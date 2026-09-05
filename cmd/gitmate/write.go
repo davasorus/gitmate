@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(stageCmd, commitCmd, pushCmd)
+	rootCmd.AddCommand(stageCmd, commitCmd, pushCmd, unstageCmd, discardCmd)
 }
 
 var stageCmd = &cobra.Command{
@@ -68,4 +68,42 @@ func init() {
 	_ = commitCmd.MarkFlagRequired("message")
 	pushCmd.Flags().StringVar(&pushRemote, "remote", "origin", "remote to push to")
 	pushCmd.Flags().BoolVarP(&pushSetUpstream, "set-upstream", "u", false, "set upstream tracking on push")
+}
+
+var unstageCmd = &cobra.Command{
+	Use:   "unstage [paths...]",
+	Short: "Unstage changes (all if no paths given)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := gitops.Unstage(".", args...); err != nil {
+			return err
+		}
+		if len(args) == 0 {
+			fmt.Println("unstaged all changes")
+		} else {
+			fmt.Printf("unstaged %d path(s)\n", len(args))
+		}
+		return nil
+	},
+}
+
+var discardForce bool
+
+func init() {
+	discardCmd.Flags().BoolVarP(&discardForce, "force", "f", false, "confirm discarding changes (required — this is destructive)")
+}
+
+var discardCmd = &cobra.Command{
+	Use:   "discard <paths...>",
+	Short: "Discard working-tree changes to tracked files (destructive)",
+	Args:  cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if !discardForce {
+			return fmt.Errorf("refusing to discard without --force: this permanently deletes uncommitted changes to %v", args)
+		}
+		if err := gitops.Discard(".", args...); err != nil {
+			return err
+		}
+		fmt.Printf("discarded changes to %d path(s)\n", len(args))
+		return nil
+	},
 }

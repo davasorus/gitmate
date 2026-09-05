@@ -47,6 +47,13 @@ func (g *GitService) Branches() ([]gitops.Branch, error) {
 	return gitops.GetBranches(g.repoDir)
 }
 
+func (g *GitService) Diff(path string, staged bool) ([]gitops.FileDiff, error) {
+	return gitops.Diff(g.repoDir, gitops.DiffOptions{
+		Path:   path,
+		Staged: staged,
+	})
+}
+
 // --- GitHub (needs GITHUB_TOKEN in the process env) ---
 
 // PRs resolves owner/repo from the origin remote of the current dir.
@@ -91,6 +98,34 @@ func (g *GitService) Stage() error {
 	return gitops.Stage(g.repoDir)
 }
 
+func (g *GitService) StagePath(path string) error {
+	return gitops.Stage(g.repoDir, path)
+}
+
+func (g *GitService) UnstagePath(path string) error {
+	return gitops.Unstage(g.repoDir, path)
+}
+
+func (g *GitService) DiscardPath(path string) error {
+	return gitops.Discard(g.repoDir, path)
+}
+
+func (g *GitService) Switch(branch string) error {
+	return gitops.Switch(g.repoDir, branch)
+}
+
+func (g *GitService) SwitchNew(branch string) error {
+	return gitops.SwitchNew(g.repoDir, branch)
+}
+
+func (g *GitService) DeleteBranch(name string, force bool) error {
+	return gitops.DeleteBranch(g.repoDir, name, force)
+}
+
+func (g *GitService) RenameBranch(oldName, newName string) error {
+	return gitops.RenameBranch(g.repoDir, oldName, newName)
+}
+
 func (g *GitService) Commit(message string) (string, error) {
 	return gitops.CreateCommit(g.repoDir, message)
 }
@@ -101,6 +136,14 @@ func (g *GitService) Push(setUpstream bool) error {
 		return err
 	}
 	return gitops.Push(g.repoDir, "origin", branch, setUpstream)
+}
+
+func (g *GitService) Fetch() error {
+	return gitops.Fetch(g.repoDir, "origin")
+}
+
+func (g *GitService) Pull(rebase bool) error {
+	return gitops.Pull(g.repoDir, rebase)
 }
 
 // --- GitHub write ---
@@ -157,4 +200,36 @@ func (g *GitService) PRChecks(number int) ([]ghapi.CheckRun, error) {
 		return nil, err
 	}
 	return client.PRChecks(ctx, owner, repo, number)
+}
+
+func (g *GitService) StashSave(message string, includeUntracked bool) error {
+	return gitops.StashSave(g.repoDir, message, includeUntracked)
+}
+
+func (g *GitService) StashList() ([]gitops.Stash, error) {
+	return gitops.StashList(g.repoDir)
+}
+
+func (g *GitService) StashPop(ref string) error {
+	return gitops.StashPop(g.repoDir, ref)
+}
+
+func (g *GitService) StashDrop(ref string) error {
+	return gitops.StashDrop(g.repoDir, ref)
+}
+
+func (g *GitService) Show(rev string) (*gitops.CommitDetail, error) {
+	return gitops.Show(g.repoDir, rev)
+}
+
+func (g *GitService) CurrentBranch() (string, error) {
+	return gitops.CurrentBranch(g.repoDir)
+}
+
+func (g *GitService) PRTemplate() string {
+	return gitops.ReadPRTemplate(g.repoDir)
+}
+
+func (g *GitService) DefaultPRTitle(branch string) (string, error) {
+	return gitops.LastCommitSubject(g.repoDir, branch)
 }
