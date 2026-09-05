@@ -84,3 +84,51 @@ func (g *GitService) resolve(ctx context.Context) (owner, repo string, err error
 	}
 	return ghapi.ParseRepo(url)
 }
+
+// --- git write ---
+
+func (g *GitService) Stage() error {
+	return gitops.Stage(g.repoDir)
+}
+
+func (g *GitService) Commit(message string) (string, error) {
+	return gitops.CreateCommit(g.repoDir, message)
+}
+
+func (g *GitService) Push(setUpstream bool) error {
+	branch, err := gitops.CurrentBranch(g.repoDir)
+	if err != nil {
+		return err
+	}
+	return gitops.Push(g.repoDir, "origin", branch, setUpstream)
+}
+
+// --- GitHub write ---
+
+func (g *GitService) CreatePR(title, body, head, base string) (string, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return "", err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return "", err
+	}
+	_, url, err := client.CreatePR(ctx, owner, repo, title, body, head, base)
+	return url, err
+}
+
+func (g *GitService) CreateIssue(title, body string) (string, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return "", err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return "", err
+	}
+	_, url, err := client.CreateIssue(ctx, owner, repo, title, body)
+	return url, err
+}

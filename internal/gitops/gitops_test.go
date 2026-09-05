@@ -1,0 +1,149 @@
+package gitops
+
+import (
+	"os"
+	"os/exec"
+	"path/filepath"
+	"testing"
+)
+
+// newTestRepo makes a fresh git repo in a temp dir and returns its path.
+// t.TempDir() is auto-removed when the test finishes.
+func newTestRepo(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+
+	// init + identity so commits work in CI (no global config there)
+	for _, args := range [][]string{
+		{"init"},
+		{"config", "user.email", "test@example.com"},
+		{"config", "user.name", "Test"},
+		{"config", "commit.gpgsign", "false"},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	return dir
+}
+
+func writeFile(t *testing.T, dir, name, content string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestStatusUntrackedThenStaged(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "hello")
+
+	// before staging: one untracked file
+	s, err := GetStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Untracked) != 1 || s.Untracked[0] != "a.txt" {
+		t.Fatalf("expected a.txt untracked, got %+v", s.Untracked)
+	}
+	if len(s.Changes) != 0 {
+		t.Fatalf("expected no staged changes, got %+v", s.Changes)
+	}
+
+	// after staging: it moves into the staged column
+	if err := Stage(dir); err != nil {
+		t.Fatal(err)
+	}
+	s, err = GetStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(s.Untracked) != 0 {
+		t.Fatalf("expected nothing untracked after stage, got %+v", s.Untracked)
+	}
+	if len(s.Changes) != 1 || s.Changes[0].Staged != "added" {
+		t.Fatalf("expected a.txt staged as added, got %+v", s.Changes)
+	}
+}
+
+func TestCommitAndLog(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "hello")
+	if err := Stage(dir); err != nil {
+		t.Fatal(err)
+	}
+
+	short, err := CreateCommit(dir, "first commit")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if short == "" {
+		t.Fatal("expected a short hash, got empty")
+	}
+
+	commits, err := GetLog(dir, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(commits) != 1 {
+		t.Fatalf("expected 1 commit, got %d", len(commits))
+	}
+	if commits[0].Subject != "first commit" {
+		t.Fatalf("expected subject 'first commit', got %q", commits[0].Subject)
+	}
+	if commits[0].Short != short {
+		t.Fatalf("log hash %q != commit hash %q", commits[0].Short, short)
+	}
+}
+
+func TestCommitEmptyMessageRejected(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "hello")
+	_ = Stage(dir)
+
+	if _, err := CreateCommit(dir, "   "); err == nil {
+		t.Fatal("expected error for empty commit message, got nil")
+	}
+}
+
+func TestCurrentBranchAfterCommit(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "hello")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "first"); err != nil {
+		t.Fatal(err)
+	}
+
+	branch, err := CurrentBranch(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// default branch name varies by git config (main/master/live); just assert non-empty
+	if branch == "" {
+		t.Fatal("expected a branch name, got empty")
+	}
+}
+
+func TestParseTrackAheadBehind(t *testing.T) {
+	// pure-function test, no repo needed
+	cases := []struct {
+		in            string
+		ahead, behind int
+	}{
+		{"", 0, 0},
+		{"gone", 0, 0},
+		{"ahead 2", 2, 0},
+		{"behind 3", 0, 3},
+		{"ahead 2, behind 1", 2, 1},
+	}
+	for _, c := range cases {
+		var b Branch
+		parseTrack(&b, c.in)
+		if b.Ahead != c.ahead || b.Behind != c.behind {
+			t.Errorf("parseTrack(%q) = ahead %d behind %d, want ahead %d behind %d",
+				c.in, b.Ahead, b.Behind, c.ahead, c.behind)
+		}
+	}
+}

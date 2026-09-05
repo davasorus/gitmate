@@ -22,6 +22,18 @@ export function Branches(): $CancellablePromise<gitops$0.Branch[] | null> {
     return $Call.ByID(3913623929);
 }
 
+export function Commit(message: string): $CancellablePromise<string> {
+    return $Call.ByID(471482348, message);
+}
+
+export function CreateIssue(title: string, body: string): $CancellablePromise<string> {
+    return $Call.ByID(4181657864, title, body);
+}
+
+export function CreatePR(title: string, body: string, head: string, base: string): $CancellablePromise<string> {
+    return $Call.ByID(1421252495, title, body, head, base);
+}
+
 /**
  * GetRepoDir returns the current working directory.
  */
@@ -44,11 +56,19 @@ export function PRs(state: string): $CancellablePromise<ghapi$0.PR[] | null> {
     return $Call.ByID(3721264108, state);
 }
 
+export function Push(setUpstream: boolean): $CancellablePromise<void> {
+    return $Call.ByID(4024544461, setUpstream);
+}
+
 /**
  * SetRepoDir lets the frontend re-point the service at another repo.
  */
 export function SetRepoDir(dir: string): $CancellablePromise<void> {
     return $Call.ByID(1616087450, dir);
+}
+
+export function Stage(): $CancellablePromise<void> {
+    return $Call.ByID(1407503261);
 }
 
 export function Status(): $CancellablePromise<gitops$0.Status | null> {

@@ -5,16 +5,30 @@ import type { PR } from "../bindings/github.com/davasorus/gitmate/internal/ghapi
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
+type Toast = { kind: "ok" | "err"; msg: string } | null;
+
 export default function App() {
   const [dir, setDir] = useState("");
   const [status, setStatus] = useState<Status | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [commits, setCommits] = useState<Commit[]>([]);
   const [prs, setPRs] = useState<PR[]>([]);
-  const [err, setErr] = useState("");
+  const [toast, setToast] = useState<Toast>(null);
+  const [busy, setBusy] = useState<string>(""); // name of the in-flight action, "" if idle
+
+  // form state
+  const [commitMsg, setCommitMsg] = useState("");
+  const [prTitle, setPrTitle] = useState("");
+  const [prHead, setPrHead] = useState("");
+  const [prBase, setPrBase] = useState("live");
+  const [issueTitle, setIssueTitle] = useState("");
+
+  const flash = (kind: "ok" | "err", msg: string) => {
+    setToast({ kind, msg });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const reload = useCallback(async () => {
-    setErr("");
     try {
       await GitService.SetRepoDir(dir.trim());
       const [s, b, c] = await Promise.all([
@@ -29,34 +43,108 @@ export default function App() {
         const p = await GitService.PRs("open");
         setPRs(p ?? []);
       } catch {
-        setPRs([]); // no remote / no token — leave PRs empty, don't fail the page
+        setPRs([]);
       }
     } catch (e) {
-      setErr(String(e));
+      flash("err", String(e));
     }
   }, [dir]);
 
-  useEffect(() => { reload(); }, []); // initial load
+  useEffect(() => { reload(); }, []);
+
+  // Wrap an async action with busy-state, toast, and a reload afterward.
+  const run = async (name: string, fn: () => Promise<string | void>, okMsg: string) => {
+    setBusy(name);
+    try {
+      const res = await fn();
+      flash("ok", typeof res === "string" && res ? res : okMsg);
+      await reload();
+    } catch (e) {
+      flash("err", String(e));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const doCommit = () =>
+    run("commit", async () => {
+      await GitService.Stage();
+      const hash = await GitService.Commit(commitMsg);
+      setCommitMsg("");
+      return `committed ${hash}`;
+    }, "committed");
+
+  const doPush = () =>
+    run("push", () => GitService.Push(true), "pushed");
+
+  const doPR = () =>
+    run("pr", () => GitService.CreatePR(prTitle, "", prHead, prBase), "PR opened");
+
+  const doIssue = () =>
+    run("issue", () => GitService.CreateIssue(issueTitle, ""), "issue opened");
+
+  const input = "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-primary";
+  const btn = "rounded-md bg-primary px-4 py-1.5 text-sm font-semibold text-background disabled:opacity-40";
 
   return (
     <div className="mx-auto max-w-4xl p-6 font-mono">
       <header className="mb-4 flex items-center justify-between border-b border-border pb-3">
         <h1 className="text-2xl font-bold">gitmate</h1>
         <div className="flex gap-2">
-          <input
-            value={dir}
-            onChange={(e) => setDir(e.target.value)}
-            placeholder="repo path (default .)"
-            className="rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-primary"
-          />
-          <button onClick={reload} className="rounded-md bg-primary px-4 py-1.5 text-sm font-semibold text-background">
-            Reload
-          </button>
+          <input value={dir} onChange={(e) => setDir(e.target.value)} placeholder="repo path (default .)" className={input} />
+          <button onClick={reload} disabled={!!busy} className={btn}>Reload</button>
         </div>
       </header>
 
-      {err && <div className="mb-4 text-sm text-red-500">{err}</div>}
+      {toast && (
+        <div className={`mb-4 rounded-md px-3 py-2 text-sm ${toast.kind === "ok" ? "bg-green-600/20 text-green-400" : "bg-red-600/20 text-red-400"}`}>
+          {toast.msg}
+        </div>
+      )}
 
+      {/* Actions */}
+      <Card className="mb-4">
+        <CardHeader><CardTitle>Commit &amp; Push</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex gap-2">
+            <input value={commitMsg} onChange={(e) => setCommitMsg(e.target.value)} placeholder="commit message (stages all)" className={`${input} flex-1`} />
+            <button onClick={doCommit} disabled={!!busy || !commitMsg.trim()} className={btn}>
+              {busy === "commit" ? "…" : "Commit"}
+            </button>
+            <button onClick={doPush} disabled={!!busy} className={btn}>
+              {busy === "push" ? "…" : "Push"}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4">
+        <CardHeader><CardTitle>New pull request</CardTitle></CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <input value={prTitle} onChange={(e) => setPrTitle(e.target.value)} placeholder="title" className={`${input} flex-1`} />
+            <input value={prHead} onChange={(e) => setPrHead(e.target.value)} placeholder="head (source branch)" className={input} />
+            <input value={prBase} onChange={(e) => setPrBase(e.target.value)} placeholder="base" className={`${input} w-24`} />
+            <button onClick={doPR} disabled={!!busy || !prTitle.trim() || !prHead.trim()} className={btn}>
+              {busy === "pr" ? "…" : "Open PR"}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4">
+        <CardHeader><CardTitle>New issue</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <input value={issueTitle} onChange={(e) => setIssueTitle(e.target.value)} placeholder="title" className={`${input} flex-1`} />
+            <button onClick={doIssue} disabled={!!busy || !issueTitle.trim()} className={btn}>
+              {busy === "issue" ? "…" : "Open issue"}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Read panels */}
       <Card className="mb-4">
         <CardHeader><CardTitle>Status</CardTitle></CardHeader>
         <CardContent>
