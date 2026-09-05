@@ -39,5 +39,4 @@ Thumbs.db
 /gui/node_modules/
 /gui/frontend/node_modules/
 /gui/frontend/dist/
-/gui/frontend/bindings/
 /gui/frontend/out/
