@@ -32,14 +32,10 @@ go.work.sum
 .DS_Store
 Thumbs.db
 
-# Wails 3 build output
-/gui/build/bin/
-/gui/frontend/node_modules/
-/gui/frontend/dist/
-
-# Wails 3 build output
-/gui/build/bin/
+# Wails 3 build output, generated code, and installed deps
 /gui/bin/
+/gui/build/bin/
+/gui/.task/
 /gui/node_modules/
 /gui/frontend/node_modules/
 /gui/frontend/dist/
