@@ -64,3 +64,17 @@ func PushTag(dir, name string) error {
 	_, err := run(dir, "push", "origin", "refs/tags/"+name)
 	return err
 }
+
+// DeleteRemoteTag deletes a tag from origin (git push origin --delete <tag>).
+// Local deletion is separate (DeleteTag) — this only removes it from the remote.
+func DeleteRemoteTag(dir, name string) error {
+	_, err := run(dir, "push", "origin", "--delete", "refs/tags/"+name)
+	return err
+}
+
+// FetchTags syncs tags from origin, pruning local tags that were deleted on the
+// remote (so ListTags reflects the remote after e.g. a browser-side deletion).
+func FetchTags(dir string) error {
+	_, err := run(dir, "fetch", "--tags", "--prune", "--prune-tags", "origin")
+	return err
+}

@@ -9,11 +9,13 @@ import (
 
 func init() {
 	tagCreateCmd.Flags().StringVarP(&tagMessage, "message", "m", "", "annotation message (omit for a lightweight tag)")
-	tagCmd.AddCommand(tagListCmd, tagCreateCmd, tagDeleteCmd, tagPushCmd)
+	tagDeleteCmd.Flags().BoolVar(&tagDeleteRemote, "remote", false, "also delete the tag from origin")
+	tagCmd.AddCommand(tagListCmd, tagCreateCmd, tagDeleteCmd, tagPushCmd, tagFetchCmd)
 	rootCmd.AddCommand(tagCmd)
 }
 
 var tagMessage string
+var tagDeleteRemote bool
 
 var tagCmd = &cobra.Command{
 	Use:   "tag",
@@ -63,7 +65,14 @@ var tagDeleteCmd = &cobra.Command{
 		if err := gitops.DeleteTag(".", args[0]); err != nil {
 			return err
 		}
-		fmt.Printf("deleted tag %s\n", args[0])
+		if tagDeleteRemote {
+			if err := gitops.DeleteRemoteTag(".", args[0]); err != nil {
+				return fmt.Errorf("deleted locally, but remote delete failed: %w", err)
+			}
+			fmt.Printf("deleted tag %s (local + origin)\n", args[0])
+			return nil
+		}
+		fmt.Printf("deleted tag %s (local only; use --remote to also delete from origin)\n", args[0])
 		return nil
 	},
 }
@@ -77,6 +86,18 @@ var tagPushCmd = &cobra.Command{
 			return err
 		}
 		fmt.Printf("pushed tag %s to origin\n", args[0])
+		return nil
+	},
+}
+
+var tagFetchCmd = &cobra.Command{
+	Use:   "fetch",
+	Short: "Sync tags from origin (prunes tags deleted on the remote)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := gitops.FetchTags("."); err != nil {
+			return err
+		}
+		fmt.Println("synced tags from origin")
 		return nil
 	},
 }

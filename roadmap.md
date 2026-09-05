@@ -173,7 +173,7 @@
 ### 2.6 Tags  [x]
 - [x] engine: ListTags/CreateTag(lightweight+annotated)/DeleteTag/PushTag
 - [x] CLI: `gitmate tag [list|create|delete|push]`
-- [x] GUI: Tags sidebar view — list, create (annotated opt), delete, push (push triggers release)
+- [x] GUI: Tags sidebar view — list, create (annotated opt), delete (local or local+origin), push (triggers release), Sync tags (fetch --prune); tags now refresh on global Reload
 
 ### 2.7 Reflog  [ ]  (the safety net / undo backbone)
 - [ ] engine: read reflog

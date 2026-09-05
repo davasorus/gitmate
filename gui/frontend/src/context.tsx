@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import { GitService } from "../bindings/github.com/davasorus/gitmate/gui";
-import type { Status, Commit, Branch, FileDiff, Stash, CommitDetail } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
+import type { Status, Commit, Branch, FileDiff, Stash, CommitDetail, Tag } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
 import type { PR, CheckRun, Issue } from "../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 export type View = "changes" | "history" | "branches" | "prs" | "issues" | "stashes" | "tags" | "conflicts";
@@ -18,6 +18,7 @@ export interface GitmateState {
   prs: PR[];
   issues: Issue[];
   stashes: Stash[];
+  tags: Tag[];
   checks: Record<number, CheckRun[]>;
   mergeInProgress: boolean;
   rebaseInProgress: boolean;
@@ -52,6 +53,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
   const [prs, setPRs] = useState<PR[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [stashes, setStashes] = useState<Stash[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [checks] = useState<Record<number, CheckRun[]>>({});
   const [mergeInProgress, setMergeInProgress] = useState(false);
   const [rebaseInProgress, setRebaseInProgress] = useState(false);
@@ -79,6 +81,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
       try { setPRs((await GitService.PRs("open")) ?? []); } catch { setPRs([]); }
       try { setStashes((await GitService.StashList()) ?? []); } catch { setStashes([]); }
       try { setIssues((await GitService.Issues("open")) ?? []); } catch { setIssues([]); }
+      try { setTags((await GitService.ListTags()) ?? []); } catch { setTags([]); }
       try {
         setMergeInProgress(await GitService.MergeInProgress());
         setRebaseInProgress(await GitService.RebaseInProgress());
@@ -106,7 +109,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
 
   const value: GitmateState = {
     view, setView, dir, setDir,
-    status, branches, commits, prs, issues, stashes, checks, mergeInProgress, rebaseInProgress, conflicts,
+    status, branches, commits, prs, issues, stashes, tags, checks, mergeInProgress, rebaseInProgress, conflicts,
     toast, busy, setBusy, flash, reload, run,
     service: GitService,
   };
