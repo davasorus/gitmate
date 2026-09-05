@@ -209,3 +209,7 @@ func (g *GitService) StashPop(ref string) error {
 func (g *GitService) StashDrop(ref string) error {
 	return gitops.StashDrop(g.repoDir, ref)
 }
+
+func (g *GitService) Show(rev string) (*gitops.CommitDetail, error) {
+	return gitops.Show(g.repoDir, rev)
+}

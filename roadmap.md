@@ -1,4 +1,3 @@
-
 # gitmate — Roadmap to a Full Git Client (CLI + GUI)
 
 > Living plan. gitmate is a Cobra CLI + Wails 3 (React/Tailwind/shadcn) desktop app
@@ -89,39 +88,39 @@
 
 **Build order within tier: diff FIRST** (everything downstream renders diffs).
 
-### 1.1 Diff  [ ]  ← START HERE
-- [ ] engine: working-tree diff (unstaged)
-- [ ] engine: staged diff (`--cached`)
-- [ ] engine: commit-to-commit diff
-- [ ] engine: single-file diff
-- [ ] parse unified-diff / patch into structured hunks (file, +/- lines, headers)
-- [ ] CLI: `gitmate diff [--staged] [<path>] [<rev>..<rev>]`
-- [ ] GUI: diff viewer component (+/- line coloring, hunk headers) — hardest UI piece
-- [ ] GUI: click a file in Status → show its diff
-- [ ] GUI: click a commit in log → show its diff (needs `show`, 1.9)
+### 1.1 Diff  [x]
+- [x] engine: working-tree diff (unstaged)
+- [x] engine: staged diff (`--cached`)
+- [x] engine: commit-to-commit diff
+- [x] engine: single-file diff
+- [x] parse unified-diff / patch into structured hunks (file, +/- lines, headers)
+- [x] CLI: `gitmate diff [--staged] [<path>] [--rev <rev>]`
+- [x] GUI: DiffView component (+/- line coloring, line-number gutters, hunk headers)
+- [x] GUI: click a file in Changes → show its diff (inline)
+- [x] GUI: click a commit in History → show its diff (via 1.8 show)
 
-### 1.2 Checkout / switch  [ ]
-- [ ] engine: switch branch
-- [ ] engine: restore file(s) from index/HEAD
-- [ ] handle dirty-tree refusal (git blocks switch w/ uncommitted changes)
-- [ ] CLI: `gitmate switch <branch>`, `gitmate restore <path>`
-- [ ] GUI: branch switcher (dropdown/list → click to switch)
+### 1.2 Checkout / switch  [x]
+- [x] engine: switch branch
+- [x] engine: restore file(s) from index/HEAD (see 1.5 discard)
+- [x] handle dirty-tree refusal (surfaced as error/toast)
+- [x] CLI: `gitmate switch <branch>` (-c to create)
+- [x] GUI: branch switcher (Branches view, click to switch)
 
-### 1.3 Branch management  [ ]
-- [ ] engine: create / delete / rename branch
-- [ ] CLI: `gitmate branch create|delete|rename`
-- [ ] GUI: new-branch input + delete button on branch list
+### 1.3 Branch management  [x]
+- [x] engine: create / delete / rename branch
+- [x] CLI: `gitmate switch -c` (create), `gitmate branch delete|rename`, `gitmate branch list`
+- [x] GUI: new-branch input + rename + delete (confirm dialog) on branch list
 
-### 1.4 Granular staging  [ ]
-- [ ] engine: stage / unstage a specific file
-- [ ] engine: stage a hunk (advanced — patch application)
-- [ ] CLI: `gitmate stage <path>`, `gitmate unstage <path>`
-- [ ] GUI: per-file stage/unstage in Status panel; (stretch) per-hunk
+### 1.4 Granular staging  [x]
+- [x] engine: stage / unstage a specific file
+- [ ] engine: stage a hunk (advanced — patch application) — deferred
+- [x] CLI: `gitmate stage <path>`, `gitmate unstage <path>`
+- [x] GUI: per-file stage/unstage in Changes (Staged/Unstaged split); per-hunk deferred
 
-### 1.5 Discard / restore changes  [ ]
-- [ ] engine: discard working-tree changes to a file (guarded — destructive)
-- [ ] CLI: `gitmate discard <path>` (with confirm)
-- [ ] GUI: discard button per file (with confirm dialog)
+### 1.5 Discard / restore changes  [x]
+- [x] engine: discard working-tree changes to a file (guarded — destructive)
+- [x] CLI: `gitmate discard <path> --force`
+- [x] GUI: discard button per file (confirm dialog)
 
 ### 1.6 Fetch / pull  [ ]
 - [ ] engine: fetch
@@ -130,15 +129,15 @@
 - [ ] CLI: `gitmate fetch`, `gitmate pull [--rebase]`
 - [ ] GUI: fetch/pull buttons; show ahead/behind refresh
 
-### 1.7 Stash  [ ]
-- [ ] engine: stash save / list / pop / apply / drop
-- [ ] CLI: `gitmate stash [save|list|pop|drop]`
-- [ ] GUI: stash panel (save current, list, pop/drop)
+### 1.7 Stash  [x]
+- [x] engine: stash save / list / pop / drop (apply deferred)
+- [x] CLI: `gitmate stash [save|list|pop|drop]`
+- [x] GUI: Stashes sidebar section (save, list, pop, drop w/ confirm)
 
-### 1.8 Show (inspect one commit)  [ ]
-- [ ] engine: commit metadata + diff for a rev
-- [ ] CLI: `gitmate show <rev>`
-- [ ] GUI: commit detail view (feeds 1.1 log→diff)
+### 1.8 Show (inspect one commit)  [x]
+- [x] engine: commit metadata + diff for a rev (root-commit safe)
+- [x] CLI: `gitmate show <rev>`
+- [x] GUI: commit detail in History (click commit → metadata + DiffView)
 
 ---
 

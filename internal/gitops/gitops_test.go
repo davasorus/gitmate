@@ -331,3 +331,59 @@ func TestStashSaveListPop(t *testing.T) {
 		t.Fatalf("expected empty stash list after pop, got %d", len(list))
 	}
 }
+
+func TestShowCommit(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "one\n")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "first commit"); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, dir, "a.txt", "one\ntwo\n")
+	_ = Stage(dir)
+	short, err := CreateCommit(dir, "second commit")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d, err := Show(dir, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Subject != "second commit" {
+		t.Errorf("expected subject 'second commit', got %q", d.Subject)
+	}
+	if d.Short != short {
+		t.Errorf("expected short %q, got %q", short, d.Short)
+	}
+	if len(d.Files) != 1 {
+		t.Fatalf("expected 1 file in the commit, got %d", len(d.Files))
+	}
+	var adds int
+	for _, h := range d.Files[0].Hunks {
+		for _, ln := range h.Lines {
+			if ln.Kind == LineAdd {
+				adds++
+			}
+		}
+	}
+	if adds != 1 {
+		t.Errorf("expected 1 added line, got %d", adds)
+	}
+}
+
+func TestShowRootCommit(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "hello\n")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+	d, err := Show(dir, "HEAD")
+	if err != nil {
+		t.Fatalf("show on root commit errored: %v", err)
+	}
+	if len(d.Files) != 1 {
+		t.Fatalf("expected 1 file in root commit, got %d", len(d.Files))
+	}
+}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { GitService } from "../bindings/github.com/davasorus/gitmate/gui";
-import type { Status, Commit, Branch, FileDiff, Stash } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
+import type { Status, Commit, Branch, FileDiff, Stash, CommitDetail } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
 import type { PR, CheckRun } from "../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 /* ---------- types ---------- */
@@ -110,6 +110,8 @@ export default function App() {
   const [stashes, setStashes] = useState<Stash[]>([]);
   const [stashMsg, setStashMsg] = useState("");
   const [confirmDropStash, setConfirmDropStash] = useState<string | null>(null);
+  const [openCommit, setOpenCommit] = useState<string | null>(null);
+  const [commitDetail, setCommitDetail] = useState<CommitDetail | null>(null);
 
   const flash = (kind: "ok" | "err", msg: string) => {
     setToast({ kind, msg });
@@ -267,6 +269,24 @@ export default function App() {
       setConfirmDropStash(null);
       return `dropped ${ref}`;
     }, `dropped ${ref}`);
+
+  const showCommit = async (hash: string) => {
+    if (openCommit === hash) {
+      setOpenCommit(null);
+      setCommitDetail(null);
+      return;
+    }
+    setBusy(`show-${hash}`);
+    try {
+      const d = await GitService.Show(hash);
+      setCommitDetail(d);
+      setOpenCommit(hash);
+    } catch (e) {
+      flash("err", String(e));
+    } finally {
+      setBusy("");
+    }
+  };
 
   /* ---------- styles ---------- */
   const input = "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-[var(--color-ahead)]";
@@ -535,10 +555,26 @@ export default function App() {
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">History</h2>
               <div className="rounded-lg border border-border">
                 {(commits ?? []).map((c) => (
-                  <div key={c.Hash} className="flex items-baseline gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
-                    <span className="shrink-0 text-[var(--color-modified)]">{c.Short}</span>
-                    <span className="truncate">{c.Subject}</span>
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">{c.Author}</span>
+                  <div key={c.Hash}>
+                    <button
+                      onClick={() => showCommit(c.Hash)}
+                      className="flex w-full items-baseline gap-2 border-b border-border px-3 py-1.5 text-left text-sm last:border-0 hover:bg-muted/60"
+                    >
+                      <span className="shrink-0 text-[var(--color-modified)]">{c.Short}</span>
+                      <span className="truncate">{c.Subject}</span>
+                      {busy === `show-${c.Hash}` && <span className="ml-auto text-xs text-muted-foreground">…</span>}
+                      <span className={`${busy === `show-${c.Hash}` ? "" : "ml-auto"} shrink-0 text-xs text-muted-foreground`}>{c.Author}</span>
+                    </button>
+                    {openCommit === c.Hash && commitDetail && (
+                      <div className="border-b border-border bg-background px-2 py-2">
+                        <div className="mb-2 px-1 text-xs text-muted-foreground">
+                          <div><span className="text-foreground">{commitDetail.Subject}</span></div>
+                          <div>{commitDetail.Author} &lt;{commitDetail.Email}&gt; · {commitDetail.Date}</div>
+                          {commitDetail.Body ? <div className="mt-1 whitespace-pre-wrap">{commitDetail.Body}</div> : null}
+                        </div>
+                        <DiffView files={commitDetail.Files} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
