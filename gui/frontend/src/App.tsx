@@ -170,6 +170,8 @@ export default function App() {
       return `committed ${h}`;
     }, "committed");
   const doPush = () => run("push", () => GitService.Push(true), "pushed");
+  const doFetch = () => run("fetch", () => GitService.Fetch(), "fetched");
+  const doPull = () => run("pull", () => GitService.Pull(false), "pulled");
   const doPR = () =>
     run("pr", async () => {
       const url = await GitService.CreatePR(prTitle, "", prHead, prBase);
@@ -350,6 +352,12 @@ export default function App() {
           </div>
           <div className="flex gap-1">
             <button onClick={reload} disabled={!!busy} className={`${btnSm} flex-1`}>Reload</button>
+            <button onClick={doFetch} disabled={!!busy} className={`${btnSm} flex-1`}>
+              {busy === "fetch" ? "…" : "Fetch"}
+            </button>
+            <button onClick={doPull} disabled={!!busy} className={`${btnSm} flex-1`}>
+              {busy === "pull" ? "…" : "Pull"}
+            </button>
             <button onClick={doPush} disabled={!!busy} className={`${btnSm} flex-1`}>
               {busy === "push" ? "…" : "Push"}
             </button>

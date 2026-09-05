@@ -86,6 +86,8 @@
 
 ## TIER 1 — Core daily git (a client isn't a client without these)
 
+> STATUS: all core items shipped (1.1 diff, 1.2 switch, 1.3 branch mgmt, 1.4 staging, 1.5 discard, 1.6 fetch/pull, 1.7 stash, 1.8 show). Deferred within-tier: hunk-level staging (1.4), stash apply (1.7). Conflict *surfacing* as structured state moves to Tier 2.2.
+
 **Build order within tier: diff FIRST** (everything downstream renders diffs).
 
 ### 1.1 Diff  [x]
@@ -122,12 +124,12 @@
 - [x] CLI: `gitmate discard <path> --force`
 - [x] GUI: discard button per file (confirm dialog)
 
-### 1.6 Fetch / pull  [ ]
-- [ ] engine: fetch
-- [ ] engine: pull (--rebase and merge modes)
-- [ ] surface conflicts as a distinct state (feeds Tier 2 conflict UI)
-- [ ] CLI: `gitmate fetch`, `gitmate pull [--rebase]`
-- [ ] GUI: fetch/pull buttons; show ahead/behind refresh
+### 1.6 Fetch / pull  [x]
+- [x] engine: fetch
+- [x] engine: pull (--rebase and merge modes)
+- [ ] surface conflicts as a distinct state (feeds Tier 2 conflict UI) — errors surface as toast; structured conflict state is Tier 2.2
+- [x] CLI: `gitmate fetch`, `gitmate pull [--rebase]`
+- [x] GUI: fetch/pull buttons in status bar; ahead/behind refreshes on reload
 
 ### 1.7 Stash  [x]
 - [x] engine: stash save / list / pop / drop (apply deferred)

@@ -105,6 +105,29 @@ func Push(dir, remote, branch string, setUpstream bool) error {
 	return err
 }
 
+// Fetch downloads objects and refs from a remote without merging. Empty remote
+// defaults to "origin". Updates remote-tracking branches (so ahead/behind
+// reflect the remote) but does not touch the working tree.
+func Fetch(dir, remote string) error {
+	if remote == "" {
+		remote = "origin"
+	}
+	_, err := run(dir, "fetch", remote)
+	return err
+}
+
+// Pull integrates remote changes into the current branch. rebase=true replays
+// local commits on top of upstream (linear); otherwise merges. Either mode can
+// conflict — returned as an error for the caller to surface.
+func Pull(dir string, rebase bool) error {
+	args := []string{"pull"}
+	if rebase {
+		args = append(args, "--rebase")
+	}
+	_, err := run(dir, args...)
+	return err
+}
+
 // CurrentBranch returns the checked-out branch name.
 func CurrentBranch(dir string) (string, error) {
 	out, err := run(dir, "rev-parse", "--abbrev-ref", "HEAD")

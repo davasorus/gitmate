@@ -138,6 +138,14 @@ func (g *GitService) Push(setUpstream bool) error {
 	return gitops.Push(g.repoDir, "origin", branch, setUpstream)
 }
 
+func (g *GitService) Fetch() error {
+	return gitops.Fetch(g.repoDir, "origin")
+}
+
+func (g *GitService) Pull(rebase bool) error {
+	return gitops.Pull(g.repoDir, rebase)
+}
+
 // --- GitHub write ---
 
 func (g *GitService) CreatePR(title, body, head, base string) (string, error) {

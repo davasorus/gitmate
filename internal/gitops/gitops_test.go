@@ -387,3 +387,16 @@ func TestShowRootCommit(t *testing.T) {
 		t.Fatalf("expected 1 file in root commit, got %d", len(d.Files))
 	}
 }
+
+func TestFetchNoRemoteErrors(t *testing.T) {
+	// a fresh repo with no remote configured should error on fetch
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "x\n")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+	if err := Fetch(dir, "origin"); err == nil {
+		t.Fatal("expected error fetching with no origin remote")
+	}
+}
