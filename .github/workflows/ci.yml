@@ -5,6 +5,9 @@ on:
     branches: [live]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   go:
     runs-on: ubuntu-latest
