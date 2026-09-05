@@ -263,6 +263,10 @@ func (g *GitService) Show(rev string) (*gitops.CommitDetail, error) {
 	return gitops.Show(g.repoDir, rev)
 }
 
+func (g *GitService) Reflog(limit int) ([]gitops.ReflogEntry, error) {
+	return gitops.Reflog(g.repoDir, limit)
+}
+
 func (g *GitService) CurrentBranch() (string, error) {
 	return gitops.CurrentBranch(g.repoDir)
 }

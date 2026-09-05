@@ -175,10 +175,10 @@
 - [x] CLI: `gitmate tag [list|create|delete|push]`
 - [x] GUI: Tags sidebar view — list, create (annotated opt), delete (local or local+origin), push (triggers release), Sync tags (fetch --prune); tags now refresh on global Reload; location shown as Monitor(local)/Cloud(remote) icons; Tags promoted out of the SOON group into active nav
 
-### 2.7 Reflog  [ ]  (the safety net / undo backbone)
-- [ ] engine: read reflog
-- [ ] CLI: `gitmate reflog`
-- [ ] GUI: reflog view; (stretch) one-click restore to a reflog entry
+### 2.7 Reflog  [x]  (the safety net / undo backbone)
+- [x] engine: Reflog(dir, limit) — parses selector/action/message
+- [x] CLI: `gitmate reflog [-n N]`
+- [x] GUI: Reflog view (read-only, color-coded by action); one-click restore deferred until 2.4 reset
 
 ### 2.8 Blame  [ ]
 - [ ] engine: line-by-line authorship for a file
