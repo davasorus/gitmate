@@ -151,6 +151,22 @@ func (g *GitService) MergeAbort() error                  { return gitops.MergeAb
 func (g *GitService) ConflictedFiles() ([]string, error) { return gitops.ConflictedFiles(g.repoDir) }
 func (g *GitService) MergeInProgress() bool              { return gitops.MergeInProgress(g.repoDir) }
 
+func (g *GitService) ReadConflict(path string) (*gitops.ConflictFile, error) {
+	return gitops.ReadConflict(g.repoDir, path)
+}
+
+func (g *GitService) ResolveOurs(path string) error {
+	return gitops.ResolveOurs(g.repoDir, path)
+}
+
+func (g *GitService) ResolveTheirs(path string) error {
+	return gitops.ResolveTheirs(g.repoDir, path)
+}
+
+func (g *GitService) MarkResolved(path string) error {
+	return gitops.MarkResolved(g.repoDir, path)
+}
+
 // --- GitHub write ---
 
 func (g *GitService) CreatePR(title, body, head, base string) (string, error) {

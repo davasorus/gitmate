@@ -5,6 +5,7 @@ import { Branches } from "./views/Branches";
 import { PullRequests } from "./views/PullRequests";
 import { Issues } from "./views/Issues";
 import { Stashes } from "./views/Stashes";
+import { Conflicts } from "./views/Conflicts";
 
 export default function App() {
   const {
@@ -48,6 +49,7 @@ export default function App() {
         </div>
         <nav className="flex-1 overflow-y-auto py-1">
           <NavItem id="changes" label="Changes" badge={changed} />
+          {mergeInProgress && <NavItem id="conflicts" label="Conflicts" badge={conflicts.length} />}
           <NavItem id="history" label="History" />
           <NavItem id="branches" label="Branches" badge={branches.length} />
           <NavItem id="prs" label="Pull Requests" badge={prs.length} />
@@ -74,7 +76,7 @@ export default function App() {
       <main className="flex-1 overflow-y-auto">
         {mergeInProgress && (
           <div className="m-3 rounded-md border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
-            <div className="font-semibold text-[var(--color-conflict)]">Merge in progress</div>
+            <button onClick={() => setView("conflicts")} className="font-semibold text-[var(--color-conflict)] hover:underline">Merge in progress — resolve conflicts →</button>
             {conflicts.length
               ? <div className="mt-1 text-xs text-muted-foreground">{conflicts.length} conflicted file(s): {conflicts.join(", ")}. Resolve (edit + stage in Changes), then commit — or abort.</div>
               : <div className="mt-1 text-xs text-muted-foreground">No conflicts — commit to finish the merge, or abort.</div>}
@@ -93,6 +95,7 @@ export default function App() {
           {view === "prs" && <PullRequests />}
           {view === "issues" && <Issues />}
           {view === "stashes" && <Stashes />}
+          {view === "conflicts" && <Conflicts />}
         </div>
       </main>
     </div>

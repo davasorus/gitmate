@@ -400,3 +400,45 @@ func TestFetchNoRemoteErrors(t *testing.T) {
 		t.Fatal("expected error fetching with no origin remote")
 	}
 }
+
+func TestConflictResolveOurs(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "base\n")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "base"); err != nil { t.Fatal(err) }
+	main, _ := CurrentBranch(dir)
+
+	if err := SwitchNew(dir, "other"); err != nil { t.Fatal(err) }
+	writeFile(t, dir, "a.txt", "theirs\n")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "theirs"); err != nil { t.Fatal(err) }
+	if err := Switch(dir, main); err != nil { t.Fatal(err) }
+	writeFile(t, dir, "a.txt", "ours\n")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "ours"); err != nil { t.Fatal(err) }
+
+	_ = Merge(dir, "other") // conflicts
+	files, _ := ConflictedFiles(dir)
+	if len(files) != 1 { t.Fatalf("expected 1 conflict, got %v", files) }
+
+	cf, err := ReadConflict(dir, "a.txt")
+	if err != nil { t.Fatal(err) }
+	if len(cf.Hunks) != 1 { t.Fatalf("expected 1 hunk, got %d", len(cf.Hunks)) }
+
+	if err := ResolveOurs(dir, "a.txt"); err != nil { t.Fatal(err) }
+	if files, _ := ConflictedFiles(dir); len(files) != 0 {
+		t.Fatalf("expected resolved, still conflicted: %v", files)
+	}
+	got, _ := readRepoFile(dir, "a.txt")
+	if !contains(got, "ours") || contains(got, "theirs") {
+		t.Fatalf("expected ours content, got %q", got)
+	}
+}
+
+func contains(s, sub string) bool { return len(s) >= len(sub) && (indexOf(s, sub) >= 0) }
+func indexOf(s, sub string) int {
+	for i := 0; i+len(sub) <= len(s); i++ {
+		if s[i:i+len(sub)] == sub { return i }
+	}
+	return -1
+}

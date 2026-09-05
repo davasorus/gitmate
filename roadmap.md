@@ -145,15 +145,15 @@
 
 ## TIER 2 — History & repair (git gets sharp; guardrails matter)
 
-### 2.1 Merge  [ ]
-- [ ] engine: merge a branch; detect conflicts
-- [ ] CLI: `gitmate merge <branch>`
-- [ ] GUI: merge action + conflict surfacing
+### 2.1 Merge  [x]
+- [x] engine: merge a branch; detect conflicts (Merge/ConflictedFiles/MergeInProgress/MergeAbort)
+- [x] CLI: `gitmate merge <branch>` + `merge-abort`
+- [x] GUI: Merge button in Branches + merge-in-progress banner
 
-### 2.2 Conflict resolution  [ ]  (shared by merge/rebase/pull)
-- [ ] engine: list conflicted files; read conflict markers; mark resolved (add)
-- [ ] CLI: `gitmate conflicts`, resolve flow
-- [ ] GUI: conflict view — per-file, choose ours/theirs/edited, mark resolved
+### 2.2 Conflict resolution  [x] (whole-file ours/theirs + hand-edit; per-region deferred)
+- [x] engine: ReadConflict (parse regions), ResolveOurs/Theirs, MarkResolved
+- [x] CLI: `gitmate conflicts`, `gitmate resolve <path> [--side ours|theirs]`
+- [x] GUI: Conflicts view — per-file ours/theirs preview + Take ours/theirs/Mark resolved (per-region UI deferred to polish)
 
 ### 2.3 Rebase  [ ]
 - [ ] engine: rebase onto; continue/abort
