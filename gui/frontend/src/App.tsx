@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { GitService } from "../bindings/github.com/davasorus/gitmate/gui";
 import type { Status, Commit, Branch, FileDiff, Stash, CommitDetail } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
-import type { PR, CheckRun } from "../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type { PR, CheckRun, Issue } from "../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 /* ---------- types ---------- */
-type View = "changes" | "history" | "branches" | "prs" | "stashes";
+type View = "changes" | "history" | "branches" | "prs" | "stashes" | "issues";
 type Toast = { kind: "ok" | "err"; msg: string } | null;
 
 /* ---------- tiny shared UI atoms (extract to files later per UX.md) ---------- */
@@ -105,7 +105,11 @@ export default function App() {
   const [prTitle, setPrTitle] = useState("");
   const [prHead, setPrHead] = useState("");
   const [prBase, setPrBase] = useState("live");
+  const [prBody, setPrBody] = useState("");
   const [issueTitle, setIssueTitle] = useState("");
+  const [issueBody, setIssueBody] = useState("");
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [prResult, setPrResult] = useState<string>("");
   const [newBranch, setNewBranch] = useState("");
   const [stashes, setStashes] = useState<Stash[]>([]);
   const [stashMsg, setStashMsg] = useState("");
@@ -142,6 +146,17 @@ export default function App() {
       } catch {
         setStashes([]);
       }
+      try {
+        setIssues((await GitService.Issues("open")) ?? []);
+      } catch {
+        setIssues([]);
+      }
+      try {
+        const cur = await GitService.CurrentBranch();
+        setPrHead((h) => (h ? h : cur));
+        const tmpl = await GitService.PRTemplate();
+        setPrBody((b) => (b ? b : tmpl));
+      } catch { /* non-fatal */ }
     } catch (e) {
       flash("err", String(e));
     }
@@ -174,15 +189,19 @@ export default function App() {
   const doPull = () => run("pull", () => GitService.Pull(false), "pulled");
   const doPR = () =>
     run("pr", async () => {
-      const url = await GitService.CreatePR(prTitle, "", prHead, prBase);
-      setPrTitle(""); setPrHead("");
-      setView("prs");
+      let title = prTitle.trim();
+      if (!title) {
+        title = (await GitService.DefaultPRTitle(prHead)) || prHead;
+      }
+      const url = await GitService.CreatePR(title, prBody, prHead, prBase);
+      setPrResult(url);
+      setPrTitle("");
       return url;
     }, "PR opened");
   const doIssue = () =>
     run("issue", async () => {
-      const url = await GitService.CreateIssue(issueTitle, "");
-      setIssueTitle("");
+      const url = await GitService.CreateIssue(issueTitle.trim(), issueBody);
+      setIssueTitle(""); setIssueBody("");
       return url;
     }, "issue opened");
   const doMerge = (n: number) =>
@@ -339,6 +358,7 @@ export default function App() {
           <NavItem id="history" label="History" />
           <NavItem id="branches" label="Branches" badge={branches.length} />
           <NavItem id="prs" label="Pull Requests" badge={prs.length} />
+          <NavItem id="issues" label="Issues" badge={issues.length} />
           <Section>Soon</Section>
           <div className="px-3 py-1 text-sm text-muted-foreground/50">Remotes</div>
           <NavItem id="stashes" label="Stashes" badge={stashes.length} />
@@ -640,24 +660,36 @@ export default function App() {
           {/* PULL REQUESTS */}
           {view === "prs" && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pull requests</h2>
-              </div>
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pull requests</h2>
 
-              <div className="flex flex-wrap gap-2 rounded-lg border border-border p-3">
-                <input value={prTitle} onChange={(e) => setPrTitle(e.target.value)} placeholder="PR title" className={`${input} flex-1`} />
-                <input value={prHead} onChange={(e) => setPrHead(e.target.value)} placeholder="head branch" className={input} />
-                <input value={prBase} onChange={(e) => setPrBase(e.target.value)} placeholder="base" className={`${input} w-24`} />
-                <button onClick={doPR} disabled={!!busy || !prTitle.trim() || !prHead.trim()} className={btn}>
-                  {busy === "pr" ? "…" : "Open PR"}
-                </button>
-              </div>
-
-              <div className="flex gap-2 rounded-lg border border-border p-3">
-                <input value={issueTitle} onChange={(e) => setIssueTitle(e.target.value)} placeholder="issue title" className={`${input} flex-1`} />
-                <button onClick={doIssue} disabled={!!busy || !issueTitle.trim()} className={btn}>
-                  {busy === "issue" ? "…" : "Open issue"}
-                </button>
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                <div className="text-xs text-muted-foreground">
+                  Open a PR from <span className="text-[var(--color-ahead)]">{prHead || "…"}</span> into{" "}
+                  <span className="text-[var(--color-ahead)]">{prBase}</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <input value={prHead} onChange={(e) => setPrHead(e.target.value)} placeholder="head branch"
+                         className={`${input} flex-1`} />
+                  <select value={prBase} onChange={(e) => setPrBase(e.target.value)} className={input}>
+                    {(branches ?? []).map((b) => <option key={b.Name} value={b.Name}>{b.Name}</option>)}
+                    {!(branches ?? []).some((b) => b.Name === prBase) && <option value={prBase}>{prBase}</option>}
+                  </select>
+                </div>
+                <input value={prTitle} onChange={(e) => setPrTitle(e.target.value)}
+                       placeholder="title (optional — defaults to last commit subject)" className={`${input} w-full`} />
+                <textarea value={prBody} onChange={(e) => setPrBody(e.target.value)}
+                          placeholder="description (loaded from PR template if present)"
+                          className={`${input} h-28 w-full resize-y`} />
+                <div className="flex items-center gap-3">
+                  <button onClick={doPR} disabled={!!busy || !prHead.trim()} className={btn}>
+                    {busy === "pr" ? "…" : "Open PR"}
+                  </button>
+                  {prResult && (
+                    <a href={prResult} target="_blank" rel="noreferrer" className="text-xs text-[var(--color-ahead)] underline">
+                      {prResult}
+                    </a>
+                  )}
+                </div>
               </div>
 
               <div className="rounded-lg border border-border">
@@ -685,6 +717,31 @@ export default function App() {
                     )}
                   </div>
                 )) : <div className="p-3 text-sm italic text-muted-foreground">no open PRs</div>}
+              </div>
+            </div>
+          )}
+
+          {/* ISSUES */}
+          {view === "issues" && (
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Issues</h2>
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                <input value={issueTitle} onChange={(e) => setIssueTitle(e.target.value)}
+                       placeholder="issue title" className={`${input} w-full`} />
+                <textarea value={issueBody} onChange={(e) => setIssueBody(e.target.value)}
+                          placeholder="description (optional)" className={`${input} h-24 w-full resize-y`} />
+                <button onClick={doIssue} disabled={!!busy || !issueTitle.trim()} className={btn}>
+                  {busy === "issue" ? "…" : "Open issue"}
+                </button>
+              </div>
+              <div className="rounded-lg border border-border">
+                {(issues ?? []).length ? (issues ?? []).map((i) => (
+                  <div key={i.Number} className="flex items-baseline gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
+                    <span className="font-semibold text-[var(--color-ahead)]">#{i.Number}</span>
+                    <span className="truncate">{i.Title}</span>
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">@{i.Author}</span>
+                  </div>
+                )) : <div className="p-3 text-sm italic text-muted-foreground">no open issues</div>}
               </div>
             </div>
           )}

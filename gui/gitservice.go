@@ -221,3 +221,15 @@ func (g *GitService) StashDrop(ref string) error {
 func (g *GitService) Show(rev string) (*gitops.CommitDetail, error) {
 	return gitops.Show(g.repoDir, rev)
 }
+
+func (g *GitService) CurrentBranch() (string, error) {
+	return gitops.CurrentBranch(g.repoDir)
+}
+
+func (g *GitService) PRTemplate() string {
+	return gitops.ReadPRTemplate(g.repoDir)
+}
+
+func (g *GitService) DefaultPRTitle(branch string) (string, error) {
+	return gitops.LastCommitSubject(g.repoDir, branch)
+}

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/davasorus/gitmate/internal/ghapi"
+	"github.com/davasorus/gitmate/internal/gitops"
 	"github.com/spf13/cobra"
 )
 
@@ -14,8 +15,6 @@ func init() {
 	prCreateCmd.Flags().StringVarP(&prBody, "body", "b", "", "PR description")
 	prCreateCmd.Flags().StringVar(&prHead, "head", "", "source branch (required)")
 	prCreateCmd.Flags().StringVar(&prBase, "base", "live", "target branch")
-	_ = prCreateCmd.MarkFlagRequired("title")
-	_ = prCreateCmd.MarkFlagRequired("head")
 
 	issueCreateCmd.Flags().StringVar(&issueRepoFlag, "repo", "", "target repo as owner/name (defaults to origin remote)")
 	issueCreateCmd.Flags().StringVarP(&issueTitle, "title", "t", "", "issue title (required)")
@@ -43,12 +42,27 @@ var prCreateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		head := prHead
+		if head == "" {
+			head, err = gitops.CurrentBranch(".")
+			if err != nil {
+				return err
+			}
+		}
+		title := prTitle
+		if title == "" {
+			title, _ = gitops.LastCommitSubject(".", head)
+		}
+		body := prBody
+		if body == "" {
+			body = gitops.ReadPRTemplate(".")
+		}
 		ctx := context.Background()
 		client, err := ghapi.New(ctx, owner, repo)
 		if err != nil {
 			return err
 		}
-		num, url, err := client.CreatePR(ctx, owner, repo, prTitle, prBody, prHead, prBase)
+		num, url, err := client.CreatePR(ctx, owner, repo, title, body, head, prBase)
 		if err != nil {
 			return err
 		}

@@ -198,7 +198,7 @@
 - [ ] CLI: `gitmate clone <url>`
 - [ ] GUI: clone dialog
 
-### 3.3 Richer GitHub (REST)  [ ]
+### 3.3 Richer GitHub (REST)  [~]  (partial: issues list + improved PR create shipped)
 - [ ] PR reviews + review comments
 - [ ] labels, assignees, milestones
 - [ ] releases list / create (ties to tags 2.6)

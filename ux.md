@@ -181,3 +181,7 @@ building on it; do budget a polish pass after the sidebar+main shell + DiffView 
 - Destructive actions always use ConfirmButton.
 - Keep the errors-surface-as-toast + nil-safe rendering rules from ROADMAP.
 - Update checkboxes here as components/tokens land.
+
+## Update log
+
+- PR creation redesigned: head pre-filled with current branch (editable), base as branch dropdown, title optional (defaults to last commit subject), body pre-loaded from `.github/PULL_REQUEST_TEMPLATE.md`, PR link shown on success. Issues promoted to a dedicated sidebar tab.
