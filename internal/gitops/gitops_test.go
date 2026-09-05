@@ -252,3 +252,40 @@ func TestSwitchNewDuplicateErrors(t *testing.T) {
 		t.Fatal("expected error creating an existing branch")
 	}
 }
+
+func TestRenameAndDeleteBranch(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "x\n")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+	start, _ := CurrentBranch(dir)
+
+	// create a branch off HEAD (no unique commits), rename it, then safe-delete it
+	if err := SwitchNew(dir, "temp"); err != nil {
+		t.Fatal(err)
+	}
+	if err := Switch(dir, start); err != nil {
+		t.Fatal(err)
+	}
+	if err := RenameBranch(dir, "temp", "temp2"); err != nil {
+		t.Fatal(err)
+	}
+	if err := DeleteBranch(dir, "temp2", false); err != nil {
+		t.Fatalf("safe delete of merged branch should succeed: %v", err)
+	}
+}
+
+func TestDeleteCurrentBranchErrors(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "x\n")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+	cur, _ := CurrentBranch(dir)
+	if err := DeleteBranch(dir, cur, false); err == nil {
+		t.Fatal("expected error deleting the current branch")
+	}
+}

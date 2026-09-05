@@ -95,6 +95,8 @@ export default function App() {
   const [openDiff, setOpenDiff] = useState<{ path: string; staged: boolean } | null>(null);
   const [diffFiles, setDiffFiles] = useState<FileDiff[]>([]);
   const [confirmDiscard, setConfirmDiscard] = useState<string | null>(null);
+  const [confirmDelBranch, setConfirmDelBranch] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ old: string; next: string } | null>(null);
 
   const [toast, setToast] = useState<Toast>(null);
   const [busy, setBusy] = useState("");
@@ -228,6 +230,21 @@ export default function App() {
       return `created ${b}`;
     }, "branch created");
 
+  const doDeleteBranch = (name: string, force: boolean) =>
+    run(`delbranch-${name}`, async () => {
+      await GitService.DeleteBranch(name, force);
+      setConfirmDelBranch(null);
+      return `deleted ${name}`;
+    }, `deleted ${name}`);
+  const doRenameBranch = () =>
+    run("rename-branch", async () => {
+      if (!renaming) return;
+      const { old, next } = renaming;
+      await GitService.RenameBranch(old, next.trim());
+      setRenaming(null);
+      return `renamed ${old} → ${next.trim()}`;
+    }, "branch renamed");
+
   /* ---------- styles ---------- */
   const input = "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-[var(--color-ahead)]";
   const btn = "rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-background disabled:opacity-40";
@@ -314,6 +331,44 @@ export default function App() {
                 <button onClick={() => doDiscard(confirmDiscard)} disabled={!!busy}
                         className="rounded-md bg-[var(--color-removed)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40">
                   {busy === `discard-${confirmDiscard}` ? "…" : "Discard"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {confirmDelBranch && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="w-96 rounded-lg border border-border bg-card p-4 shadow-lg">
+              <div className="mb-2 text-sm font-semibold text-[var(--color-removed)]">Delete branch?</div>
+              <div className="mb-4 break-all text-xs text-muted-foreground">
+                Delete branch <span className="text-foreground">{confirmDelBranch}</span>? Safe delete refuses if it has unmerged commits.
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setConfirmDelBranch(null)} disabled={!!busy}
+                        className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-40">Cancel</button>
+                <button onClick={() => doDeleteBranch(confirmDelBranch, false)} disabled={!!busy}
+                        className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-40">Delete</button>
+                <button onClick={() => doDeleteBranch(confirmDelBranch, true)} disabled={!!busy}
+                        className="rounded-md bg-[var(--color-removed)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40">
+                  {busy === `delbranch-${confirmDelBranch}` ? "…" : "Force delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {renaming && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="w-96 rounded-lg border border-border bg-card p-4 shadow-lg">
+              <div className="mb-2 text-sm font-semibold">Rename branch</div>
+              <input autoFocus value={renaming.next}
+                     onChange={(e) => setRenaming({ old: renaming.old, next: e.target.value })}
+                     className={`${input} mb-4 w-full`} />
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setRenaming(null)} disabled={!!busy}
+                        className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-40">Cancel</button>
+                <button onClick={doRenameBranch} disabled={!!busy || !renaming.next.trim() || renaming.next.trim() === renaming.old}
+                        className={btn}>
+                  {busy === "rename-branch" ? "…" : "Rename"}
                 </button>
               </div>
             </div>
@@ -473,12 +528,24 @@ export default function App() {
                       <span className="text-xs text-muted-foreground">↑{b.Ahead} ↓{b.Behind}</span>
                     ) : null}
                     <span className="truncate text-xs text-muted-foreground">{b.LastSubject}</span>
-                    {!b.IsCurrent && (
-                      <button onClick={() => doSwitch(b.Name)} disabled={!!busy}
-                              className="ml-auto shrink-0 rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40">
-                        {busy === `switch-${b.Name}` ? "…" : "Switch"}
+                    <span className="ml-auto flex shrink-0 gap-1">
+                      {!b.IsCurrent && (
+                        <button onClick={() => doSwitch(b.Name)} disabled={!!busy}
+                                className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40">
+                          {busy === `switch-${b.Name}` ? "…" : "Switch"}
+                        </button>
+                      )}
+                      <button onClick={() => setRenaming({ old: b.Name, next: b.Name })} disabled={!!busy}
+                              className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40">
+                        Rename
                       </button>
-                    )}
+                      {!b.IsCurrent && (
+                        <button onClick={() => setConfirmDelBranch(b.Name)} disabled={!!busy}
+                                className="rounded-md border border-border px-2 py-0.5 text-xs text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10 disabled:opacity-40">
+                          {busy === `delbranch-${b.Name}` ? "…" : "Delete"}
+                        </button>
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>

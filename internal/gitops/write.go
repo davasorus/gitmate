@@ -58,6 +58,26 @@ func SwitchNew(dir, branch string) error {
 	return err
 }
 
+// DeleteBranch deletes a branch. With force=false it uses safe delete (-d),
+// which refuses to delete a branch holding commits not merged elsewhere. With
+// force=true it uses -D, deleting regardless (may orphan commits). Git refuses
+// to delete the currently checked-out branch either way.
+func DeleteBranch(dir, name string, force bool) error {
+	flag := "-d"
+	if force {
+		flag = "-D"
+	}
+	_, err := run(dir, "branch", flag, name)
+	return err
+}
+
+// RenameBranch renames a branch (git branch -m). Renaming the current branch
+// is allowed.
+func RenameBranch(dir, oldName, newName string) error {
+	_, err := run(dir, "branch", "-m", oldName, newName)
+	return err
+}
+
 // CreateCommit creates a commit with the given message and returns the new short hash.
 func CreateCommit(dir, message string) (string, error) {
 	if strings.TrimSpace(message) == "" {

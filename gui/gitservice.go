@@ -118,6 +118,14 @@ func (g *GitService) SwitchNew(branch string) error {
 	return gitops.SwitchNew(g.repoDir, branch)
 }
 
+func (g *GitService) DeleteBranch(name string, force bool) error {
+	return gitops.DeleteBranch(g.repoDir, name, force)
+}
+
+func (g *GitService) RenameBranch(oldName, newName string) error {
+	return gitops.RenameBranch(g.repoDir, oldName, newName)
+}
+
 func (g *GitService) Commit(message string) (string, error) {
 	return gitops.CreateCommit(g.repoDir, message)
 }
