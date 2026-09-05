@@ -17,7 +17,7 @@ func init() {
 	stashSaveCmd.Flags().StringVarP(&stashMessage, "message", "m", "", "stash description")
 	stashSaveCmd.Flags().BoolVarP(&stashUntracked, "include-untracked", "u", false, "also stash untracked files")
 	stashDropCmd.Flags().BoolVarP(&stashDropForce, "force", "f", false, "confirm dropping the stash (destructive)")
-	stashCmd.AddCommand(stashSaveCmd, stashListCmd, stashPopCmd, stashDropCmd)
+	stashCmd.AddCommand(stashSaveCmd, stashListCmd, stashPopCmd, stashApplyCmd, stashDropCmd)
 	rootCmd.AddCommand(stashCmd)
 }
 
@@ -98,6 +98,23 @@ var stashDropCmd = &cobra.Command{
 			return err
 		}
 		fmt.Println("dropped stash")
+		return nil
+	},
+}
+
+var stashApplyCmd = &cobra.Command{
+	Use:   "apply [ref]",
+	Short: "Apply a stash without removing it from the list",
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ref := ""
+		if len(args) == 1 {
+			ref = args[0]
+		}
+		if err := gitops.StashApply(".", ref); err != nil {
+			return err
+		}
+		fmt.Println("applied stash (kept in list)")
 		return nil
 	},
 }

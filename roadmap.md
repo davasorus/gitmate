@@ -1,5 +1,22 @@
 # gitmate — Roadmap to a Full Git Client (CLI + GUI)
 
+---
+
+## ✅ TIER 1/2 FUNCTIONAL GAPS — CLOSED (both re-implemented after the reset)
+
+Two features were built then lost in a `git reset --hard`. Both must be
+re-implemented to make Tier 1/2 functionally complete. Doing them one at a time.
+
+- [x] 1.7 stash apply — DONE — have save/list/pop/drop; missing `apply` (apply and keep).
+- [x] 2.5 GUI cherry-pick reachability — DONE (History branch selector + target labeling) — History shows only the current branch, so
+  GUI cherry-pick can only pick commits already on the branch (a no-op). Needs a
+  History branch selector (log any ref) + label the cherry-pick/revert target.
+  CLI cherry-pick already works.
+
+Correctly NOT gaps (already Tier 3): remote management (3.1), clone (3.2).
+
+---
+
 > Living plan. gitmate is a Cobra CLI + Wails 3 (React/Tailwind/shadcn) desktop app
 > over one shared Go engine. Goal: a real, full-featured git client usable from both
 > the terminal and the UI — not a toy. This doc is the reference we build against.
@@ -7,6 +24,8 @@
 ---
 
 ## Architecture (fixed decisions)
+
+> SCOPE BOUNDARY (decided at end of Tier 2): gitmate is a git-OPERATIONS client, not a code editor. Anything that only makes sense inside an editor — blame annotations, inline file editing, a source file tree/viewer, syntax highlighting — is OUT OF SCOPE. Those live in the user's actual editor (VS Code + GitLens). This prevents scope creep toward 'rebuild the IDE'.
 
 - **Shared engine, two frontends.** All git/GitHub logic lives in `internal/`.
   The CLI (`cmd/gitmate`) and GUI (`gui/`) are thin layers that call the same engine.
@@ -134,7 +153,7 @@
 ### 1.7 Stash  [x]
 - [x] engine: stash save / list / pop / drop (apply deferred)
 - [x] CLI: `gitmate stash [save|list|pop|drop]`
-- [x] GUI: Stashes sidebar section (save, list, pop, drop w/ confirm)
+- [x] GUI: Stashes sidebar (save, list, pop, apply, drop w/ confirm)
 
 ### 1.8 Show (inspect one commit)  [x]
 - [x] engine: commit metadata + diff for a rev (root-commit safe)
@@ -145,45 +164,47 @@
 
 ## TIER 2 — History & repair (git gets sharp; guardrails matter)
 
-### 2.1 Merge  [ ]
-- [ ] engine: merge a branch; detect conflicts
-- [ ] CLI: `gitmate merge <branch>`
-- [ ] GUI: merge action + conflict surfacing
+> STATUS: TIER 2 COMPLETE — merge, conflicts, rebase, reset, cherry-pick/revert, tags, reflog, blame all shipped (CLI + GUI). Deferred within-tier: interactive rebase, per-region conflict resolution. Next: polish stage (row-action cleanup, History branch browsing, etc.) or Tier 3.
 
-### 2.2 Conflict resolution  [ ]  (shared by merge/rebase/pull)
-- [ ] engine: list conflicted files; read conflict markers; mark resolved (add)
-- [ ] CLI: `gitmate conflicts`, resolve flow
-- [ ] GUI: conflict view — per-file, choose ours/theirs/edited, mark resolved
+### 2.1 Merge  [x]
+- [x] engine: merge a branch; detect conflicts (Merge/ConflictedFiles/MergeInProgress/MergeAbort)
+- [x] CLI: `gitmate merge <branch>` + `merge-abort`
+- [x] GUI: Merge button in Branches + merge-in-progress banner
 
-### 2.3 Rebase  [ ]
-- [ ] engine: rebase onto; continue/abort
-- [ ] engine: interactive rebase (reorder/squash/edit) — hard to model
-- [ ] CLI: `gitmate rebase <base> [--continue|--abort]`
-- [ ] GUI: (stretch) interactive rebase editor
+### 2.2 Conflict resolution  [x] (whole-file ours/theirs + hand-edit; per-region deferred)
+- [x] engine: ReadConflict (parse regions), ResolveOurs/Theirs, MarkResolved
+- [x] CLI: `gitmate conflicts`, `gitmate resolve <path> [--side ours|theirs]`
+- [x] GUI: Conflicts view — per-file ours/theirs preview + Take ours/theirs/Mark resolved (per-region UI deferred to polish)
 
-### 2.4 Reset  [ ]  (dangerous — guardrails required)
-- [ ] engine: reset soft / mixed / hard
-- [ ] CLI: `gitmate reset [--soft|--mixed|--hard] <rev>` (confirm on hard)
-- [ ] GUI: reset with explicit mode choice + confirm
+### 2.3 Rebase  [x] (non-interactive; interactive rebase deferred)
+- [x] engine: Rebase/RebaseContinue/RebaseAbort/RebaseInProgress
+- [ ] engine: interactive rebase (reorder/squash/edit) — deferred
+- [x] CLI: `gitmate rebase <base> [--continue|--abort]`
+- [x] GUI: Rebase button in Branches + rebase-in-progress banner (Continue/Abort), reuses Conflicts view; interactive editor deferred
 
-### 2.5 Cherry-pick / revert  [ ]
-- [ ] engine: cherry-pick <rev>, revert <rev>
-- [ ] CLI + GUI actions
+### 2.4 Reset  [x]  (dangerous — guardrails required)
+- [x] engine: Reset(rev, soft|mixed|hard)
+- [x] CLI: `gitmate reset <rev> [--soft|--hard]` (--hard needs --force)
+- [x] GUI: Reset to here (Soft/Mixed/Hard) on each Reflog entry; Hard needs confirm dialog
 
-### 2.6 Tags  [ ]
-- [ ] engine: create / list / delete tags (lightweight + annotated)
-- [ ] CLI: `gitmate tag [create|list|delete]`
-- [ ] GUI: tag list + create (ties to GoReleaser release flow)
+### 2.5 Cherry-pick / revert  [x]
+- [x] engine: CherryPick/Revert (+continue/abort, SequencerInProgress) — reuses conflict flow
+- [x] CLI: `gitmate cherry-pick <rev>` / `revert <rev>` (--continue/--abort); GUI: Cherry-pick + Revert buttons on History commits, in-progress banners route to Conflicts view
 
-### 2.7 Reflog  [ ]  (the safety net / undo backbone)
-- [ ] engine: read reflog
-- [ ] CLI: `gitmate reflog`
-- [ ] GUI: reflog view; (stretch) one-click restore to a reflog entry
+### 2.6 Tags  [x]
+- [x] engine: ListTags/CreateTag(lightweight+annotated)/DeleteTag/PushTag
+- [x] CLI: `gitmate tag [list|create|delete|push]`
+- [x] GUI: Tags sidebar view — list, create (annotated opt), delete (local or local+origin), push (triggers release), Sync tags (fetch --prune); tags now refresh on global Reload; location shown as Monitor(local)/Cloud(remote) icons; Tags promoted out of the SOON group into active nav
 
-### 2.8 Blame  [ ]
-- [ ] engine: line-by-line authorship for a file
-- [ ] CLI: `gitmate blame <path>`
-- [ ] GUI: blame gutter in file view
+### 2.7 Reflog  [x]  (the safety net / undo backbone)
+- [x] engine: Reflog(dir, limit) — parses selector/action/message
+- [x] CLI: `gitmate reflog [-n N]`
+- [x] GUI: Reflog view color-coded; per-entry Reset to here (soft/mixed/hard) wired via 2.4
+
+### 2.8 Blame  [x]
+- [x] engine: Blame(path) via git blame --porcelain
+- [x] CLI: `gitmate blame <path>`
+- [x] GUI: DECLINED — blame is only meaningful while reading code (chasing a bug), which is a code-editor activity. gitmate is a git-operations client, not an editor; blame has no natural context here. Kept as CLI (`gitmate blame <path>`).
 
 ---
 
@@ -199,6 +220,17 @@
 - [ ] GUI: clone dialog
 
 ### 3.3 Richer GitHub (REST)  [~]  (partial: issues list + improved PR create shipped)
+- [ ] CI does not build/typecheck the GUI (only cmd/ + internal/). This is why
+  mangled GUI files / missing frontend deps reached runtime instead of failing in
+  CI. Add a CI job: `go build ./gui/...` + a frontend typecheck/build. Hygiene.
+- [ ] Release ships only the CLI (`gitmate.exe`), not the Wails GUI. GoReleaser builds
+  `cmd/gitmate` (CLI); the desktop GUI needs `wails3 build` per-platform (embeds frontend,
+  icons, manifests), which GoReleaser doesn't do natively. Options: GoReleaser custom build
+  invoking wails3, or a separate release job running `wails3 build` and attaching artifacts.
+  Pairs with the workflow_dispatch release item.
+- [ ] Binaries are unsigned — Windows SmartScreen warns on download/run. Signing needs an
+  Authenticode cert (Windows) / Apple Developer cert + notarization (macOS) stored as CI
+  secrets; has real cost + setup. Defer until distributing to actual users.
 - [ ] PR reviews + review comments
 - [ ] labels, assignees, milestones
 - [ ] releases list / create (ties to tags 2.6)
@@ -209,6 +241,14 @@
 - [ ] use where REST would need many round-trips (PR detail view)
 
 ### 3.5 Webhooks (live updates)  [ ]  (only piece needing a server)
+- [ ] Release ships only the CLI (`gitmate.exe`), not the Wails GUI. GoReleaser builds
+  `cmd/gitmate` (CLI); the GUI needs `wails3 build` per-platform, which GoReleaser doesn't
+  do natively. Options: GoReleaser custom build invoking wails3, or a separate workflow job
+  running `wails3 build` and attaching the artifacts. Pairs with the workflow_dispatch
+  release item. (Raised during Tier 2; deferred to Tier 3 per roadmap discipline.)
+- [ ] Binaries are unsigned (Windows SmartScreen warning). Needs Authenticode cert (Windows)
+  / Apple Developer cert + notarization (macOS) stored as CI secrets — cost + setup. Defer
+  until distributing to real users. (Tier 3 at earliest.)
 - [ ] small HTTP server to receive events (HMAC-SHA256 verify, constant-time compare)
 - [ ] push events → GUI updates live instead of polling
 - [ ] biggest new concept; largest infra commitment
@@ -251,3 +291,34 @@
 - Keep CI green; run `golangci-lint run ./cmd/... ./internal/...` before pushing.
 - Add a gitops table test for each new engine operation.
 - Update this doc's checkboxes as things land.
+
+### UX feedback (added post-Tier-2.2)
+- [ ] **Auto-refresh (kill the manual Reload button for normal use).** Two parts:
+  (1) reload local state on window focus, so returning to the app after terminal/
+  browser work reflects reality without a manual Reload; (2) periodic background
+  fetch (every few minutes and/or on focus) so ahead/behind + remote state stay
+  fresh — NOT fetch-on-every-reload (that's slow/chatty/offline-fragile: reload is
+  cheap+local, fetch is network). After this, Reload becomes a rarely-needed manual
+  override, not the primary refresh mechanism. Supersedes the earlier bare
+  "reload on window focus" note.
+- [ ] Branch-row actions: five equal-weight buttons (Switch/Merge/Rebase/Rename/Delete)
+  feel cluttered, BUT the Integrate-menu redesign attempted mid-Tier-2 was worse
+  (hidden click-to-switch, over-engineered dropdowns) and was reverted. Revisit in the
+  dedicated polish stage with a light touch: visual hierarchy (primary vs secondary
+  weight) only — do NOT hide state-changing actions behind clicks/menus.
+- [ ] **GUI reload on window focus** — the GUI polls, it doesn't watch. Actions taken
+  in the terminal (or another git tool) while the app is open aren't reflected until a
+  manual Reload or a GUI action forces reload(). Reload on window-focus covers the
+  common terminal↔GUI bounce cheaply (a filesystem watcher on .git is the heavier,
+  fuller fix). Surfaced when a CLI-concluded merge left the banner stale.
+- [ ] **GUI should set repoDir to the real repo root.** repoDir defaults to "." and the
+  Wails process runs from gui/, so git commands work only because git walks *up* to
+  find the repo. Path-relative filesystem commands (e.g. conflict resolve's
+  `checkout --ours -- <path>`) broke because the pathspec resolved against gui/, not
+  the root. ResolveOurs/Theirs/MarkResolved self-correct via `rev-parse --show-toplevel`,
+  but the real fix is aligning repoDir/cwd once for all commands.
+- [ ] **Merge-completion UX** — banner should auto-clear when a merge concludes, and the
+  Conflicts view should offer a "Commit merge" button once conflicts hit zero (right now
+  it says "commit in Changes to finish" but nothing pulls you there).
+- [ ] Windows path casing (README.MD vs README.md) is a recurring gotcha — git pathspecs
+  are case-sensitive even on case-insensitive filesystems. Not code-fixable; note for docs.

@@ -136,3 +136,137 @@ func CurrentBranch(dir string) (string, error) {
 	}
 	return strings.TrimSpace(out), nil
 }
+
+// Merge merges the named branch into the current branch. On conflicts git exits
+// non-zero and leaves conflict markers; that error is returned to surface.
+func Merge(dir, branch string) error {
+	_, err := run(dir, "merge", branch)
+	return err
+}
+
+// MergeAbort aborts an in-progress merge, restoring the pre-merge state.
+func MergeAbort(dir string) error {
+	_, err := run(dir, "merge", "--abort")
+	return err
+}
+
+// ConflictedFiles returns paths currently in a conflicted (unmerged) state.
+func ConflictedFiles(dir string) ([]string, error) {
+	out, err := run(dir, "diff", "--name-only", "--diff-filter=U")
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	for _, line := range strings.Split(out, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			files = append(files, line)
+		}
+	}
+	return files, nil
+}
+
+// MergeInProgress reports whether a merge is underway (MERGE_HEAD exists).
+func MergeInProgress(dir string) bool {
+	_, err := run(dir, "rev-parse", "--verify", "--quiet", "MERGE_HEAD")
+	return err == nil
+}
+
+// Rebase replays the current branch's commits on top of base. Like merge it can
+// conflict — but per replayed commit, so it may stop repeatedly. On conflict git
+// exits non-zero; resolve then RebaseContinue, or RebaseAbort to bail.
+func Rebase(dir, base string) error {
+	_, err := run(dir, "rebase", base)
+	return err
+}
+
+// RebaseContinue resumes a rebase after conflicts are resolved and staged.
+func RebaseContinue(dir string) error {
+	// -c core.editor=true skips the commit-message editor prompt.
+	_, err := run(dir, "-c", "core.editor=true", "rebase", "--continue")
+	return err
+}
+
+// RebaseAbort aborts an in-progress rebase, restoring the pre-rebase state.
+func RebaseAbort(dir string) error {
+	_, err := run(dir, "rebase", "--abort")
+	return err
+}
+
+// RebaseInProgress reports whether a rebase is underway (the rebase-merge or
+// rebase-apply state dir exists under .git).
+func RebaseInProgress(dir string) bool {
+	// `git rev-parse --git-path` gives the path; existence check via status.
+	out, err := run(dir, "status")
+	if err != nil {
+		return false
+	}
+	return strings.Contains(out, "rebase in progress") || strings.Contains(out, "interactive rebase in progress")
+}
+
+// ResetMode is soft (move HEAD, keep index + working tree), mixed (move HEAD +
+// reset index, keep working tree — the default), or hard (move HEAD + reset
+// index + working tree, DISCARDING uncommitted changes and orphaning commits
+// after the target — recoverable via reflog until it expires).
+type ResetMode string
+
+const (
+	ResetSoft  ResetMode = "soft"
+	ResetMixed ResetMode = "mixed"
+	ResetHard  ResetMode = "hard"
+)
+
+// Reset moves HEAD to rev using the given mode.
+func Reset(dir, rev string, mode ResetMode) error {
+	m := string(mode)
+	if m == "" {
+		m = "mixed"
+	}
+	_, err := run(dir, "reset", "--"+m, rev)
+	return err
+}
+
+// CherryPick applies the changes from a single commit onto the current branch,
+// creating a new commit. Can conflict (uses the same conflict machinery as
+// merge/rebase); resolve then CherryPickContinue, or CherryPickAbort.
+func CherryPick(dir, rev string) error {
+	_, err := run(dir, "cherry-pick", rev)
+	return err
+}
+
+func CherryPickContinue(dir string) error {
+	_, err := run(dir, "-c", "core.editor=true", "cherry-pick", "--continue")
+	return err
+}
+
+func CherryPickAbort(dir string) error {
+	_, err := run(dir, "cherry-pick", "--abort")
+	return err
+}
+
+// Revert creates a NEW commit that undoes the changes of a previous commit —
+// the safe, history-preserving undo (unlike Reset, which rewrites history).
+// Can conflict; resolve then RevertContinue, or RevertAbort.
+func Revert(dir, rev string) error {
+	_, err := run(dir, "-c", "core.editor=true", "revert", "--no-edit", rev)
+	return err
+}
+
+func RevertContinue(dir string) error {
+	_, err := run(dir, "-c", "core.editor=true", "revert", "--continue")
+	return err
+}
+
+func RevertAbort(dir string) error {
+	_, err := run(dir, "revert", "--abort")
+	return err
+}
+
+// SequencerInProgress reports whether a cherry-pick or revert is mid-operation
+// (paused on a conflict). Both use git's "sequencer" state.
+func SequencerInProgress(dir string) (cherryPick bool, revert bool) {
+	out, err := run(dir, "status")
+	if err != nil {
+		return false, false
+	}
+	return strings.Contains(out, "cherry-pick"), strings.Contains(out, "revert")
+}

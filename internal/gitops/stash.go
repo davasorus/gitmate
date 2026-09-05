@@ -77,6 +77,17 @@ func StashPop(dir, ref string) error {
 	return err
 }
 
+// StashApply applies a stash WITHOUT removing it from the stash list (unlike
+// StashPop, which applies and drops). Empty ref applies the most recent.
+func StashApply(dir, ref string) error {
+	args := []string{"stash", "apply"}
+	if ref != "" {
+		args = append(args, ref)
+	}
+	_, err := run(dir, args...)
+	return err
+}
+
 // StashDrop discards a stash entry without applying it. An empty ref drops the
 // most recent. Destructive — the stashed changes are lost.
 func StashDrop(dir, ref string) error {

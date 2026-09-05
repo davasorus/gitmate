@@ -29,10 +29,19 @@ type Commit struct {
 const logFormat = "%H%x00%h%x00%an%x00%ae%x00%at%x00%s%x1e"
 
 // GetLog runs git log with a fixed format and parses up to `limit` commits.
+// GetLog logs the current branch (HEAD).
 func GetLog(dir string, limit int) ([]Commit, error) {
+	return GetLogRef(dir, "", limit)
+}
+
+// GetLogRef logs a specific ref (branch, tag, commit-ish). Empty ref = HEAD.
+func GetLogRef(dir, ref string, limit int) ([]Commit, error) {
 	args := []string{"log", "--pretty=format:" + logFormat}
 	if limit > 0 {
 		args = append(args, "-n", strconv.Itoa(limit))
+	}
+	if ref != "" {
+		args = append(args, ref)
 	}
 	out, err := run(dir, args...)
 	if err != nil {

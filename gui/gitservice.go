@@ -43,6 +43,10 @@ func (g *GitService) Log(limit int) ([]gitops.Commit, error) {
 	return gitops.GetLog(g.repoDir, limit)
 }
 
+func (g *GitService) LogRef(ref string, limit int) ([]gitops.Commit, error) {
+	return gitops.GetLogRef(g.repoDir, ref, limit)
+}
+
 func (g *GitService) Branches() ([]gitops.Branch, error) {
 	return gitops.GetBranches(g.repoDir)
 }
@@ -146,6 +150,47 @@ func (g *GitService) Pull(rebase bool) error {
 	return gitops.Pull(g.repoDir, rebase)
 }
 
+func (g *GitService) Merge(branch string) error          { return gitops.Merge(g.repoDir, branch) }
+func (g *GitService) MergeAbort() error                  { return gitops.MergeAbort(g.repoDir) }
+func (g *GitService) ConflictedFiles() ([]string, error) { return gitops.ConflictedFiles(g.repoDir) }
+func (g *GitService) MergeInProgress() bool              { return gitops.MergeInProgress(g.repoDir) }
+
+func (g *GitService) Rebase(base string) error { return gitops.Rebase(g.repoDir, base) }
+func (g *GitService) RebaseContinue() error    { return gitops.RebaseContinue(g.repoDir) }
+func (g *GitService) RebaseAbort() error       { return gitops.RebaseAbort(g.repoDir) }
+func (g *GitService) RebaseInProgress() bool   { return gitops.RebaseInProgress(g.repoDir) }
+
+func (g *GitService) ListTags() ([]gitops.Tag, error) { return gitops.ListTags(g.repoDir) }
+func (g *GitService) CreateTag(name, message string) error {
+	return gitops.CreateTag(g.repoDir, name, message)
+}
+func (g *GitService) DeleteTag(name string) error { return gitops.DeleteTag(g.repoDir, name) }
+func (g *GitService) PushTag(name string) error   { return gitops.PushTag(g.repoDir, name) }
+
+func (g *GitService) DeleteRemoteTag(name string) error {
+	return gitops.DeleteRemoteTag(g.repoDir, name)
+}
+func (g *GitService) FetchTags() error { return gitops.FetchTags(g.repoDir) }
+func (g *GitService) SmartDeleteTag(name string) (string, error) {
+	return gitops.SmartDeleteTag(g.repoDir, name)
+}
+
+func (g *GitService) ReadConflict(path string) (*gitops.ConflictFile, error) {
+	return gitops.ReadConflict(g.repoDir, path)
+}
+
+func (g *GitService) ResolveOurs(path string) error {
+	return gitops.ResolveOurs(g.repoDir, path)
+}
+
+func (g *GitService) ResolveTheirs(path string) error {
+	return gitops.ResolveTheirs(g.repoDir, path)
+}
+
+func (g *GitService) MarkResolved(path string) error {
+	return gitops.MarkResolved(g.repoDir, path)
+}
+
 // --- GitHub write ---
 
 func (g *GitService) CreatePR(title, body, head, base string) (string, error) {
@@ -214,6 +259,10 @@ func (g *GitService) StashPop(ref string) error {
 	return gitops.StashPop(g.repoDir, ref)
 }
 
+func (g *GitService) StashApply(ref string) error {
+	return gitops.StashApply(g.repoDir, ref)
+}
+
 func (g *GitService) StashDrop(ref string) error {
 	return gitops.StashDrop(g.repoDir, ref)
 }
@@ -221,6 +270,26 @@ func (g *GitService) StashDrop(ref string) error {
 func (g *GitService) Show(rev string) (*gitops.CommitDetail, error) {
 	return gitops.Show(g.repoDir, rev)
 }
+
+func (g *GitService) Reflog(limit int) ([]gitops.ReflogEntry, error) {
+	return gitops.Reflog(g.repoDir, limit)
+}
+
+func (g *GitService) Blame(path string) ([]gitops.BlameLine, error) {
+	return gitops.Blame(g.repoDir, path)
+}
+
+func (g *GitService) Reset(rev, mode string) error {
+	return gitops.Reset(g.repoDir, rev, gitops.ResetMode(mode))
+}
+
+func (g *GitService) CherryPick(rev string) error       { return gitops.CherryPick(g.repoDir, rev) }
+func (g *GitService) CherryPickContinue() error         { return gitops.CherryPickContinue(g.repoDir) }
+func (g *GitService) CherryPickAbort() error            { return gitops.CherryPickAbort(g.repoDir) }
+func (g *GitService) Revert(rev string) error           { return gitops.Revert(g.repoDir, rev) }
+func (g *GitService) RevertContinue() error             { return gitops.RevertContinue(g.repoDir) }
+func (g *GitService) RevertAbort() error                { return gitops.RevertAbort(g.repoDir) }
+func (g *GitService) SequencerInProgress() (bool, bool) { return gitops.SequencerInProgress(g.repoDir) }
 
 func (g *GitService) CurrentBranch() (string, error) {
 	return gitops.CurrentBranch(g.repoDir)
