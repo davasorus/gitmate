@@ -3,7 +3,7 @@ import { GitService } from "../bindings/github.com/davasorus/gitmate/gui";
 import type { Status, Commit, Branch, FileDiff, Stash, CommitDetail } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
 import type { PR, CheckRun, Issue } from "../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
-export type View = "changes" | "history" | "branches" | "prs" | "issues" | "stashes" | "conflicts";
+export type View = "changes" | "history" | "branches" | "prs" | "issues" | "stashes" | "tags" | "conflicts";
 type Toast = { kind: "ok" | "err"; msg: string } | null;
 
 export interface GitmateState {

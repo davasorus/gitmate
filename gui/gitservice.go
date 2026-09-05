@@ -156,6 +156,13 @@ func (g *GitService) RebaseContinue() error    { return gitops.RebaseContinue(g.
 func (g *GitService) RebaseAbort() error       { return gitops.RebaseAbort(g.repoDir) }
 func (g *GitService) RebaseInProgress() bool   { return gitops.RebaseInProgress(g.repoDir) }
 
+func (g *GitService) ListTags() ([]gitops.Tag, error) { return gitops.ListTags(g.repoDir) }
+func (g *GitService) CreateTag(name, message string) error {
+	return gitops.CreateTag(g.repoDir, name, message)
+}
+func (g *GitService) DeleteTag(name string) error { return gitops.DeleteTag(g.repoDir, name) }
+func (g *GitService) PushTag(name string) error   { return gitops.PushTag(g.repoDir, name) }
+
 func (g *GitService) ReadConflict(path string) (*gitops.ConflictFile, error) {
 	return gitops.ReadConflict(g.repoDir, path)
 }

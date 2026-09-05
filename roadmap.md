@@ -170,10 +170,10 @@
 - [ ] engine: cherry-pick <rev>, revert <rev>
 - [ ] CLI + GUI actions
 
-### 2.6 Tags  [ ]
-- [ ] engine: create / list / delete tags (lightweight + annotated)
-- [ ] CLI: `gitmate tag [create|list|delete]`
-- [ ] GUI: tag list + create (ties to GoReleaser release flow)
+### 2.6 Tags  [x]
+- [x] engine: ListTags/CreateTag(lightweight+annotated)/DeleteTag/PushTag
+- [x] CLI: `gitmate tag [list|create|delete|push]`
+- [x] GUI: Tags sidebar view — list, create (annotated opt), delete, push (push triggers release)
 
 ### 2.7 Reflog  [ ]  (the safety net / undo backbone)
 - [ ] engine: read reflog
@@ -253,6 +253,11 @@
 - Update this doc's checkboxes as things land.
 
 ### UX feedback (added post-Tier-2.2)
+- [ ] Branch-row actions: five equal-weight buttons (Switch/Merge/Rebase/Rename/Delete)
+  feel cluttered, BUT the Integrate-menu redesign attempted mid-Tier-2 was worse
+  (hidden click-to-switch, over-engineered dropdowns) and was reverted. Revisit in the
+  dedicated polish stage with a light touch: visual hierarchy (primary vs secondary
+  weight) only — do NOT hide state-changing actions behind clicks/menus.
 - [ ] **GUI reload on window focus** — the GUI polls, it doesn't watch. Actions taken
   in the terminal (or another git tool) while the app is open aren't reflected until a
   manual Reload or a GUI action forces reload(). Reload on window-focus covers the

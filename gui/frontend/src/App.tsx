@@ -6,6 +6,7 @@ import { PullRequests } from "./views/PullRequests";
 import { Issues } from "./views/Issues";
 import { Stashes } from "./views/Stashes";
 import { Conflicts } from "./views/Conflicts";
+import { Tags } from "./views/Tags";
 
 export default function App() {
   const {
@@ -59,7 +60,7 @@ export default function App() {
           <NavItem id="stashes" label="Stashes" badge={stashes.length} />
           <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Soon</div>
           <div className="px-3 py-1 text-sm text-muted-foreground/50">Remotes</div>
-          <div className="px-3 py-1 text-sm text-muted-foreground/50">Tags</div>
+          <NavItem id="tags" label="Tags" />
         </nav>
         <div className="border-t border-border p-2">
           <div className="mb-1 flex gap-1">
@@ -110,6 +111,7 @@ export default function App() {
           {view === "issues" && <Issues />}
           {view === "stashes" && <Stashes />}
           {view === "conflicts" && <Conflicts />}
+          {view === "tags" && <Tags />}
         </div>
       </main>
     </div>
