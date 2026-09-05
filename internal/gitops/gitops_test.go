@@ -208,3 +208,47 @@ func TestDiscardNoPathsErrors(t *testing.T) {
 		t.Fatal("expected error when no paths given")
 	}
 }
+
+func TestSwitchNewAndBack(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "x\n")
+	if err := Stage(dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+
+	start, err := CurrentBranch(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := SwitchNew(dir, "feature-x"); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := CurrentBranch(dir); b != "feature-x" {
+		t.Fatalf("expected feature-x, got %q", b)
+	}
+	if err := Switch(dir, start); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := CurrentBranch(dir); b != start {
+		t.Fatalf("expected back on %q, got %q", start, b)
+	}
+}
+
+func TestSwitchNewDuplicateErrors(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "x\n")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+	if err := SwitchNew(dir, "dup"); err != nil {
+		t.Fatal(err)
+	}
+	// back to a branch, then try to create "dup" again → should error
+	if err := SwitchNew(dir, "dup"); err == nil {
+		t.Fatal("expected error creating an existing branch")
+	}
+}

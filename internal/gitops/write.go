@@ -43,6 +43,21 @@ func Discard(dir string, paths ...string) error {
 	return err
 }
 
+// Switch changes the checked-out branch. Git refuses if uncommitted changes
+// would be overwritten; that refusal is returned as an error for the caller
+// to surface (commit, discard, or — once available — stash first).
+func Switch(dir, branch string) error {
+	_, err := run(dir, "switch", branch)
+	return err
+}
+
+// SwitchNew creates a new branch from the current HEAD and switches to it
+// (git switch -c). Fails if the branch already exists.
+func SwitchNew(dir, branch string) error {
+	_, err := run(dir, "switch", "-c", branch)
+	return err
+}
+
 // CreateCommit creates a commit with the given message and returns the new short hash.
 func CreateCommit(dir, message string) (string, error) {
 	if strings.TrimSpace(message) == "" {

@@ -104,6 +104,7 @@ export default function App() {
   const [prHead, setPrHead] = useState("");
   const [prBase, setPrBase] = useState("live");
   const [issueTitle, setIssueTitle] = useState("");
+  const [newBranch, setNewBranch] = useState("");
 
   const flash = (kind: "ok" | "err", msg: string) => {
     setToast({ kind, msg });
@@ -216,6 +217,16 @@ export default function App() {
       setConfirmDiscard(null);
       return `discarded ${path}`;
     }, `discarded ${path}`);
+
+  const doSwitch = (branch: string) =>
+    run(`switch-${branch}`, () => GitService.Switch(branch), `switched to ${branch}`);
+  const doCreateBranch = () =>
+    run("create-branch", async () => {
+      const b = newBranch.trim();
+      await GitService.SwitchNew(b);
+      setNewBranch("");
+      return `created ${b}`;
+    }, "branch created");
 
   /* ---------- styles ---------- */
   const input = "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-[var(--color-ahead)]";
@@ -440,19 +451,34 @@ export default function App() {
 
           {/* BRANCHES */}
           {view === "branches" && (
-            <div className="space-y-2">
+            <div className="space-y-4">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Branches</h2>
+
+              <div className="flex gap-2 rounded-lg border border-border p-3">
+                <input value={newBranch} onChange={(e) => setNewBranch(e.target.value)}
+                       placeholder="new branch name" className={`${input} flex-1`} />
+                <button onClick={doCreateBranch} disabled={!!busy || !newBranch.trim()} className={btn}>
+                  {busy === "create-branch" ? "…" : "Create + switch"}
+                </button>
+              </div>
+
               <div className="rounded-lg border border-border">
                 {(branches ?? []).map((b) => (
-                  <div key={b.Name} className="flex items-baseline gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
+                  <div key={b.Name} className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
                     {b.IsCurrent ? <span className="text-[var(--color-added)]">●</span> : <span className="w-2" />}
-                    <b>{b.Name}</b>
+                    <b className={b.IsCurrent ? "" : ""}>{b.Name}</b>
                     <span className="text-[var(--color-modified)]">{b.LastHash}</span>
                     {!b.Upstream && <span className="text-xs text-muted-foreground">(no upstream)</span>}
                     {b.Upstream && (b.Ahead || b.Behind) ? (
                       <span className="text-xs text-muted-foreground">↑{b.Ahead} ↓{b.Behind}</span>
                     ) : null}
-                    <span className="ml-auto truncate text-xs text-muted-foreground">{b.LastSubject}</span>
+                    <span className="truncate text-xs text-muted-foreground">{b.LastSubject}</span>
+                    {!b.IsCurrent && (
+                      <button onClick={() => doSwitch(b.Name)} disabled={!!busy}
+                              className="ml-auto shrink-0 rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40">
+                        {busy === `switch-${b.Name}` ? "…" : "Switch"}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

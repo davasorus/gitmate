@@ -110,6 +110,14 @@ func (g *GitService) DiscardPath(path string) error {
 	return gitops.Discard(g.repoDir, path)
 }
 
+func (g *GitService) Switch(branch string) error {
+	return gitops.Switch(g.repoDir, branch)
+}
+
+func (g *GitService) SwitchNew(branch string) error {
+	return gitops.SwitchNew(g.repoDir, branch)
+}
+
 func (g *GitService) Commit(message string) (string, error) {
 	return gitops.CreateCommit(g.repoDir, message)
 }
