@@ -132,3 +132,29 @@ func (g *GitService) CreateIssue(title, body string) (string, error) {
 	_, url, err := client.CreateIssue(ctx, owner, repo, title, body)
 	return url, err
 }
+
+func (g *GitService) MergePR(number int, method string) (string, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return "", err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return "", err
+	}
+	return client.MergePR(ctx, owner, repo, number, method)
+}
+
+func (g *GitService) PRChecks(number int) ([]ghapi.CheckRun, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.PRChecks(ctx, owner, repo, number)
+}

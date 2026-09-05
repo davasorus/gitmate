@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 
 	"github.com/google/go-github/v66/github"
+	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 )
 
@@ -16,13 +18,16 @@ type Client struct {
 	Repo  string
 }
 
-// New builds an authenticated client. The token is read from the
-// GITHUB_TOKEN environment variable — same convention as the Wails
-// updater tutorial, and what GitHub Actions injects automatically.
+// New builds an authenticated client. The token is resolved from, in order:
+//  1. the GITHUB_TOKEN process environment variable
+//  2. a .env file (walking up from the working directory)
+//  3. the persisted user environment variable (Windows), via `gh auth token`
+//
+// The first non-empty source wins.
 func New(ctx context.Context, owner, repo string) (*Client, error) {
-	token := os.Getenv("GITHUB_TOKEN")
+	token := resolveToken()
 	if token == "" {
-		return nil, errors.New("GITHUB_TOKEN not set — create a PAT and set it in your environment")
+		return nil, errors.New("no GitHub token found — set GITHUB_TOKEN, add it to a .env file, or run `gh auth login`")
 	}
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	httpClient := oauth2.NewClient(ctx, ts)
@@ -31,6 +36,24 @@ func New(ctx context.Context, owner, repo string) (*Client, error) {
 		Owner: owner,
 		Repo:  repo,
 	}, nil
+}
+
+// resolveToken tries several sources and returns the first non-empty token.
+func resolveToken() string {
+	// 1. Already in the process environment? Use it.
+	if t := strings.TrimSpace(os.Getenv("GITHUB_TOKEN")); t != "" {
+		return t
+	}
+
+	// 2. Load a .env file if present. godotenv.Load walks the current dir;
+	//    we also try the module root one level up (the GUI runs from gui/).
+	_ = godotenv.Load()
+	_ = godotenv.Load("../.env")
+	if t := strings.TrimSpace(os.Getenv("GITHUB_TOKEN")); t != "" {
+		return t
+	}
+
+	return ""
 }
 
 // Whoami returns the authenticated user's login — a cheap call to

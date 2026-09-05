@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { GitService } from "../bindings/github.com/davasorus/gitmate/gui";
 import type { Status, Commit, Branch } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
-import type { PR } from "../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type { PR, CheckRun } from "../bindings/github.com/davasorus/gitmate/internal/ghapi";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -14,7 +14,10 @@ export default function App() {
   const [commits, setCommits] = useState<Commit[]>([]);
   const [prs, setPRs] = useState<PR[]>([]);
   const [toast, setToast] = useState<Toast>(null);
-  const [busy, setBusy] = useState<string>(""); // name of the in-flight action, "" if idle
+  const [busy, setBusy] = useState<string>("");
+
+  // per-PR check results, keyed by PR number
+  const [checks, setChecks] = useState<Record<number, CheckRun[]>>({});
 
   // form state
   const [commitMsg, setCommitMsg] = useState("");
@@ -52,7 +55,6 @@ export default function App() {
 
   useEffect(() => { reload(); }, []);
 
-  // Wrap an async action with busy-state, toast, and a reload afterward.
   const run = async (name: string, fn: () => Promise<string | void>, okMsg: string) => {
     setBusy(name);
     try {
@@ -74,17 +76,40 @@ export default function App() {
       return `committed ${hash}`;
     }, "committed");
 
-  const doPush = () =>
-    run("push", () => GitService.Push(true), "pushed");
+  const doPush = () => run("push", () => GitService.Push(true), "pushed");
+  const doPR = () => run("pr", () => GitService.CreatePR(prTitle, "", prHead, prBase), "PR opened");
+  const doIssue = () => run("issue", () => GitService.CreateIssue(issueTitle, ""), "issue opened");
 
-  const doPR = () =>
-    run("pr", () => GitService.CreatePR(prTitle, "", prHead, prBase), "PR opened");
+  const doMerge = (n: number) =>
+    run(`merge-${n}`, async () => {
+      const sha = await GitService.MergePR(n, "merge");
+      return `merged #${n} (${sha.slice(0, 7)})`;
+    }, `merged #${n}`);
 
-  const doIssue = () =>
-    run("issue", () => GitService.CreateIssue(issueTitle, ""), "issue opened");
+  // Load checks for one PR on demand (doesn't trigger a full reload).
+  const loadChecks = async (n: number) => {
+    setBusy(`checks-${n}`);
+    try {
+      const runs = await GitService.PRChecks(n);
+      setChecks((prev) => ({ ...prev, [n]: runs ?? [] }));
+    } catch (e) {
+      flash("err", String(e));
+    } finally {
+      setBusy("");
+    }
+  };
 
   const input = "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-primary";
   const btn = "rounded-md bg-primary px-4 py-1.5 text-sm font-semibold text-background disabled:opacity-40";
+  const btnSm = "rounded-md border border-border px-2 py-0.5 text-xs disabled:opacity-40";
+
+  // Map a check conclusion/status to a color.
+  const checkColor = (r: CheckRun) => {
+    const s = r.Conclusion || r.Status;
+    if (s === "success") return "text-green-500";
+    if (s === "failure" || s === "cancelled" || s === "timed_out") return "text-red-500";
+    return "text-amber-500"; // queued / in_progress / neutral
+  };
 
   return (
     <div className="mx-auto max-w-4xl p-6 font-mono">
@@ -102,7 +127,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Actions */}
       <Card className="mb-4">
         <CardHeader><CardTitle>Commit &amp; Push</CardTitle></CardHeader>
         <CardContent className="space-y-2">
@@ -144,7 +168,6 @@ export default function App() {
         </CardContent>
       </Card>
 
-      {/* Read panels */}
       <Card className="mb-4">
         <CardHeader><CardTitle>Status</CardTitle></CardHeader>
         <CardContent>
@@ -202,13 +225,33 @@ export default function App() {
 
       <Card>
         <CardHeader><CardTitle>Open PRs</CardTitle></CardHeader>
-        <CardContent className="space-y-1">
+        <CardContent className="space-y-2">
           {(prs ?? []).length ? (prs ?? []).map((p) => (
-            <div key={p.Number} className="flex items-baseline gap-2 text-sm">
-              <span className="font-semibold text-blue-500">#{p.Number}</span>
-              <span className="truncate">{p.Title}</span>
-              {p.Draft && <Badge variant="outline">draft</Badge>}
-              <span className="text-muted-foreground">@{p.Author}</span>
+            <div key={p.Number} className="border-b border-border pb-2 last:border-0">
+              <div className="flex items-baseline gap-2 text-sm">
+                <span className="font-semibold text-blue-500">#{p.Number}</span>
+                <span className="truncate">{p.Title}</span>
+                {p.Draft && <Badge variant="outline">draft</Badge>}
+                <span className="text-muted-foreground">@{p.Author}</span>
+                <span className="ml-auto flex gap-1">
+                  <button onClick={() => loadChecks(p.Number)} disabled={!!busy} className={btnSm}>
+                    {busy === `checks-${p.Number}` ? "…" : "Checks"}
+                  </button>
+                  <button onClick={() => doMerge(p.Number)} disabled={!!busy} className={btnSm}>
+                    {busy === `merge-${p.Number}` ? "…" : "Merge"}
+                  </button>
+                </span>
+              </div>
+              {checks[p.Number] && (
+                <div className="mt-1 space-y-0.5 pl-6">
+                  {checks[p.Number].length ? checks[p.Number].map((r, i) => (
+                    <div key={i} className="text-xs">
+                      <span className={checkColor(r)}>{r.Conclusion || r.Status}</span>
+                      <span className="ml-2 text-muted-foreground">{r.Name}</span>
+                    </div>
+                  )) : <div className="text-xs italic text-muted-foreground">no checks reported</div>}
+                </div>
+              )}
             </div>
           )) : <span className="italic text-muted-foreground">no open PRs</span>}
         </CardContent>
