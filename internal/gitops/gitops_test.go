@@ -289,3 +289,45 @@ func TestDeleteCurrentBranchErrors(t *testing.T) {
 		t.Fatal("expected error deleting the current branch")
 	}
 }
+
+func TestStashSaveListPop(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "one\n")
+	_ = Stage(dir)
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+
+	// make a change, stash it, tree should be clean
+	writeFile(t, dir, "a.txt", "two\n")
+	if err := StashSave(dir, "wip", false); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := GetStatus(dir)
+	if len(s.Changes) != 0 {
+		t.Fatalf("expected clean tree after stash, got %+v", s.Changes)
+	}
+
+	list, err := StashList(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 stash, got %d", len(list))
+	}
+	if list[0].Message != "wip" {
+		t.Errorf("expected message 'wip', got %q", list[0].Message)
+	}
+
+	// pop it back, change should return
+	if err := StashPop(dir, ""); err != nil {
+		t.Fatal(err)
+	}
+	s, _ = GetStatus(dir)
+	if len(s.Changes) != 1 {
+		t.Fatalf("expected change restored after pop, got %+v", s.Changes)
+	}
+	if list, _ := StashList(dir); len(list) != 0 {
+		t.Fatalf("expected empty stash list after pop, got %d", len(list))
+	}
+}

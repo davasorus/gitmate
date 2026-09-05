@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { GitService } from "../bindings/github.com/davasorus/gitmate/gui";
-import type { Status, Commit, Branch, FileDiff } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
+import type { Status, Commit, Branch, FileDiff, Stash } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
 import type { PR, CheckRun } from "../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 /* ---------- types ---------- */
-type View = "changes" | "history" | "branches" | "prs";
+type View = "changes" | "history" | "branches" | "prs" | "stashes";
 type Toast = { kind: "ok" | "err"; msg: string } | null;
 
 /* ---------- tiny shared UI atoms (extract to files later per UX.md) ---------- */
@@ -107,6 +107,9 @@ export default function App() {
   const [prBase, setPrBase] = useState("live");
   const [issueTitle, setIssueTitle] = useState("");
   const [newBranch, setNewBranch] = useState("");
+  const [stashes, setStashes] = useState<Stash[]>([]);
+  const [stashMsg, setStashMsg] = useState("");
+  const [confirmDropStash, setConfirmDropStash] = useState<string | null>(null);
 
   const flash = (kind: "ok" | "err", msg: string) => {
     setToast({ kind, msg });
@@ -131,6 +134,11 @@ export default function App() {
         setPRs((await GitService.PRs("open")) ?? []);
       } catch {
         setPRs([]);
+      }
+      try {
+        setStashes((await GitService.StashList()) ?? []);
+      } catch {
+        setStashes([]);
       }
     } catch (e) {
       flash("err", String(e));
@@ -245,6 +253,21 @@ export default function App() {
       return `renamed ${old} → ${next.trim()}`;
     }, "branch renamed");
 
+  const doStashSave = () =>
+    run("stash-save", async () => {
+      await GitService.StashSave(stashMsg.trim(), true);
+      setStashMsg("");
+      return "stashed changes";
+    }, "stashed");
+  const doStashPop = (ref: string) =>
+    run(`stash-pop-${ref}`, () => GitService.StashPop(ref), `popped ${ref}`);
+  const doStashDrop = (ref: string) =>
+    run(`stash-drop-${ref}`, async () => {
+      await GitService.StashDrop(ref);
+      setConfirmDropStash(null);
+      return `dropped ${ref}`;
+    }, `dropped ${ref}`);
+
   /* ---------- styles ---------- */
   const input = "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-[var(--color-ahead)]";
   const btn = "rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-background disabled:opacity-40";
@@ -296,7 +319,7 @@ export default function App() {
           <NavItem id="prs" label="Pull Requests" badge={prs.length} />
           <Section>Soon</Section>
           <div className="px-3 py-1 text-sm text-muted-foreground/50">Remotes</div>
-          <div className="px-3 py-1 text-sm text-muted-foreground/50">Stashes</div>
+          <NavItem id="stashes" label="Stashes" badge={stashes.length} />
           <div className="px-3 py-1 text-sm text-muted-foreground/50">Tags</div>
         </nav>
 
@@ -369,6 +392,24 @@ export default function App() {
                 <button onClick={doRenameBranch} disabled={!!busy || !renaming.next.trim() || renaming.next.trim() === renaming.old}
                         className={btn}>
                   {busy === "rename-branch" ? "…" : "Rename"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {confirmDropStash && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="w-96 rounded-lg border border-border bg-card p-4 shadow-lg">
+              <div className="mb-2 text-sm font-semibold text-[var(--color-removed)]">Drop stash?</div>
+              <div className="mb-4 break-all text-xs text-muted-foreground">
+                Discard <span className="text-foreground">{confirmDropStash}</span> without applying it. The stashed changes are lost.
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setConfirmDropStash(null)} disabled={!!busy}
+                        className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-40">Cancel</button>
+                <button onClick={() => doStashDrop(confirmDropStash)} disabled={!!busy}
+                        className="rounded-md bg-[var(--color-removed)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40">
+                  {busy === `stash-drop-${confirmDropStash}` ? "…" : "Drop"}
                 </button>
               </div>
             </div>
@@ -600,6 +641,41 @@ export default function App() {
                     )}
                   </div>
                 )) : <div className="p-3 text-sm italic text-muted-foreground">no open PRs</div>}
+              </div>
+            </div>
+          )}
+
+          {/* STASHES */}
+          {view === "stashes" && (
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Stashes</h2>
+
+              <div className="flex gap-2 rounded-lg border border-border p-3">
+                <input value={stashMsg} onChange={(e) => setStashMsg(e.target.value)}
+                       placeholder="stash message (optional)" className={`${input} flex-1`} />
+                <button onClick={doStashSave} disabled={!!busy} className={btn}>
+                  {busy === "stash-save" ? "…" : "Stash changes"}
+                </button>
+              </div>
+
+              <div className="rounded-lg border border-border">
+                {(stashes ?? []).length ? (stashes ?? []).map((st) => (
+                  <div key={st.Ref} className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
+                    <span className="shrink-0 text-[var(--color-modified)]">{st.Ref}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{st.Branch}</span>
+                    <span className="truncate">{st.Message}</span>
+                    <span className="ml-auto flex shrink-0 gap-1">
+                      <button onClick={() => doStashPop(st.Ref)} disabled={!!busy}
+                              className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40">
+                        {busy === `stash-pop-${st.Ref}` ? "…" : "Pop"}
+                      </button>
+                      <button onClick={() => setConfirmDropStash(st.Ref)} disabled={!!busy}
+                              className="rounded-md border border-border px-2 py-0.5 text-xs text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10 disabled:opacity-40">
+                        {busy === `stash-drop-${st.Ref}` ? "…" : "Drop"}
+                      </button>
+                    </span>
+                  </div>
+                )) : <div className="p-3 text-sm italic text-muted-foreground">no stashes</div>}
               </div>
             </div>
           )}

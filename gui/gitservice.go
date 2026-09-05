@@ -193,3 +193,19 @@ func (g *GitService) PRChecks(number int) ([]ghapi.CheckRun, error) {
 	}
 	return client.PRChecks(ctx, owner, repo, number)
 }
+
+func (g *GitService) StashSave(message string, includeUntracked bool) error {
+	return gitops.StashSave(g.repoDir, message, includeUntracked)
+}
+
+func (g *GitService) StashList() ([]gitops.Stash, error) {
+	return gitops.StashList(g.repoDir)
+}
+
+func (g *GitService) StashPop(ref string) error {
+	return gitops.StashPop(g.repoDir, ref)
+}
+
+func (g *GitService) StashDrop(ref string) error {
+	return gitops.StashDrop(g.repoDir, ref)
+}
