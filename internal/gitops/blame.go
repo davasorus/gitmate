@@ -73,13 +73,13 @@ func shortSha(s string) string {
 
 func isHex(s string) bool {
 	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+		isHexDigit := (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')
+		if !isHexDigit {
 			return false
 		}
 	}
 	return len(s) > 0
 }
-
 func atoiSafe(s string) int {
 	n := 0
 	for _, c := range s {
