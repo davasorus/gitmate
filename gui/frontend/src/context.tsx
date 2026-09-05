@@ -22,6 +22,8 @@ export interface GitmateState {
   checks: Record<number, CheckRun[]>;
   mergeInProgress: boolean;
   rebaseInProgress: boolean;
+  cherryPickInProgress: boolean;
+  revertInProgress: boolean;
   conflicts: string[];
 
   // ui
@@ -57,6 +59,8 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
   const [checks] = useState<Record<number, CheckRun[]>>({});
   const [mergeInProgress, setMergeInProgress] = useState(false);
   const [rebaseInProgress, setRebaseInProgress] = useState(false);
+  const [cherryPickInProgress, setCherryPickInProgress] = useState(false);
+  const [revertInProgress, setRevertInProgress] = useState(false);
   const [conflicts, setConflicts] = useState<string[]>([]);
 
   const [toast, setToast] = useState<Toast>(null);
@@ -85,8 +89,11 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
       try {
         setMergeInProgress(await GitService.MergeInProgress());
         setRebaseInProgress(await GitService.RebaseInProgress());
+        const seq = await GitService.SequencerInProgress();
+        setCherryPickInProgress(!!seq && !!seq[0]);
+        setRevertInProgress(!!seq && !!seq[1]);
         setConflicts((await GitService.ConflictedFiles()) ?? []);
-      } catch { setMergeInProgress(false); setRebaseInProgress(false); setConflicts([]); }
+      } catch { setMergeInProgress(false); setRebaseInProgress(false); setCherryPickInProgress(false); setRevertInProgress(false); setConflicts([]); }
     } catch (e) {
       flash("err", String(e));
     }
@@ -109,7 +116,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
 
   const value: GitmateState = {
     view, setView, dir, setDir,
-    status, branches, commits, prs, issues, stashes, tags, checks, mergeInProgress, rebaseInProgress, conflicts,
+    status, branches, commits, prs, issues, stashes, tags, checks, mergeInProgress, rebaseInProgress, cherryPickInProgress, revertInProgress, conflicts,
     toast, busy, setBusy, flash, reload, run,
     service: GitService,
   };

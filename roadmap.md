@@ -166,9 +166,9 @@
 - [x] CLI: `gitmate reset <rev> [--soft|--hard]` (--hard needs --force)
 - [x] GUI: Reset to here (Soft/Mixed/Hard) on each Reflog entry; Hard needs confirm dialog
 
-### 2.5 Cherry-pick / revert  [ ]
-- [ ] engine: cherry-pick <rev>, revert <rev>
-- [ ] CLI + GUI actions
+### 2.5 Cherry-pick / revert  [x]
+- [x] engine: CherryPick/Revert (+continue/abort, SequencerInProgress) — reuses conflict flow
+- [x] CLI: `gitmate cherry-pick <rev>` / `revert <rev>` (--continue/--abort); GUI: Cherry-pick + Revert buttons on History commits, in-progress banners route to Conflicts view
 
 ### 2.6 Tags  [x]
 - [x] engine: ListTags/CreateTag(lightweight+annotated)/DeleteTag/PushTag

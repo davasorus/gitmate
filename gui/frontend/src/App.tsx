@@ -12,7 +12,7 @@ import { Reflog } from "./views/Reflog";
 export default function App() {
   const {
     view, setView, dir, setDir, status, branches, prs, issues, stashes, tags,
-    toast, busy, run, service, reload, mergeInProgress, rebaseInProgress, conflicts,
+    toast, busy, run, service, reload, mergeInProgress, rebaseInProgress, cherryPickInProgress, revertInProgress, conflicts,
   } = useGit();
 
   const changed = (status?.Changes?.length ?? 0) + (status?.Untracked?.length ?? 0);
@@ -23,6 +23,10 @@ export default function App() {
   const doMergeAbort = () => run("merge-abort", () => service.MergeAbort(), "merge aborted");
   const doRebaseContinue = () => run("rebase-continue", () => service.RebaseContinue(), "rebase continued");
   const doRebaseAbort = () => run("rebase-abort", () => service.RebaseAbort(), "rebase aborted");
+  const doCherryContinue = () => run("cp-continue", () => service.CherryPickContinue(), "cherry-pick continued");
+  const doCherryAbort = () => run("cp-abort", () => service.CherryPickAbort(), "cherry-pick aborted");
+  const doRevertContinue = () => run("rv-continue", () => service.RevertContinue(), "revert continued");
+  const doRevertAbort = () => run("rv-abort", () => service.RevertAbort(), "revert aborted");
 
   const NavItem = ({ id, label, badge }: { id: View; label: string; badge?: number }) => (
     <button onClick={() => setView(id)}
@@ -53,7 +57,7 @@ export default function App() {
         </div>
         <nav className="flex-1 overflow-y-auto py-1">
           <NavItem id="changes" label="Changes" badge={changed} />
-          {(mergeInProgress || rebaseInProgress) && <NavItem id="conflicts" label="Conflicts" badge={conflicts.length} />}
+          {(mergeInProgress || rebaseInProgress || cherryPickInProgress || revertInProgress) && <NavItem id="conflicts" label="Conflicts" badge={conflicts.length} />}
           <NavItem id="history" label="History" />
           <NavItem id="branches" label="Branches" badge={branches.length} />
           <NavItem id="prs" label="Pull Requests" badge={prs.length} />
@@ -97,6 +101,30 @@ export default function App() {
             <div className="mt-2 flex gap-2">
               <button onClick={doRebaseContinue} disabled={!!busy} className={cls.btnSm}>{busy === "rebase-continue" ? "…" : "Continue"}</button>
               <button onClick={doRebaseAbort} disabled={!!busy} className={cls.btnSm}>{busy === "rebase-abort" ? "…" : "Abort rebase"}</button>
+            </div>
+          </div>
+        )}
+        {cherryPickInProgress && (
+          <div className="m-3 rounded-md border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
+            <button onClick={() => setView("conflicts")} className="font-semibold text-[var(--color-conflict)] hover:underline">Cherry-pick in progress — resolve conflicts →</button>
+            {conflicts.length
+              ? <div className="mt-1 text-xs text-muted-foreground">{conflicts.length} conflicted file(s): {conflicts.join(", ")}. Resolve, then Continue.</div>
+              : <div className="mt-1 text-xs text-muted-foreground">No conflicts — Continue to finish, or Abort.</div>}
+            <div className="mt-2 flex gap-2">
+              <button onClick={doCherryContinue} disabled={!!busy} className={cls.btnSm}>{busy === "cp-continue" ? "…" : "Continue"}</button>
+              <button onClick={doCherryAbort} disabled={!!busy} className={cls.btnSm}>{busy === "cp-abort" ? "…" : "Abort"}</button>
+            </div>
+          </div>
+        )}
+        {revertInProgress && (
+          <div className="m-3 rounded-md border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
+            <button onClick={() => setView("conflicts")} className="font-semibold text-[var(--color-conflict)] hover:underline">Revert in progress — resolve conflicts →</button>
+            {conflicts.length
+              ? <div className="mt-1 text-xs text-muted-foreground">{conflicts.length} conflicted file(s): {conflicts.join(", ")}. Resolve, then Continue.</div>
+              : <div className="mt-1 text-xs text-muted-foreground">No conflicts — Continue to finish, or Abort.</div>}
+            <div className="mt-2 flex gap-2">
+              <button onClick={doRevertContinue} disabled={!!busy} className={cls.btnSm}>{busy === "rv-continue" ? "…" : "Continue"}</button>
+              <button onClick={doRevertAbort} disabled={!!busy} className={cls.btnSm}>{busy === "rv-abort" ? "…" : "Abort"}</button>
             </div>
           </div>
         )}

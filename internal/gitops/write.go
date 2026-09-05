@@ -224,3 +224,49 @@ func Reset(dir, rev string, mode ResetMode) error {
 	_, err := run(dir, "reset", "--"+m, rev)
 	return err
 }
+
+// CherryPick applies the changes from a single commit onto the current branch,
+// creating a new commit. Can conflict (uses the same conflict machinery as
+// merge/rebase); resolve then CherryPickContinue, or CherryPickAbort.
+func CherryPick(dir, rev string) error {
+	_, err := run(dir, "cherry-pick", rev)
+	return err
+}
+
+func CherryPickContinue(dir string) error {
+	_, err := run(dir, "-c", "core.editor=true", "cherry-pick", "--continue")
+	return err
+}
+
+func CherryPickAbort(dir string) error {
+	_, err := run(dir, "cherry-pick", "--abort")
+	return err
+}
+
+// Revert creates a NEW commit that undoes the changes of a previous commit —
+// the safe, history-preserving undo (unlike Reset, which rewrites history).
+// Can conflict; resolve then RevertContinue, or RevertAbort.
+func Revert(dir, rev string) error {
+	_, err := run(dir, "-c", "core.editor=true", "revert", "--no-edit", rev)
+	return err
+}
+
+func RevertContinue(dir string) error {
+	_, err := run(dir, "-c", "core.editor=true", "revert", "--continue")
+	return err
+}
+
+func RevertAbort(dir string) error {
+	_, err := run(dir, "revert", "--abort")
+	return err
+}
+
+// SequencerInProgress reports whether a cherry-pick or revert is mid-operation
+// (paused on a conflict). Both use git's "sequencer" state.
+func SequencerInProgress(dir string) (cherryPick bool, revert bool) {
+	out, err := run(dir, "status")
+	if err != nil {
+		return false, false
+	}
+	return strings.Contains(out, "cherry-pick"), strings.Contains(out, "revert")
+}

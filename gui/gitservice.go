@@ -271,6 +271,14 @@ func (g *GitService) Reset(rev, mode string) error {
 	return gitops.Reset(g.repoDir, rev, gitops.ResetMode(mode))
 }
 
+func (g *GitService) CherryPick(rev string) error       { return gitops.CherryPick(g.repoDir, rev) }
+func (g *GitService) CherryPickContinue() error         { return gitops.CherryPickContinue(g.repoDir) }
+func (g *GitService) CherryPickAbort() error            { return gitops.CherryPickAbort(g.repoDir) }
+func (g *GitService) Revert(rev string) error           { return gitops.Revert(g.repoDir, rev) }
+func (g *GitService) RevertContinue() error             { return gitops.RevertContinue(g.repoDir) }
+func (g *GitService) RevertAbort() error                { return gitops.RevertAbort(g.repoDir) }
+func (g *GitService) SequencerInProgress() (bool, bool) { return gitops.SequencerInProgress(g.repoDir) }
+
 func (g *GitService) CurrentBranch() (string, error) {
 	return gitops.CurrentBranch(g.repoDir)
 }
