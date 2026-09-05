@@ -167,6 +167,9 @@ func (g *GitService) DeleteRemoteTag(name string) error {
 	return gitops.DeleteRemoteTag(g.repoDir, name)
 }
 func (g *GitService) FetchTags() error { return gitops.FetchTags(g.repoDir) }
+func (g *GitService) SmartDeleteTag(name string) (string, error) {
+	return gitops.SmartDeleteTag(g.repoDir, name)
+}
 
 func (g *GitService) ReadConflict(path string) (*gitops.ConflictFile, error) {
 	return gitops.ReadConflict(g.repoDir, path)
