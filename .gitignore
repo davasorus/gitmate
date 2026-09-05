@@ -37,4 +37,11 @@ Thumbs.db
 /gui/frontend/node_modules/
 /gui/frontend/dist/
 
-#test
+# Wails 3 build output
+/gui/build/bin/
+/gui/bin/
+/gui/node_modules/
+/gui/frontend/node_modules/
+/gui/frontend/dist/
+/gui/frontend/bindings/
+/gui/frontend/out/
