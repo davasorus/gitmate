@@ -94,6 +94,7 @@ export default function App() {
 
   const [openDiff, setOpenDiff] = useState<{ path: string; staged: boolean } | null>(null);
   const [diffFiles, setDiffFiles] = useState<FileDiff[]>([]);
+  const [confirmDiscard, setConfirmDiscard] = useState<string | null>(null);
 
   const [toast, setToast] = useState<Toast>(null);
   const [busy, setBusy] = useState("");
@@ -209,6 +210,12 @@ export default function App() {
     run(`stage-${path}`, () => GitService.StagePath(path), `staged ${path}`);
   const doUnstage = (path: string) =>
     run(`unstage-${path}`, () => GitService.UnstagePath(path), `unstaged ${path}`);
+  const doDiscard = (path: string) =>
+    run(`discard-${path}`, async () => {
+      await GitService.DiscardPath(path);
+      setConfirmDiscard(null);
+      return `discarded ${path}`;
+    }, `discarded ${path}`);
 
   /* ---------- styles ---------- */
   const input = "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-[var(--color-ahead)]";
@@ -281,6 +288,26 @@ export default function App() {
 
       {/* ---------- MAIN ---------- */}
       <main className="flex-1 overflow-y-auto">
+        {confirmDiscard && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div className="w-96 rounded-lg border border-border bg-card p-4 shadow-lg">
+              <div className="mb-2 text-sm font-semibold text-[var(--color-removed)]">Discard changes?</div>
+              <div className="mb-4 break-all text-xs text-muted-foreground">
+                This permanently deletes your uncommitted changes to <span className="text-foreground">{confirmDiscard}</span>. This cannot be undone.
+              </div>
+              <div className="flex justify-end gap-2">
+                <button onClick={() => setConfirmDiscard(null)} disabled={!!busy}
+                        className="rounded-md border border-border px-3 py-1.5 text-sm hover:bg-muted disabled:opacity-40">
+                  Cancel
+                </button>
+                <button onClick={() => doDiscard(confirmDiscard)} disabled={!!busy}
+                        className="rounded-md bg-[var(--color-removed)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40">
+                  {busy === `discard-${confirmDiscard}` ? "…" : "Discard"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {toast && (
           <div className={`m-3 rounded-md px-3 py-2 text-sm ${
             toast.kind === "ok" ? "bg-[var(--color-added)]/20 text-[var(--color-added)]"
@@ -315,6 +342,16 @@ export default function App() {
                           >
                             {busy === `${isStaged ? "unstage" : "stage"}-${path}` ? "…" : isStaged ? "\u2212" : "+"}
                           </button>
+                          {!isStaged && (
+                            <button
+                              onClick={() => setConfirmDiscard(path)}
+                              disabled={!!busy}
+                              className="w-5 shrink-0 rounded border border-border text-center text-xs text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10 disabled:opacity-40"
+                              title="discard changes"
+                            >
+                              {busy === `discard-${path}` ? "…" : "\u2717"}
+                            </button>
+                          )}
                           <button
                             onClick={() => showDiff(path, isStaged)}
                             className="flex flex-1 items-baseline gap-2 text-left"

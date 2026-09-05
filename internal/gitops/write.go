@@ -30,6 +30,19 @@ func Unstage(dir string, paths ...string) error {
 	return err
 }
 
+// Discard throws away working-tree changes to tracked paths, restoring them to
+// their staged/HEAD state. This is DESTRUCTIVE — uncommitted edits are lost and
+// cannot be recovered. It does not touch untracked files (git restore ignores
+// them); callers should guard against passing untracked paths.
+func Discard(dir string, paths ...string) error {
+	if len(paths) == 0 {
+		return errors.New("discard requires at least one path")
+	}
+	args := append([]string{"restore"}, paths...)
+	_, err := run(dir, args...)
+	return err
+}
+
 // CreateCommit creates a commit with the given message and returns the new short hash.
 func CreateCommit(dir, message string) (string, error) {
 	if strings.TrimSpace(message) == "" {

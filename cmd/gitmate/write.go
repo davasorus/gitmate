@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	rootCmd.AddCommand(stageCmd, commitCmd, pushCmd, unstageCmd)
+	rootCmd.AddCommand(stageCmd, commitCmd, pushCmd, unstageCmd, discardCmd)
 }
 
 var stageCmd = &cobra.Command{
@@ -82,6 +82,28 @@ var unstageCmd = &cobra.Command{
 		} else {
 			fmt.Printf("unstaged %d path(s)\n", len(args))
 		}
+		return nil
+	},
+}
+
+var discardForce bool
+
+func init() {
+	discardCmd.Flags().BoolVarP(&discardForce, "force", "f", false, "confirm discarding changes (required — this is destructive)")
+}
+
+var discardCmd = &cobra.Command{
+	Use:   "discard <paths...>",
+	Short: "Discard working-tree changes to tracked files (destructive)",
+	Args:  cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if !discardForce {
+			return fmt.Errorf("refusing to discard without --force: this permanently deletes uncommitted changes to %v", args)
+		}
+		if err := gitops.Discard(".", args...); err != nil {
+			return err
+		}
+		fmt.Printf("discarded changes to %d path(s)\n", len(args))
 		return nil
 	},
 }

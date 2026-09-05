@@ -106,6 +106,10 @@ func (g *GitService) UnstagePath(path string) error {
 	return gitops.Unstage(g.repoDir, path)
 }
 
+func (g *GitService) DiscardPath(path string) error {
+	return gitops.Discard(g.repoDir, path)
+}
+
 func (g *GitService) Commit(message string) (string, error) {
 	return gitops.CreateCommit(g.repoDir, message)
 }

@@ -177,3 +177,34 @@ func TestStageUnstageRoundTrip(t *testing.T) {
 		t.Fatalf("expected a.txt unstaged as modified, got %+v", s.Changes)
 	}
 }
+
+func TestDiscardRestoresFile(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "original\n")
+	if err := Stage(dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+
+	// modify the tracked file (unstaged), then discard
+	writeFile(t, dir, "a.txt", "changed\n")
+	s, _ := GetStatus(dir)
+	if len(s.Changes) != 1 {
+		t.Fatalf("expected 1 change before discard, got %d", len(s.Changes))
+	}
+	if err := Discard(dir, "a.txt"); err != nil {
+		t.Fatal(err)
+	}
+	s, _ = GetStatus(dir)
+	if len(s.Changes) != 0 || len(s.Untracked) != 0 {
+		t.Fatalf("expected clean tree after discard, got %+v / %+v", s.Changes, s.Untracked)
+	}
+}
+
+func TestDiscardNoPathsErrors(t *testing.T) {
+	if err := Discard(t.TempDir()); err == nil {
+		t.Fatal("expected error when no paths given")
+	}
+}
