@@ -293,6 +293,14 @@ Correctly NOT gaps (already Tier 3): remote management (3.1), clone (3.2).
 - Update this doc's checkboxes as things land.
 
 ### UX feedback (added post-Tier-2.2)
+- [ ] **Auto-refresh (kill the manual Reload button for normal use).** Two parts:
+  (1) reload local state on window focus, so returning to the app after terminal/
+  browser work reflects reality without a manual Reload; (2) periodic background
+  fetch (every few minutes and/or on focus) so ahead/behind + remote state stay
+  fresh — NOT fetch-on-every-reload (that's slow/chatty/offline-fragile: reload is
+  cheap+local, fetch is network). After this, Reload becomes a rarely-needed manual
+  override, not the primary refresh mechanism. Supersedes the earlier bare
+  "reload on window focus" note.
 - [ ] Branch-row actions: five equal-weight buttons (Switch/Merge/Rebase/Rename/Delete)
   feel cluttered, BUT the Integrate-menu redesign attempted mid-Tier-2 was worse
   (hidden click-to-switch, over-engineered dropdowns) and was reverted. Revisit in the
