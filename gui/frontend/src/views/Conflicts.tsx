@@ -56,15 +56,15 @@ export function Conflicts() {
               </div>
               {open === path && detail && (
                 <div className="space-y-2 border-b border-border bg-background px-3 py-2">
-                  {detail.Hunks.length === 0 && <div className="text-xs italic text-muted-foreground">no marked regions (may be hand-edited already)</div>}
+                  {(detail.Hunks ?? []).length === 0 && <div className="text-xs italic text-muted-foreground">no conflict regions found (file may already be resolved or hand-edited)</div>}
                   {(detail.Hunks ?? []).map((h, i) => (
                     <div key={i} className="grid grid-cols-2 gap-2 text-xs">
                       <div className="rounded border border-[var(--color-added)]/40 bg-[var(--color-added)]/5 p-2">
-                        <div className="mb-1 text-[var(--color-added)]">ours</div>
+                        <div className="mb-1 font-semibold text-[var(--color-added)]">ours — current branch (HEAD)</div>
                         <pre className="whitespace-pre-wrap">{(h.Ours ?? []).join("\n")}</pre>
                       </div>
                       <div className="rounded border border-[var(--color-ahead)]/40 bg-[var(--color-ahead)]/5 p-2">
-                        <div className="mb-1 text-[var(--color-ahead)]">theirs</div>
+                        <div className="mb-1 font-semibold text-[var(--color-ahead)]">theirs — merged-in branch</div>
                         <pre className="whitespace-pre-wrap">{(h.Theirs ?? []).join("\n")}</pre>
                       </div>
                     </div>

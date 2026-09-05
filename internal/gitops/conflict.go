@@ -6,45 +6,69 @@ import (
 	"strings"
 )
 
-// ConflictHunk is one <<<<<<< ======= >>>>>>> region within a conflicted file.
+// ConflictHunk is one conflict region: the "ours" and "theirs" content.
 type ConflictHunk struct {
-	Ours   []string // lines from our side (current branch, HEAD)
-	Theirs []string // lines from their side (the merged-in branch)
+	Ours   []string // stage 2 — current branch (HEAD)
+	Theirs []string // stage 3 — the merged-in branch
 }
 
 // ConflictFile is a conflicted file's regions plus the raw marked-up content.
 type ConflictFile struct {
 	Path  string
 	Hunks []ConflictHunk
-	Raw   string // full file including markers, for hand-editing
+	Raw   string
 }
 
-// readRepoFile / writeRepoFile do plain file I/O relative to the repo dir.
-func readRepoFile(dir, path string) (string, error) {
-	b, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(path)))
+// repoFilePath resolves a repo-relative path to an absolute one under dir,
+// so os file I/O works regardless of the process's working directory.
+func repoFilePath(dir, path string) (string, error) {
+	// Ask git for the repo's top level so writes land in the right place even
+	// when dir is "." and the process cwd differs (e.g. the Wails GUI runs from gui/).
+	top, err := run(dir, "rev-parse", "--show-toplevel")
 	if err != nil {
-		return "", err
+		// fall back to joining dir directly
+		return filepath.Join(dir, filepath.FromSlash(path)), nil
 	}
-	return string(b), nil
+	return filepath.Join(strings.TrimSpace(top), filepath.FromSlash(path)), nil
 }
 
-func writeRepoFile(dir, path, content string) error {
-	return os.WriteFile(filepath.Join(dir, filepath.FromSlash(path)), []byte(content), 0o644)
+func splitLines(s string) []string {
+	s = strings.TrimRight(s, "\n")
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, "\n")
 }
 
-// ReadConflict parses the conflict regions of a single conflicted file.
+// ReadConflict returns the conflict for a file, reading the authoritative
+// "ours" (index stage 2) and "theirs" (stage 3) blobs via git — reliable
+// regardless of marker formatting or the process working directory.
 func ReadConflict(dir, path string) (*ConflictFile, error) {
-	content, err := readRepoFile(dir, path)
-	if err != nil {
-		return nil, err
+	cf := &ConflictFile{Path: path}
+
+	// raw working-tree file (with markers) for the hand-edit fallback
+	if abs, err := repoFilePath(dir, path); err == nil {
+		if b, rerr := os.ReadFile(abs); rerr == nil {
+			cf.Raw = string(b)
+		}
 	}
-	return &ConflictFile{Path: path, Raw: content, Hunks: parseConflictHunks(content)}, nil
+
+	ours, oerr := run(dir, "show", ":2:"+path)   // ours = HEAD
+	theirs, terr := run(dir, "show", ":3:"+path) // theirs = merged-in
+	if oerr == nil || terr == nil {
+		cf.Hunks = []ConflictHunk{{Ours: splitLines(ours), Theirs: splitLines(theirs)}}
+		return cf, nil
+	}
+	// fall back to parsing markers from the raw content
+	cf.Hunks = parseConflictHunks(cf.Raw)
+	return cf, nil
 }
 
+// parseConflictHunks extracts ours/theirs from <<<<<<< ======= >>>>>>> markers.
 func parseConflictHunks(content string) []ConflictHunk {
 	var hunks []ConflictHunk
 	var cur *ConflictHunk
-	side := 0 // 1 = ours, 2 = theirs
+	side := 0
 	for _, ln := range strings.Split(content, "\n") {
 		switch {
 		case strings.HasPrefix(ln, "<<<<<<<"):
@@ -67,46 +91,40 @@ func parseConflictHunks(content string) []ConflictHunk {
 	return hunks
 }
 
-// ResolveOurs resolves a file by taking our side for every conflict region.
-func ResolveOurs(dir, path string) error { return resolveSide(dir, path, true) }
-
-// ResolveTheirs resolves a file by taking their side for every conflict region.
-func ResolveTheirs(dir, path string) error { return resolveSide(dir, path, false) }
-
-func resolveSide(dir, path string, ours bool) error {
-	content, err := readRepoFile(dir, path)
+// repoRoot returns the repository's top-level directory, so path-based git
+// commands resolve correctly even when the process cwd differs (the Wails GUI
+// runs from gui/, not the repo root).
+func repoRoot(dir string) string {
+	top, err := run(dir, "rev-parse", "--show-toplevel")
 	if err != nil {
+		return dir
+	}
+	return strings.TrimSpace(top)
+}
+
+// ResolveOurs resolves a file by taking our side entirely (git checkout --ours).
+func ResolveOurs(dir, path string) error {
+	root := repoRoot(dir)
+	if _, err := run(root, "checkout", "--ours", "--", path); err != nil {
 		return err
 	}
-	if err := writeRepoFile(dir, path, applySide(content, ours)); err != nil {
-		return err
-	}
-	_, err = run(dir, "add", "--", path) // stage → mark resolved
+	_, err := run(root, "add", "--", path)
 	return err
 }
 
-func applySide(content string, ours bool) string {
-	var out []string
-	side := 0
-	for _, ln := range strings.Split(content, "\n") {
-		switch {
-		case strings.HasPrefix(ln, "<<<<<<<"):
-			side = 1
-		case strings.HasPrefix(ln, "======="):
-			side = 2
-		case strings.HasPrefix(ln, ">>>>>>>"):
-			side = 0
-		default:
-			if side == 0 || (side == 1 && ours) || (side == 2 && !ours) {
-				out = append(out, ln)
-			}
-		}
+// ResolveTheirs resolves a file by taking their side entirely (git checkout --theirs).
+func ResolveTheirs(dir, path string) error {
+	root := repoRoot(dir)
+	if _, err := run(root, "checkout", "--theirs", "--", path); err != nil {
+		return err
 	}
-	return strings.Join(out, "\n")
+	_, err := run(root, "add", "--", path)
+	return err
 }
 
 // MarkResolved stages a (hand-edited) conflicted file, marking it resolved.
 func MarkResolved(dir, path string) error {
-	_, err := run(dir, "add", "--", path)
+	root := repoRoot(dir)
+	_, err := run(root, "add", "--", path)
 	return err
 }
