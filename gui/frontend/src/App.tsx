@@ -2,24 +2,52 @@ import { useEffect, useState, useCallback } from "react";
 import { GitService } from "../bindings/github.com/davasorus/gitmate/gui";
 import type { Status, Commit, Branch } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
 import type { PR, CheckRun } from "../bindings/github.com/davasorus/gitmate/internal/ghapi";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
+/* ---------- types ---------- */
+type View = "changes" | "history" | "branches" | "prs";
 type Toast = { kind: "ok" | "err"; msg: string } | null;
 
+/* ---------- tiny shared UI atoms (extract to files later per UX.md) ---------- */
+
+function StatusBadge({ staged, unstaged }: { staged: string; unstaged: string }) {
+  const label = [staged, unstaged].filter(Boolean).join("/") || "•";
+  const color =
+    staged === "conflict" || unstaged === "conflict" ? "text-[var(--color-conflict)]"
+    : staged === "added" ? "text-[var(--color-added)]"
+    : staged === "deleted" || unstaged === "deleted" ? "text-[var(--color-removed)]"
+    : "text-[var(--color-modified)]";
+  return <span className={`w-20 shrink-0 text-xs ${color}`}>{label}</span>;
+}
+
+function CheckBadge({ run }: { run: CheckRun }) {
+  const s = run.Conclusion || run.Status;
+  const color =
+    s === "success" ? "text-[var(--color-check-pass)]"
+    : s === "failure" || s === "cancelled" || s === "timed_out" ? "text-[var(--color-check-fail)]"
+    : "text-[var(--color-check-pending)]";
+  return (
+    <div className="text-xs">
+      <span className={color}>{s}</span>
+      <span className="ml-2 text-muted-foreground">{run.Name}</span>
+    </div>
+  );
+}
+
+/* ---------- app ---------- */
+
 export default function App() {
+  const [view, setView] = useState<View>("changes");
   const [dir, setDir] = useState("");
+
   const [status, setStatus] = useState<Status | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [commits, setCommits] = useState<Commit[]>([]);
   const [prs, setPRs] = useState<PR[]>([]);
-  const [toast, setToast] = useState<Toast>(null);
-  const [busy, setBusy] = useState<string>("");
-
-  // per-PR check results, keyed by PR number
   const [checks, setChecks] = useState<Record<number, CheckRun[]>>({});
 
-  // form state
+  const [toast, setToast] = useState<Toast>(null);
+  const [busy, setBusy] = useState("");
+
   const [commitMsg, setCommitMsg] = useState("");
   const [prTitle, setPrTitle] = useState("");
   const [prHead, setPrHead] = useState("");
@@ -37,14 +65,13 @@ export default function App() {
       const [s, b, c] = await Promise.all([
         GitService.Status(),
         GitService.Branches(),
-        GitService.Log(10),
+        GitService.Log(15),
       ]);
       setStatus(s);
       setBranches(b ?? []);
       setCommits(c ?? []);
       try {
-        const p = await GitService.PRs("open");
-        setPRs(p ?? []);
+        setPRs((await GitService.PRs("open")) ?? []);
       } catch {
         setPRs([]);
       }
@@ -71,27 +98,35 @@ export default function App() {
   const doCommit = () =>
     run("commit", async () => {
       await GitService.Stage();
-      const hash = await GitService.Commit(commitMsg);
+      const h = await GitService.Commit(commitMsg);
       setCommitMsg("");
-      return `committed ${hash}`;
+      return `committed ${h}`;
     }, "committed");
-
   const doPush = () => run("push", () => GitService.Push(true), "pushed");
-  const doPR = () => run("pr", () => GitService.CreatePR(prTitle, "", prHead, prBase), "PR opened");
-  const doIssue = () => run("issue", () => GitService.CreateIssue(issueTitle, ""), "issue opened");
-
+  const doPR = () =>
+    run("pr", async () => {
+      const url = await GitService.CreatePR(prTitle, "", prHead, prBase);
+      setPrTitle(""); setPrHead("");
+      setView("prs");
+      return url;
+    }, "PR opened");
+  const doIssue = () =>
+    run("issue", async () => {
+      const url = await GitService.CreateIssue(issueTitle, "");
+      setIssueTitle("");
+      return url;
+    }, "issue opened");
   const doMerge = (n: number) =>
     run(`merge-${n}`, async () => {
       const sha = await GitService.MergePR(n, "merge");
       return `merged #${n} (${sha.slice(0, 7)})`;
     }, `merged #${n}`);
 
-  // Load checks for one PR on demand (doesn't trigger a full reload).
-  const loadChecks = async (n: number) => {
+    const loadChecks = async (n: number) => {
     setBusy(`checks-${n}`);
     try {
-      const runs = await GitService.PRChecks(n);
-      setChecks((prev) => ({ ...prev, [n]: runs ?? [] }));
+      const runs = (await GitService.PRChecks(n)) ?? [];
+      setChecks((p) => ({ ...p, [n]: runs }));
     } catch (e) {
       flash("err", String(e));
     } finally {
@@ -99,163 +134,215 @@ export default function App() {
     }
   };
 
-  const input = "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-primary";
-  const btn = "rounded-md bg-primary px-4 py-1.5 text-sm font-semibold text-background disabled:opacity-40";
-  const btnSm = "rounded-md border border-border px-2 py-0.5 text-xs disabled:opacity-40";
+  /* ---------- styles ---------- */
+  const input = "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-[var(--color-ahead)]";
+  const btn = "rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-background disabled:opacity-40";
+  const btnSm = "rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40";
 
-  // Map a check conclusion/status to a color.
-  const checkColor = (r: CheckRun) => {
-    const s = r.Conclusion || r.Status;
-    if (s === "success") return "text-green-500";
-    if (s === "failure" || s === "cancelled" || s === "timed_out") return "text-red-500";
-    return "text-amber-500"; // queued / in_progress / neutral
-  };
+  const changed = (status?.Changes?.length ?? 0) + (status?.Untracked?.length ?? 0);
+
+  /* ---------- sidebar item ---------- */
+  const NavItem = ({ id, label, badge }: { id: View; label: string; badge?: number }) => (
+    <button
+      onClick={() => setView(id)}
+      className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-sm ${
+        view === id ? "bg-muted font-semibold" : "hover:bg-muted/60"
+      }`}
+    >
+      <span>{label}</span>
+      {badge ? <span className="rounded bg-border px-1.5 text-xs">{badge}</span> : null}
+    </button>
+  );
+
+  const Section = ({ children }: { children: string }) => (
+    <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{children}</div>
+  );
 
   return (
-    <div className="mx-auto max-w-4xl p-6 font-mono">
-      <header className="mb-4 flex items-center justify-between border-b border-border pb-3">
-        <h1 className="text-2xl font-bold">gitmate</h1>
-        <div className="flex gap-2">
-          <input value={dir} onChange={(e) => setDir(e.target.value)} placeholder="repo path (default .)" className={input} />
-          <button onClick={reload} disabled={!!busy} className={btn}>Reload</button>
+    <div className="flex h-screen font-mono text-foreground">
+      {/* ---------- SIDEBAR ---------- */}
+      <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-[var(--color-sidebar)]">
+        <div className="border-b border-border p-3">
+          <div className="text-sm font-bold">gitmate</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {status?.Detached ? "detached HEAD" : status?.Branch ?? "…"}
+            {status?.Upstream && (
+              <span className="ml-1">
+                <span className="text-[var(--color-ahead)]">↑{status.Ahead}</span>{" "}
+                <span className="text-[var(--color-behind)]">↓{status.Behind}</span>
+              </span>
+            )}
+          </div>
+          <div className="mt-1 text-xs">
+            {changed ? <span className="text-[var(--color-modified)]">{changed} changed</span>
+                     : <span className="text-muted-foreground">clean</span>}
+          </div>
         </div>
-      </header>
 
-      {toast && (
-        <div className={`mb-4 rounded-md px-3 py-2 text-sm ${toast.kind === "ok" ? "bg-green-600/20 text-green-400" : "bg-red-600/20 text-red-400"}`}>
-          {toast.msg}
-        </div>
-      )}
+        <nav className="flex-1 overflow-y-auto py-1">
+          <NavItem id="changes" label="Changes" badge={changed} />
+          <NavItem id="history" label="History" />
+          <NavItem id="branches" label="Branches" badge={branches.length} />
+          <NavItem id="prs" label="Pull Requests" badge={prs.length} />
+          <Section>Soon</Section>
+          <div className="px-3 py-1 text-sm text-muted-foreground/50">Remotes</div>
+          <div className="px-3 py-1 text-sm text-muted-foreground/50">Stashes</div>
+          <div className="px-3 py-1 text-sm text-muted-foreground/50">Tags</div>
+        </nav>
 
-      <Card className="mb-4">
-        <CardHeader><CardTitle>Commit &amp; Push</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex gap-2">
-            <input value={commitMsg} onChange={(e) => setCommitMsg(e.target.value)} placeholder="commit message (stages all)" className={`${input} flex-1`} />
-            <button onClick={doCommit} disabled={!!busy || !commitMsg.trim()} className={btn}>
-              {busy === "commit" ? "…" : "Commit"}
-            </button>
-            <button onClick={doPush} disabled={!!busy} className={btn}>
+        {/* status bar */}
+        <div className="border-t border-border p-2">
+          <div className="mb-1 flex gap-1">
+            <input value={dir} onChange={(e) => setDir(e.target.value)} placeholder="repo path (.)"
+                   className={`${input} w-full py-1 text-xs`} />
+          </div>
+          <div className="flex gap-1">
+            <button onClick={reload} disabled={!!busy} className={`${btnSm} flex-1`}>Reload</button>
+            <button onClick={doPush} disabled={!!busy} className={`${btnSm} flex-1`}>
               {busy === "push" ? "…" : "Push"}
             </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </aside>
 
-      <Card className="mb-4">
-        <CardHeader><CardTitle>New pull request</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <input value={prTitle} onChange={(e) => setPrTitle(e.target.value)} placeholder="title" className={`${input} flex-1`} />
-            <input value={prHead} onChange={(e) => setPrHead(e.target.value)} placeholder="head (source branch)" className={input} />
-            <input value={prBase} onChange={(e) => setPrBase(e.target.value)} placeholder="base" className={`${input} w-24`} />
-            <button onClick={doPR} disabled={!!busy || !prTitle.trim() || !prHead.trim()} className={btn}>
-              {busy === "pr" ? "…" : "Open PR"}
-            </button>
+      {/* ---------- MAIN ---------- */}
+      <main className="flex-1 overflow-y-auto">
+        {toast && (
+          <div className={`m-3 rounded-md px-3 py-2 text-sm ${
+            toast.kind === "ok" ? "bg-[var(--color-added)]/20 text-[var(--color-added)]"
+                                : "bg-[var(--color-removed)]/20 text-[var(--color-removed)]"}`}>
+            {toast.msg}
           </div>
-        </CardContent>
-      </Card>
+        )}
 
-      <Card className="mb-4">
-        <CardHeader><CardTitle>New issue</CardTitle></CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            <input value={issueTitle} onChange={(e) => setIssueTitle(e.target.value)} placeholder="title" className={`${input} flex-1`} />
-            <button onClick={doIssue} disabled={!!busy || !issueTitle.trim()} className={btn}>
-              {busy === "issue" ? "…" : "Open issue"}
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="p-4">
+          {/* CHANGES (home) */}
+          {view === "changes" && (
+            <div className="space-y-4">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Working changes</h2>
+              {status ? (
+                <>
+                  <div className="rounded-lg border border-border">
+                    {changed === 0 && <div className="p-3 text-sm italic text-muted-foreground">working tree clean</div>}
+                    {(status.Changes ?? []).map((c, i) => (
+                      <div key={i} className="flex items-baseline gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
+                        <StatusBadge staged={c.Staged} unstaged={c.Unstaged} />
+                        <span className="truncate">{c.Path}</span>
+                      </div>
+                    ))}
+                    {(status.Untracked ?? []).map((u, i) => (
+                      <div key={i} className="flex items-baseline gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
+                        <span className="w-20 shrink-0 text-xs text-muted-foreground">untracked</span>
+                        <span className="truncate">{u}</span>
+                      </div>
+                    ))}
+                  </div>
 
-      <Card className="mb-4">
-        <CardHeader><CardTitle>Status</CardTitle></CardHeader>
-        <CardContent>
-          {status ? (
-            <>
-              <div className="mb-2">
-                {status.Detached ? "HEAD detached" : <>On branch <b>{status.Branch}</b></>}
-                {status.Upstream && <span className="text-muted-foreground"> — tracking {status.Upstream} (ahead {status.Ahead}, behind {status.Behind})</span>}
+                  <div className="flex gap-2">
+                    <input value={commitMsg} onChange={(e) => setCommitMsg(e.target.value)}
+                           placeholder="commit message (stages all)" className={`${input} flex-1`} />
+                    <button onClick={doCommit} disabled={!!busy || !commitMsg.trim()} className={btn}>
+                      {busy === "commit" ? "…" : "Commit"}
+                    </button>
+                  </div>
+                </>
+              ) : <div className="text-sm text-muted-foreground">…</div>}
+            </div>
+          )}
+
+          {/* HISTORY */}
+          {view === "history" && (
+            <div className="space-y-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">History</h2>
+              <div className="rounded-lg border border-border">
+                {(commits ?? []).map((c) => (
+                  <div key={c.Hash} className="flex items-baseline gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
+                    <span className="shrink-0 text-[var(--color-modified)]">{c.Short}</span>
+                    <span className="truncate">{c.Subject}</span>
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">{c.Author}</span>
+                  </div>
+                ))}
               </div>
-              {((status.Changes?.length ?? 0) || (status.Untracked?.length ?? 0)) ? (
-                <div className="space-y-1">
-                  {(status.Changes ?? []).map((c, i) => (
-                    <div key={i} className="flex gap-2 text-sm">
-                      <Badge>{c.Staged}{c.Unstaged ? "/" + c.Unstaged : ""}</Badge>{c.Path}
-                    </div>
-                  ))}
-                  {(status.Untracked ?? []).map((u, i) => (
-                    <div key={i} className="flex gap-2 text-sm"><Badge>untracked</Badge>{u}</div>
-                  ))}
-                </div>
-              ) : <span className="italic text-muted-foreground">working tree clean</span>}
-            </>
-          ) : "…"}
-        </CardContent>
-      </Card>
-
-      <Card className="mb-4">
-        <CardHeader><CardTitle>Branches</CardTitle></CardHeader>
-        <CardContent className="space-y-1">
-          {(branches ?? []).map((b) => (
-            <div key={b.Name} className="flex items-baseline gap-2 text-sm">
-              {b.IsCurrent && <span className="text-green-500">●</span>}
-              <b>{b.Name}</b>
-              <span className="text-amber-500">{b.LastHash}</span>
-              {!b.Upstream && <span className="text-muted-foreground">(no upstream)</span>}
-              {b.Upstream && (b.Ahead || b.Behind) ? <span className="text-muted-foreground">[ahead {b.Ahead}, behind {b.Behind}]</span> : null}
-              <span className="truncate">{b.LastSubject}</span>
             </div>
-          ))}
-        </CardContent>
-      </Card>
+          )}
 
-      <Card className="mb-4">
-        <CardHeader><CardTitle>Recent commits</CardTitle></CardHeader>
-        <CardContent className="space-y-1">
-          {(commits ?? []).map((c) => (
-            <div key={c.Hash} className="flex items-baseline gap-2 text-sm">
-              <span className="text-amber-500">{c.Short}</span>
-              <span className="truncate">{c.Subject}</span>
-              <span className="text-muted-foreground">— {c.Author}</span>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>Open PRs</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          {(prs ?? []).length ? (prs ?? []).map((p) => (
-            <div key={p.Number} className="border-b border-border pb-2 last:border-0">
-              <div className="flex items-baseline gap-2 text-sm">
-                <span className="font-semibold text-blue-500">#{p.Number}</span>
-                <span className="truncate">{p.Title}</span>
-                {p.Draft && <Badge variant="outline">draft</Badge>}
-                <span className="text-muted-foreground">@{p.Author}</span>
-                <span className="ml-auto flex gap-1">
-                  <button onClick={() => loadChecks(p.Number)} disabled={!!busy} className={btnSm}>
-                    {busy === `checks-${p.Number}` ? "…" : "Checks"}
-                  </button>
-                  <button onClick={() => doMerge(p.Number)} disabled={!!busy} className={btnSm}>
-                    {busy === `merge-${p.Number}` ? "…" : "Merge"}
-                  </button>
-                </span>
+          {/* BRANCHES */}
+          {view === "branches" && (
+            <div className="space-y-2">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Branches</h2>
+              <div className="rounded-lg border border-border">
+                {(branches ?? []).map((b) => (
+                  <div key={b.Name} className="flex items-baseline gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
+                    {b.IsCurrent ? <span className="text-[var(--color-added)]">●</span> : <span className="w-2" />}
+                    <b>{b.Name}</b>
+                    <span className="text-[var(--color-modified)]">{b.LastHash}</span>
+                    {!b.Upstream && <span className="text-xs text-muted-foreground">(no upstream)</span>}
+                    {b.Upstream && (b.Ahead || b.Behind) ? (
+                      <span className="text-xs text-muted-foreground">↑{b.Ahead} ↓{b.Behind}</span>
+                    ) : null}
+                    <span className="ml-auto truncate text-xs text-muted-foreground">{b.LastSubject}</span>
+                  </div>
+                ))}
               </div>
-              {checks[p.Number] && (
-                <div className="mt-1 space-y-0.5 pl-6">
-                  {checks[p.Number].length ? checks[p.Number].map((r, i) => (
-                    <div key={i} className="text-xs">
-                      <span className={checkColor(r)}>{r.Conclusion || r.Status}</span>
-                      <span className="ml-2 text-muted-foreground">{r.Name}</span>
-                    </div>
-                  )) : <div className="text-xs italic text-muted-foreground">no checks reported</div>}
-                </div>
-              )}
             </div>
-          )) : <span className="italic text-muted-foreground">no open PRs</span>}
-        </CardContent>
-      </Card>
+          )}
+
+          {/* PULL REQUESTS */}
+          {view === "prs" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pull requests</h2>
+              </div>
+
+              {/* new PR */}
+              <div className="flex flex-wrap gap-2 rounded-lg border border-border p-3">
+                <input value={prTitle} onChange={(e) => setPrTitle(e.target.value)} placeholder="PR title" className={`${input} flex-1`} />
+                <input value={prHead} onChange={(e) => setPrHead(e.target.value)} placeholder="head branch" className={input} />
+                <input value={prBase} onChange={(e) => setPrBase(e.target.value)} placeholder="base" className={`${input} w-24`} />
+                <button onClick={doPR} disabled={!!busy || !prTitle.trim() || !prHead.trim()} className={btn}>
+                  {busy === "pr" ? "…" : "Open PR"}
+                </button>
+              </div>
+
+              {/* new issue */}
+              <div className="flex gap-2 rounded-lg border border-border p-3">
+                <input value={issueTitle} onChange={(e) => setIssueTitle(e.target.value)} placeholder="issue title" className={`${input} flex-1`} />
+                <button onClick={doIssue} disabled={!!busy || !issueTitle.trim()} className={btn}>
+                  {busy === "issue" ? "…" : "Open issue"}
+                </button>
+              </div>
+
+              {/* open PRs */}
+              <div className="rounded-lg border border-border">
+                {(prs ?? []).length ? (prs ?? []).map((p) => (
+                  <div key={p.Number} className="border-b border-border p-3 last:border-0">
+                    <div className="flex items-baseline gap-2 text-sm">
+                      <span className="font-semibold text-[var(--color-ahead)]">#{p.Number}</span>
+                      <span className="truncate">{p.Title}</span>
+                      <span className="text-xs text-muted-foreground">@{p.Author}</span>
+                      <span className="ml-auto flex gap-1">
+                        <button onClick={() => loadChecks(p.Number)} disabled={!!busy} className={btnSm}>
+                          {busy === `checks-${p.Number}` ? "…" : "Checks"}
+                        </button>
+                        <button onClick={() => doMerge(p.Number)} disabled={!!busy} className={btnSm}>
+                          {busy === `merge-${p.Number}` ? "…" : "Merge"}
+                        </button>
+                      </span>
+                    </div>
+                    {checks[p.Number] && (
+                      <div className="mt-1 space-y-0.5 pl-6">
+                        {checks[p.Number].length
+                          ? checks[p.Number].map((r, i) => <CheckBadge key={i} run={r} />)
+                          : <div className="text-xs italic text-muted-foreground">no checks reported</div>}
+                      </div>
+                    )}
+                  </div>
+                )) : <div className="p-3 text-sm italic text-muted-foreground">no open PRs</div>}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

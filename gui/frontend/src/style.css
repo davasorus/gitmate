@@ -8,6 +8,18 @@
   --color-muted-foreground: hsl(215 16% 47%);
   --color-primary: hsl(222 47% 11%);
   --color-card: hsl(0 0% 100%);
+  --color-sidebar: hsl(210 40% 98%);
+
+  /* git-semantic colors — meaning, not decoration */
+  --color-added: hsl(142 71% 38%);
+  --color-removed: hsl(0 72% 51%);
+  --color-modified: hsl(38 92% 45%);
+  --color-conflict: hsl(15 90% 52%);
+  --color-ahead: hsl(217 91% 55%);
+  --color-behind: hsl(38 92% 45%);
+  --color-check-pass: hsl(142 71% 38%);
+  --color-check-fail: hsl(0 72% 51%);
+  --color-check-pending: hsl(38 92% 45%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,6 +31,17 @@
     --color-muted-foreground: hsl(215 20% 65%);
     --color-primary: hsl(210 40% 96%);
     --color-card: hsl(222 47% 11%);
+    --color-sidebar: hsl(222 47% 10%);
+
+    --color-added: hsl(142 60% 45%);
+    --color-removed: hsl(0 65% 60%);
+    --color-modified: hsl(38 85% 55%);
+    --color-conflict: hsl(15 85% 60%);
+    --color-ahead: hsl(217 85% 65%);
+    --color-behind: hsl(38 85% 55%);
+    --color-check-pass: hsl(142 60% 45%);
+    --color-check-fail: hsl(0 65% 60%);
+    --color-check-pending: hsl(38 85% 55%);
   }
 }
 
