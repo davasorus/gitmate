@@ -146,6 +146,11 @@ func (g *GitService) Pull(rebase bool) error {
 	return gitops.Pull(g.repoDir, rebase)
 }
 
+func (g *GitService) Merge(branch string) error          { return gitops.Merge(g.repoDir, branch) }
+func (g *GitService) MergeAbort() error                  { return gitops.MergeAbort(g.repoDir) }
+func (g *GitService) ConflictedFiles() ([]string, error) { return gitops.ConflictedFiles(g.repoDir) }
+func (g *GitService) MergeInProgress() bool              { return gitops.MergeInProgress(g.repoDir) }
+
 // --- GitHub write ---
 
 func (g *GitService) CreatePR(title, body, head, base string) (string, error) {

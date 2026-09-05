@@ -136,3 +136,37 @@ func CurrentBranch(dir string) (string, error) {
 	}
 	return strings.TrimSpace(out), nil
 }
+
+// Merge merges the named branch into the current branch. On conflicts git exits
+// non-zero and leaves conflict markers; that error is returned to surface.
+func Merge(dir, branch string) error {
+	_, err := run(dir, "merge", branch)
+	return err
+}
+
+// MergeAbort aborts an in-progress merge, restoring the pre-merge state.
+func MergeAbort(dir string) error {
+	_, err := run(dir, "merge", "--abort")
+	return err
+}
+
+// ConflictedFiles returns paths currently in a conflicted (unmerged) state.
+func ConflictedFiles(dir string) ([]string, error) {
+	out, err := run(dir, "diff", "--name-only", "--diff-filter=U")
+	if err != nil {
+		return nil, err
+	}
+	var files []string
+	for _, line := range strings.Split(out, "\n") {
+		if line = strings.TrimSpace(line); line != "" {
+			files = append(files, line)
+		}
+	}
+	return files, nil
+}
+
+// MergeInProgress reports whether a merge is underway (MERGE_HEAD exists).
+func MergeInProgress(dir string) bool {
+	_, err := run(dir, "rev-parse", "--verify", "--quiet", "MERGE_HEAD")
+	return err == nil
+}
