@@ -65,7 +65,7 @@ var pushCmd = &cobra.Command{
 
 func init() {
 	commitCmd.Flags().StringVarP(&commitMessage, "message", "m", "", "commit message (required)")
-	commitCmd.MarkFlagRequired("message")
+	_ = commitCmd.MarkFlagRequired("message")
 	pushCmd.Flags().StringVar(&pushRemote, "remote", "origin", "remote to push to")
 	pushCmd.Flags().BoolVarP(&pushSetUpstream, "set-upstream", "u", false, "set upstream tracking on push")
 }

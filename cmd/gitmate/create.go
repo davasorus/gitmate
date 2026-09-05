@@ -14,13 +14,13 @@ func init() {
 	prCreateCmd.Flags().StringVarP(&prBody, "body", "b", "", "PR description")
 	prCreateCmd.Flags().StringVar(&prHead, "head", "", "source branch (required)")
 	prCreateCmd.Flags().StringVar(&prBase, "base", "live", "target branch")
-	prCreateCmd.MarkFlagRequired("title")
-	prCreateCmd.MarkFlagRequired("head")
+	_ = prCreateCmd.MarkFlagRequired("title")
+	_ = prCreateCmd.MarkFlagRequired("head")
 
 	issueCreateCmd.Flags().StringVar(&issueRepoFlag, "repo", "", "target repo as owner/name (defaults to origin remote)")
 	issueCreateCmd.Flags().StringVarP(&issueTitle, "title", "t", "", "issue title (required)")
 	issueCreateCmd.Flags().StringVarP(&issueBody, "body", "b", "", "issue description")
-	issueCreateCmd.MarkFlagRequired("title")
+	_ = issueCreateCmd.MarkFlagRequired("title")
 
 	prCmd.AddCommand(prCreateCmd)
 	issueCmd.AddCommand(issueCreateCmd)

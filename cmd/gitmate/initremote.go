@@ -19,7 +19,7 @@ func init() {
 	initRemoteCmd.Flags().StringVar(&initRepoName, "name", "", "repository name to create (required)")
 	initRemoteCmd.Flags().StringVar(&initDesc, "description", "", "repository description")
 	initRemoteCmd.Flags().BoolVar(&initPrivate, "private", false, "create as a private repo")
-	initRemoteCmd.MarkFlagRequired("name")
+	_ = initRemoteCmd.MarkFlagRequired("name")
 	rootCmd.AddCommand(initRemoteCmd)
 }
 
