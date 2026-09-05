@@ -93,7 +93,7 @@ export function History() {
                   <div>{detail.Author} &lt;{detail.Email}&gt; · {detail.Date}</div>
                   {detail.Body ? <div className="mt-1 whitespace-pre-wrap">{detail.Body}</div> : null}
                 </div>
-                <DiffView files={detail.Files} />
+                <DiffView files={detail.Files ?? []} />
               </div>
             )}
           </div>
