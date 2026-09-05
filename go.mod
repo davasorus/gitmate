@@ -1,6 +1,6 @@
 module github.com/davasorus/gitmate
 
-go 1.27.0
+go 1.25.0
 
 require (
 	github.com/google/go-github/v66 v66.0.0
