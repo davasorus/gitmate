@@ -2,12 +2,21 @@ import { useState } from "react";
 import { useGit, cls } from "../context";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import type { Tag } from "../../bindings/github.com/davasorus/gitmate/internal/gitops";
+import { Monitor, Cloud } from "lucide-react";
 
-function locationLabel(t: Tag): { text: string; color: string } {
-  if (t.Local && t.Remote) return { text: "both", color: "text-muted-foreground" };
-  if (t.Local) return { text: "local only", color: "text-[var(--color-modified)]" };
-  if (t.Remote) return { text: "remote only", color: "text-[var(--color-ahead)]" };
-  return { text: "", color: "" };
+// LocationIcons shows a Monitor (local) and a Cloud (remote), each lit when the
+// tag exists there and dimmed when it doesn't — instantly readable, tooltip too.
+function LocationIcons({ t }: { t: Tag }) {
+  const title =
+    t.Local && t.Remote ? "local and origin"
+    : t.Local ? "local only (not pushed)"
+    : t.Remote ? "on origin only" : "";
+  return (
+    <span className="flex shrink-0 items-center gap-1" title={title}>
+      <Monitor size={14} className={t.Local ? "text-[var(--color-modified)]" : "text-muted-foreground/25"} />
+      <Cloud size={14} className={t.Remote ? "text-[var(--color-ahead)]" : "text-muted-foreground/25"} />
+    </span>
+  );
 }
 
 export function Tags() {
@@ -54,11 +63,10 @@ export function Tags() {
 
       <div className="rounded-lg border border-border">
         {(tags ?? []).length ? (tags ?? []).map((t) => {
-          const loc = locationLabel(t);
           return (
             <div key={t.Name} className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
               <span className="shrink-0 font-semibold text-[var(--color-modified)]">{t.Name}</span>
-              <span className={`shrink-0 text-[10px] uppercase tracking-wider ${loc.color}`}>{loc.text}</span>
+              <LocationIcons t={t} />
               <span className="truncate text-xs text-muted-foreground">{t.Subject}</span>
               <span className="ml-auto flex shrink-0 gap-1">
                 {t.Local && !t.Remote && (

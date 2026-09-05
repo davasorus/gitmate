@@ -10,7 +10,7 @@ import { Tags } from "./views/Tags";
 
 export default function App() {
   const {
-    view, setView, dir, setDir, status, branches, prs, issues, stashes,
+    view, setView, dir, setDir, status, branches, prs, issues, stashes, tags,
     toast, busy, run, service, reload, mergeInProgress, rebaseInProgress, conflicts,
   } = useGit();
 
@@ -58,9 +58,9 @@ export default function App() {
           <NavItem id="prs" label="Pull Requests" badge={prs.length} />
           <NavItem id="issues" label="Issues" badge={issues.length} />
           <NavItem id="stashes" label="Stashes" badge={stashes.length} />
+          <NavItem id="tags" label="Tags" badge={tags.length} />
           <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Soon</div>
           <div className="px-3 py-1 text-sm text-muted-foreground/50">Remotes</div>
-          <NavItem id="tags" label="Tags" />
         </nav>
         <div className="border-t border-border p-2">
           <div className="mb-1 flex gap-1">

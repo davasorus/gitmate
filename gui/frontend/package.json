@@ -10,7 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@wailsio/runtime": "latest"
+    "@wailsio/runtime": "latest",
+    "lucide-react": "^0.460.0"
   },
   "devDependencies": {
     "typescript": "^7.0.2",

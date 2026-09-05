@@ -173,7 +173,7 @@
 ### 2.6 Tags  [x]
 - [x] engine: ListTags/CreateTag(lightweight+annotated)/DeleteTag/PushTag
 - [x] CLI: `gitmate tag [list|create|delete|push]`
-- [x] GUI: Tags sidebar view — list, create (annotated opt), delete (local or local+origin), push (triggers release), Sync tags (fetch --prune); tags now refresh on global Reload
+- [x] GUI: Tags sidebar view — list, create (annotated opt), delete (local or local+origin), push (triggers release), Sync tags (fetch --prune); tags now refresh on global Reload; location shown as Monitor(local)/Cloud(remote) icons; Tags promoted out of the SOON group into active nav
 
 ### 2.7 Reflog  [ ]  (the safety net / undo backbone)
 - [ ] engine: read reflog
@@ -199,6 +199,14 @@
 - [ ] GUI: clone dialog
 
 ### 3.3 Richer GitHub (REST)  [~]  (partial: issues list + improved PR create shipped)
+- [ ] Release ships only the CLI (`gitmate.exe`), not the Wails GUI. GoReleaser builds
+  `cmd/gitmate` (CLI); the desktop GUI needs `wails3 build` per-platform (embeds frontend,
+  icons, manifests), which GoReleaser doesn't do natively. Options: GoReleaser custom build
+  invoking wails3, or a separate release job running `wails3 build` and attaching artifacts.
+  Pairs with the workflow_dispatch release item.
+- [ ] Binaries are unsigned — Windows SmartScreen warns on download/run. Signing needs an
+  Authenticode cert (Windows) / Apple Developer cert + notarization (macOS) stored as CI
+  secrets; has real cost + setup. Defer until distributing to actual users.
 - [ ] PR reviews + review comments
 - [ ] labels, assignees, milestones
 - [ ] releases list / create (ties to tags 2.6)
@@ -209,6 +217,14 @@
 - [ ] use where REST would need many round-trips (PR detail view)
 
 ### 3.5 Webhooks (live updates)  [ ]  (only piece needing a server)
+- [ ] Release ships only the CLI (`gitmate.exe`), not the Wails GUI. GoReleaser builds
+  `cmd/gitmate` (CLI); the GUI needs `wails3 build` per-platform, which GoReleaser doesn't
+  do natively. Options: GoReleaser custom build invoking wails3, or a separate workflow job
+  running `wails3 build` and attaching the artifacts. Pairs with the workflow_dispatch
+  release item. (Raised during Tier 2; deferred to Tier 3 per roadmap discipline.)
+- [ ] Binaries are unsigned (Windows SmartScreen warning). Needs Authenticode cert (Windows)
+  / Apple Developer cert + notarization (macOS) stored as CI secrets — cost + setup. Defer
+  until distributing to real users. (Tier 3 at earliest.)
 - [ ] small HTTP server to receive events (HMAC-SHA256 verify, constant-time compare)
 - [ ] push events → GUI updates live instead of polling
 - [ ] biggest new concept; largest infra commitment
