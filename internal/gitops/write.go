@@ -170,3 +170,35 @@ func MergeInProgress(dir string) bool {
 	_, err := run(dir, "rev-parse", "--verify", "--quiet", "MERGE_HEAD")
 	return err == nil
 }
+
+// Rebase replays the current branch's commits on top of base. Like merge it can
+// conflict — but per replayed commit, so it may stop repeatedly. On conflict git
+// exits non-zero; resolve then RebaseContinue, or RebaseAbort to bail.
+func Rebase(dir, base string) error {
+	_, err := run(dir, "rebase", base)
+	return err
+}
+
+// RebaseContinue resumes a rebase after conflicts are resolved and staged.
+func RebaseContinue(dir string) error {
+	// -c core.editor=true skips the commit-message editor prompt.
+	_, err := run(dir, "-c", "core.editor=true", "rebase", "--continue")
+	return err
+}
+
+// RebaseAbort aborts an in-progress rebase, restoring the pre-rebase state.
+func RebaseAbort(dir string) error {
+	_, err := run(dir, "rebase", "--abort")
+	return err
+}
+
+// RebaseInProgress reports whether a rebase is underway (the rebase-merge or
+// rebase-apply state dir exists under .git).
+func RebaseInProgress(dir string) bool {
+	// `git rev-parse --git-path` gives the path; existence check via status.
+	out, err := run(dir, "status")
+	if err != nil {
+		return false
+	}
+	return strings.Contains(out, "rebase in progress") || strings.Contains(out, "interactive rebase in progress")
+}

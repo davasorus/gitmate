@@ -13,6 +13,7 @@ export function Branches() {
   const doDelete = (name: string, force: boolean) => run(`delbranch-${name}`, async () => { await service.DeleteBranch(name, force); setConfirmDel(null); return `deleted ${name}`; }, `deleted ${name}`);
   const doRename = () => run("rename-branch", async () => { if (!renaming) return; const { old, next } = renaming; await service.RenameBranch(old, next.trim()); setRenaming(null); return `renamed ${old} → ${next.trim()}`; }, "branch renamed");
   const doMerge = (b: string) => run(`merge-branch-${b}`, async () => { await service.Merge(b); const c = (await service.ConflictedFiles()) ?? []; return c.length ? `merge hit ${c.length} conflict(s) — see banner` : `merged ${b}`; }, `merged ${b}`);
+  const doRebase = (b: string) => run(`rebase-branch-${b}`, async () => { await service.Rebase(b); const c = (await service.ConflictedFiles()) ?? []; return c.length ? `rebase hit ${c.length} conflict(s) — see banner` : `rebased onto ${b}`; }, `rebased onto ${b}`);
 
   return (
     <div className="space-y-4">
@@ -35,6 +36,7 @@ export function Branches() {
             <span className="ml-auto flex shrink-0 gap-1">
               {!b.IsCurrent && <button onClick={() => doSwitch(b.Name)} disabled={!!busy} className={cls.btnSm}>{busy === `switch-${b.Name}` ? "…" : "Switch"}</button>}
               {!b.IsCurrent && <button onClick={() => doMerge(b.Name)} disabled={!!busy} className={cls.btnSm}>{busy === `merge-branch-${b.Name}` ? "…" : "Merge"}</button>}
+              {!b.IsCurrent && <button onClick={() => doRebase(b.Name)} disabled={!!busy} className={cls.btnSm}>{busy === `rebase-branch-${b.Name}` ? "…" : "Rebase"}</button>}
               <button onClick={() => setRenaming({ old: b.Name, next: b.Name })} disabled={!!busy} className={cls.btnSm}>Rename</button>
               {!b.IsCurrent && <button onClick={() => setConfirmDel(b.Name)} disabled={!!busy} className={`${cls.btnSm} text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10`}>{busy === `delbranch-${b.Name}` ? "…" : "Delete"}</button>}
             </span>

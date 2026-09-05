@@ -151,6 +151,11 @@ func (g *GitService) MergeAbort() error                  { return gitops.MergeAb
 func (g *GitService) ConflictedFiles() ([]string, error) { return gitops.ConflictedFiles(g.repoDir) }
 func (g *GitService) MergeInProgress() bool              { return gitops.MergeInProgress(g.repoDir) }
 
+func (g *GitService) Rebase(base string) error { return gitops.Rebase(g.repoDir, base) }
+func (g *GitService) RebaseContinue() error    { return gitops.RebaseContinue(g.repoDir) }
+func (g *GitService) RebaseAbort() error       { return gitops.RebaseAbort(g.repoDir) }
+func (g *GitService) RebaseInProgress() bool   { return gitops.RebaseInProgress(g.repoDir) }
+
 func (g *GitService) ReadConflict(path string) (*gitops.ConflictFile, error) {
 	return gitops.ReadConflict(g.repoDir, path)
 }

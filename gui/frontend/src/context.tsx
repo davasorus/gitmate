@@ -20,6 +20,7 @@ export interface GitmateState {
   stashes: Stash[];
   checks: Record<number, CheckRun[]>;
   mergeInProgress: boolean;
+  rebaseInProgress: boolean;
   conflicts: string[];
 
   // ui
@@ -53,6 +54,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
   const [stashes, setStashes] = useState<Stash[]>([]);
   const [checks] = useState<Record<number, CheckRun[]>>({});
   const [mergeInProgress, setMergeInProgress] = useState(false);
+  const [rebaseInProgress, setRebaseInProgress] = useState(false);
   const [conflicts, setConflicts] = useState<string[]>([]);
 
   const [toast, setToast] = useState<Toast>(null);
@@ -79,8 +81,9 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
       try { setIssues((await GitService.Issues("open")) ?? []); } catch { setIssues([]); }
       try {
         setMergeInProgress(await GitService.MergeInProgress());
+        setRebaseInProgress(await GitService.RebaseInProgress());
         setConflicts((await GitService.ConflictedFiles()) ?? []);
-      } catch { setMergeInProgress(false); setConflicts([]); }
+      } catch { setMergeInProgress(false); setRebaseInProgress(false); setConflicts([]); }
     } catch (e) {
       flash("err", String(e));
     }
@@ -103,7 +106,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
 
   const value: GitmateState = {
     view, setView, dir, setDir,
-    status, branches, commits, prs, issues, stashes, checks, mergeInProgress, conflicts,
+    status, branches, commits, prs, issues, stashes, checks, mergeInProgress, rebaseInProgress, conflicts,
     toast, busy, setBusy, flash, reload, run,
     service: GitService,
   };

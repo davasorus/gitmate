@@ -155,11 +155,11 @@
 - [x] CLI: `gitmate conflicts`, `gitmate resolve <path> [--side ours|theirs]`
 - [x] GUI: Conflicts view — per-file ours/theirs preview + Take ours/theirs/Mark resolved (per-region UI deferred to polish)
 
-### 2.3 Rebase  [ ]
-- [ ] engine: rebase onto; continue/abort
-- [ ] engine: interactive rebase (reorder/squash/edit) — hard to model
-- [ ] CLI: `gitmate rebase <base> [--continue|--abort]`
-- [ ] GUI: (stretch) interactive rebase editor
+### 2.3 Rebase  [x] (non-interactive; interactive rebase deferred)
+- [x] engine: Rebase/RebaseContinue/RebaseAbort/RebaseInProgress
+- [ ] engine: interactive rebase (reorder/squash/edit) — deferred
+- [x] CLI: `gitmate rebase <base> [--continue|--abort]`
+- [x] GUI: Rebase button in Branches + rebase-in-progress banner (Continue/Abort), reuses Conflicts view; interactive editor deferred
 
 ### 2.4 Reset  [ ]  (dangerous — guardrails required)
 - [ ] engine: reset soft / mixed / hard
@@ -251,3 +251,21 @@
 - Keep CI green; run `golangci-lint run ./cmd/... ./internal/...` before pushing.
 - Add a gitops table test for each new engine operation.
 - Update this doc's checkboxes as things land.
+
+### UX feedback (added post-Tier-2.2)
+- [ ] **GUI reload on window focus** — the GUI polls, it doesn't watch. Actions taken
+  in the terminal (or another git tool) while the app is open aren't reflected until a
+  manual Reload or a GUI action forces reload(). Reload on window-focus covers the
+  common terminal↔GUI bounce cheaply (a filesystem watcher on .git is the heavier,
+  fuller fix). Surfaced when a CLI-concluded merge left the banner stale.
+- [ ] **GUI should set repoDir to the real repo root.** repoDir defaults to "." and the
+  Wails process runs from gui/, so git commands work only because git walks *up* to
+  find the repo. Path-relative filesystem commands (e.g. conflict resolve's
+  `checkout --ours -- <path>`) broke because the pathspec resolved against gui/, not
+  the root. ResolveOurs/Theirs/MarkResolved self-correct via `rev-parse --show-toplevel`,
+  but the real fix is aligning repoDir/cwd once for all commands.
+- [ ] **Merge-completion UX** — banner should auto-clear when a merge concludes, and the
+  Conflicts view should offer a "Commit merge" button once conflicts hit zero (right now
+  it says "commit in Changes to finish" but nothing pulls you there).
+- [ ] Windows path casing (README.MD vs README.md) is a recurring gotcha — git pathspecs
+  are case-sensitive even on case-insensitive filesystems. Not code-fixable; note for docs.
