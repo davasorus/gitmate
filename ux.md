@@ -185,3 +185,4 @@ building on it; do budget a polish pass after the sidebar+main shell + DiffView 
 ## Update log
 
 - PR creation redesigned: head pre-filled with current branch (editable), base as branch dropdown, title optional (defaults to last commit subject), body pre-loaded from `.github/PULL_REQUEST_TEMPLATE.md`, PR link shown on success. Issues promoted to a dedicated sidebar tab.
+- Branch row actions redesigned: click the branch name to switch; a single **Integrate (merge|rebase)** control (remembers last method, ▾ to pick) replaces the separate Merge/Rebase buttons since they're one conceptual action; Rename/Delete moved into a **⋯ overflow menu** (Delete red). New reusable `components/Menu.tsx` dropdown is the row-action pattern going forward. No config screen — the merge/rebase preference is expressed by remembering last use.
