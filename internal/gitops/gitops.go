@@ -150,3 +150,18 @@ func codeName(c byte) string {
 		return string(c)
 	}
 }
+
+// GetRemoteURL returns the URL of the named remote (e.g. "origin").
+func GetRemoteURL(dir, name string) (string, error) {
+	out, err := run(dir, "remote", "get-url", name)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// AddRemote adds a named remote pointing at url.
+func AddRemote(dir, name, url string) error {
+	_, err := run(dir, "remote", "add", name, url)
+	return err
+}
