@@ -1,0 +1,38 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of `go tool cover`
+*.out
+coverage.*
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Env files
+.env
+.env.local
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Wails 3 build output
+/gui/build/bin/
+/gui/frontend/node_modules/
+/gui/frontend/dist/
