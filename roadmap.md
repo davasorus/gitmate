@@ -8,6 +8,8 @@
 
 ## Architecture (fixed decisions)
 
+> SCOPE BOUNDARY (decided at end of Tier 2): gitmate is a git-OPERATIONS client, not a code editor. Anything that only makes sense inside an editor — blame annotations, inline file editing, a source file tree/viewer, syntax highlighting — is OUT OF SCOPE. Those live in the user's actual editor (VS Code + GitLens). This prevents scope creep toward 'rebuild the IDE'.
+
 - **Shared engine, two frontends.** All git/GitHub logic lives in `internal/`.
   The CLI (`cmd/gitmate`) and GUI (`gui/`) are thin layers that call the same engine.
   A bug fixed in the engine fixes both frontends at once. This is non-negotiable —
@@ -145,6 +147,8 @@
 
 ## TIER 2 — History & repair (git gets sharp; guardrails matter)
 
+> STATUS: TIER 2 COMPLETE — merge, conflicts, rebase, reset, cherry-pick/revert, tags, reflog, blame all shipped (CLI + GUI). Deferred within-tier: interactive rebase, per-region conflict resolution. Next: polish stage (row-action cleanup, History branch browsing, etc.) or Tier 3.
+
 ### 2.1 Merge  [x]
 - [x] engine: merge a branch; detect conflicts (Merge/ConflictedFiles/MergeInProgress/MergeAbort)
 - [x] CLI: `gitmate merge <branch>` + `merge-abort`
@@ -180,10 +184,10 @@
 - [x] CLI: `gitmate reflog [-n N]`
 - [x] GUI: Reflog view color-coded; per-entry Reset to here (soft/mixed/hard) wired via 2.4
 
-### 2.8 Blame  [ ]
-- [ ] engine: line-by-line authorship for a file
-- [ ] CLI: `gitmate blame <path>`
-- [ ] GUI: blame gutter in file view
+### 2.8 Blame  [x]
+- [x] engine: Blame(path) via git blame --porcelain
+- [x] CLI: `gitmate blame <path>`
+- [x] GUI: DECLINED — blame is only meaningful while reading code (chasing a bug), which is a code-editor activity. gitmate is a git-operations client, not an editor; blame has no natural context here. Kept as CLI (`gitmate blame <path>`).
 
 ---
 
