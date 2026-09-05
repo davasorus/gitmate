@@ -17,6 +17,19 @@ func Stage(dir string, paths ...string) error {
 	return err
 }
 
+// Unstage removes paths from the index (staged -> unstaged), leaving the
+// working tree untouched. With no paths, unstages everything.
+func Unstage(dir string, paths ...string) error {
+	args := []string{"restore", "--staged"}
+	if len(paths) == 0 {
+		args = append(args, ".")
+	} else {
+		args = append(args, paths...)
+	}
+	_, err := run(dir, args...)
+	return err
+}
+
 // CreateCommit creates a commit with the given message and returns the new short hash.
 func CreateCommit(dir, message string) (string, error) {
 	if strings.TrimSpace(message) == "" {

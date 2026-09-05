@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { GitService } from "../bindings/github.com/davasorus/gitmate/gui";
-import type { Status, Commit, Branch } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
+import type { Status, Commit, Branch, FileDiff } from "../bindings/github.com/davasorus/gitmate/internal/gitops";
 import type { PR, CheckRun } from "../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 /* ---------- types ---------- */
@@ -33,6 +33,53 @@ function CheckBadge({ run }: { run: CheckRun }) {
   );
 }
 
+function DiffView({ files }: { files: FileDiff[] }) {
+  if (!files || files.length === 0) {
+    return <div className="p-3 text-xs italic text-muted-foreground">no diff</div>;
+  }
+  return (
+    <div className="space-y-3">
+      {files.map((f, fi) => (
+        <div key={fi} className="overflow-hidden rounded-md border border-border">
+          <div className="border-b border-border bg-muted px-3 py-1.5 text-xs text-[var(--color-ahead)]">
+            {f.NewPath || f.OldPath}
+          </div>
+          {f.Binary ? (
+            <div className="px-3 py-2 text-xs italic text-muted-foreground">binary file</div>
+          ) : (
+            (f.Hunks ?? []).map((h, hi) => (
+              <div key={hi}>
+                <div className="bg-muted/50 px-3 py-1 text-xs text-muted-foreground">{h.Header}</div>
+                <div className="overflow-x-auto">
+                  {(h.Lines ?? []).map((ln, li) => {
+                    const add = ln.Kind === "add";
+                    const rem = ln.Kind === "remove";
+                    const bg = add ? "bg-[var(--color-added)]/10" : rem ? "bg-[var(--color-removed)]/10" : "";
+                    const fg = add ? "text-[var(--color-added)]" : rem ? "text-[var(--color-removed)]" : "text-foreground";
+                    const marker = add ? "+" : rem ? "-" : " ";
+                    return (
+                      <div key={li} className={`flex ${bg} font-mono text-xs leading-5`}>
+                        <span className="w-10 shrink-0 select-none px-1 text-right text-muted-foreground/60">
+                          {ln.OldNum || ""}
+                        </span>
+                        <span className="w-10 shrink-0 select-none px-1 text-right text-muted-foreground/60">
+                          {ln.NewNum || ""}
+                        </span>
+                        <span className={`w-4 shrink-0 select-none text-center ${fg}`}>{marker}</span>
+                        <span className={`whitespace-pre ${fg}`}>{ln.Content}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 /* ---------- app ---------- */
 
 export default function App() {
@@ -44,6 +91,9 @@ export default function App() {
   const [commits, setCommits] = useState<Commit[]>([]);
   const [prs, setPRs] = useState<PR[]>([]);
   const [checks, setChecks] = useState<Record<number, CheckRun[]>>({});
+
+  const [openDiff, setOpenDiff] = useState<{ path: string; staged: boolean } | null>(null);
+  const [diffFiles, setDiffFiles] = useState<FileDiff[]>([]);
 
   const [toast, setToast] = useState<Toast>(null);
   const [busy, setBusy] = useState("");
@@ -70,6 +120,9 @@ export default function App() {
       setStatus(s);
       setBranches(b ?? []);
       setCommits(c ?? []);
+      // any open diff is stale after a reload
+      setOpenDiff(null);
+      setDiffFiles([]);
       try {
         setPRs((await GitService.PRs("open")) ?? []);
       } catch {
@@ -122,7 +175,7 @@ export default function App() {
       return `merged #${n} (${sha.slice(0, 7)})`;
     }, `merged #${n}`);
 
-    const loadChecks = async (n: number) => {
+  const loadChecks = async (n: number) => {
     setBusy(`checks-${n}`);
     try {
       const runs = (await GitService.PRChecks(n)) ?? [];
@@ -134,6 +187,29 @@ export default function App() {
     }
   };
 
+  const showDiff = async (path: string, staged: boolean) => {
+    if (openDiff && openDiff.path === path && openDiff.staged === staged) {
+      setOpenDiff(null);
+      setDiffFiles([]);
+      return;
+    }
+    setBusy(`diff-${path}`);
+    try {
+      const files = (await GitService.Diff(path, staged)) ?? [];
+      setDiffFiles(files);
+      setOpenDiff({ path, staged });
+    } catch (e) {
+      flash("err", String(e));
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const doStage = (path: string) =>
+    run(`stage-${path}`, () => GitService.StagePath(path), `staged ${path}`);
+  const doUnstage = (path: string) =>
+    run(`unstage-${path}`, () => GitService.UnstagePath(path), `unstaged ${path}`);
+
   /* ---------- styles ---------- */
   const input = "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-[var(--color-ahead)]";
   const btn = "rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-background disabled:opacity-40";
@@ -141,7 +217,6 @@ export default function App() {
 
   const changed = (status?.Changes?.length ?? 0) + (status?.Untracked?.length ?? 0);
 
-  /* ---------- sidebar item ---------- */
   const NavItem = ({ id, label, badge }: { id: View; label: string; badge?: number }) => (
     <button
       onClick={() => setView(id)}
@@ -190,7 +265,6 @@ export default function App() {
           <div className="px-3 py-1 text-sm text-muted-foreground/50">Tags</div>
         </nav>
 
-        {/* status bar */}
         <div className="border-t border-border p-2">
           <div className="mb-1 flex gap-1">
             <input value={dir} onChange={(e) => setDir(e.target.value)} placeholder="repo path (.)"
@@ -222,21 +296,82 @@ export default function App() {
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Working changes</h2>
               {status ? (
                 <>
-                  <div className="rounded-lg border border-border">
-                    {changed === 0 && <div className="p-3 text-sm italic text-muted-foreground">working tree clean</div>}
-                    {(status.Changes ?? []).map((c, i) => (
-                      <div key={i} className="flex items-baseline gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
-                        <StatusBadge staged={c.Staged} unstaged={c.Unstaged} />
-                        <span className="truncate">{c.Path}</span>
+                  {(() => {
+                    const chs = status.Changes ?? [];
+                    const staged = chs.filter((c) => (c.Staged ?? "") !== "");
+                    const unstaged = chs.filter((c) => (c.Unstaged ?? "") !== "");
+                    const untracked = status.Untracked ?? [];
+
+                    const Row = ({
+                      path, staged: isStaged, badge,
+                    }: { path: string; staged: boolean; badge: React.ReactNode }) => (
+                      <div key={`${isStaged ? "s" : "u"}-${path}`}>
+                        <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0 hover:bg-muted/60">
+                          <button
+                            onClick={() => (isStaged ? doUnstage(path) : doStage(path))}
+                            disabled={!!busy}
+                            className="w-5 shrink-0 rounded border border-border text-center text-xs hover:bg-muted disabled:opacity-40"
+                            title={isStaged ? "unstage" : "stage"}
+                          >
+                            {busy === `${isStaged ? "unstage" : "stage"}-${path}` ? "…" : isStaged ? "\u2212" : "+"}
+                          </button>
+                          <button
+                            onClick={() => showDiff(path, isStaged)}
+                            className="flex flex-1 items-baseline gap-2 text-left"
+                          >
+                            {badge}
+                            <span className="truncate">{path}</span>
+                            {busy === `diff-${path}` && <span className="ml-auto text-xs text-muted-foreground">…</span>}
+                          </button>
+                        </div>
+                        {openDiff?.path === path && openDiff.staged === isStaged && (
+                          <div className="border-b border-border bg-background px-2 py-2">
+                            <DiffView files={diffFiles} />
+                          </div>
+                        )}
                       </div>
-                    ))}
-                    {(status.Untracked ?? []).map((u, i) => (
-                      <div key={i} className="flex items-baseline gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0">
-                        <span className="w-20 shrink-0 text-xs text-muted-foreground">untracked</span>
-                        <span className="truncate">{u}</span>
+                    );
+
+                    return (
+                      <div className="space-y-4">
+                        <div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Staged ({staged.length})</div>
+                          <div className="rounded-lg border border-border">
+                            {staged.length === 0
+                              ? <div className="p-3 text-xs italic text-muted-foreground">nothing staged</div>
+                              : staged.map((c) => (
+                                  <Row key={`s-${c.Path}`} path={c.Path} staged={true}
+                                       badge={<StatusBadge staged={c.Staged} unstaged="" />} />
+                                ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Unstaged ({unstaged.length + untracked.length})</div>
+                          <div className="rounded-lg border border-border">
+                            {unstaged.length === 0 && untracked.length === 0
+                              ? <div className="p-3 text-xs italic text-muted-foreground">nothing unstaged</div>
+                              : <>
+                                  {unstaged.map((c) => (
+                                    <Row key={`u-${c.Path}`} path={c.Path} staged={false}
+                                         badge={<StatusBadge staged="" unstaged={c.Unstaged} />} />
+                                  ))}
+                                  {untracked.map((u) => (
+                                    <div key={`t-${u}`} className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0 hover:bg-muted/60">
+                                      <button onClick={() => doStage(u)} disabled={!!busy}
+                                              className="w-5 shrink-0 rounded border border-border text-center text-xs hover:bg-muted disabled:opacity-40" title="stage">
+                                        {busy === `stage-${u}` ? "…" : "+"}
+                                      </button>
+                                      <span className="w-20 shrink-0 text-xs text-muted-foreground">untracked</span>
+                                      <span className="truncate">{u}</span>
+                                    </div>
+                                  ))}
+                                </>}
+                          </div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
 
                   <div className="flex gap-2">
                     <input value={commitMsg} onChange={(e) => setCommitMsg(e.target.value)}
@@ -294,7 +429,6 @@ export default function App() {
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pull requests</h2>
               </div>
 
-              {/* new PR */}
               <div className="flex flex-wrap gap-2 rounded-lg border border-border p-3">
                 <input value={prTitle} onChange={(e) => setPrTitle(e.target.value)} placeholder="PR title" className={`${input} flex-1`} />
                 <input value={prHead} onChange={(e) => setPrHead(e.target.value)} placeholder="head branch" className={input} />
@@ -304,7 +438,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* new issue */}
               <div className="flex gap-2 rounded-lg border border-border p-3">
                 <input value={issueTitle} onChange={(e) => setIssueTitle(e.target.value)} placeholder="issue title" className={`${input} flex-1`} />
                 <button onClick={doIssue} disabled={!!busy || !issueTitle.trim()} className={btn}>
@@ -312,7 +445,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* open PRs */}
               <div className="rounded-lg border border-border">
                 {(prs ?? []).length ? (prs ?? []).map((p) => (
                   <div key={p.Number} className="border-b border-border p-3 last:border-0">

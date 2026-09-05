@@ -47,6 +47,13 @@ func (g *GitService) Branches() ([]gitops.Branch, error) {
 	return gitops.GetBranches(g.repoDir)
 }
 
+func (g *GitService) Diff(path string, staged bool) ([]gitops.FileDiff, error) {
+	return gitops.Diff(g.repoDir, gitops.DiffOptions{
+		Path:   path,
+		Staged: staged,
+	})
+}
+
 // --- GitHub (needs GITHUB_TOKEN in the process env) ---
 
 // PRs resolves owner/repo from the origin remote of the current dir.
@@ -89,6 +96,14 @@ func (g *GitService) resolve(ctx context.Context) (owner, repo string, err error
 
 func (g *GitService) Stage() error {
 	return gitops.Stage(g.repoDir)
+}
+
+func (g *GitService) StagePath(path string) error {
+	return gitops.Stage(g.repoDir, path)
+}
+
+func (g *GitService) UnstagePath(path string) error {
+	return gitops.Unstage(g.repoDir, path)
 }
 
 func (g *GitService) Commit(message string) (string, error) {

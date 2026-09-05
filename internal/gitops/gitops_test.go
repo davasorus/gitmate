@@ -147,3 +147,33 @@ func TestParseTrackAheadBehind(t *testing.T) {
 		}
 	}
 }
+
+func TestStageUnstageRoundTrip(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "one\n")
+	if err := Stage(dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+
+	// modify + stage just this file
+	writeFile(t, dir, "a.txt", "two\n")
+	if err := Stage(dir, "a.txt"); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := GetStatus(dir)
+	if len(s.Changes) != 1 || s.Changes[0].Staged != "modified" {
+		t.Fatalf("expected a.txt staged as modified, got %+v", s.Changes)
+	}
+
+	// unstage it → change moves back to the unstaged column
+	if err := Unstage(dir, "a.txt"); err != nil {
+		t.Fatal(err)
+	}
+	s, _ = GetStatus(dir)
+	if len(s.Changes) != 1 || s.Changes[0].Unstaged != "modified" {
+		t.Fatalf("expected a.txt unstaged as modified, got %+v", s.Changes)
+	}
+}
