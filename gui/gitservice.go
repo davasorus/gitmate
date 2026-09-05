@@ -43,6 +43,10 @@ func (g *GitService) Log(limit int) ([]gitops.Commit, error) {
 	return gitops.GetLog(g.repoDir, limit)
 }
 
+func (g *GitService) LogRef(ref string, limit int) ([]gitops.Commit, error) {
+	return gitops.GetLogRef(g.repoDir, ref, limit)
+}
+
 func (g *GitService) Branches() ([]gitops.Branch, error) {
 	return gitops.GetBranches(g.repoDir)
 }
