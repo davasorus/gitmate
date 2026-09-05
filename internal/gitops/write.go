@@ -202,3 +202,25 @@ func RebaseInProgress(dir string) bool {
 	}
 	return strings.Contains(out, "rebase in progress") || strings.Contains(out, "interactive rebase in progress")
 }
+
+// ResetMode is soft (move HEAD, keep index + working tree), mixed (move HEAD +
+// reset index, keep working tree — the default), or hard (move HEAD + reset
+// index + working tree, DISCARDING uncommitted changes and orphaning commits
+// after the target — recoverable via reflog until it expires).
+type ResetMode string
+
+const (
+	ResetSoft  ResetMode = "soft"
+	ResetMixed ResetMode = "mixed"
+	ResetHard  ResetMode = "hard"
+)
+
+// Reset moves HEAD to rev using the given mode.
+func Reset(dir, rev string, mode ResetMode) error {
+	m := string(mode)
+	if m == "" {
+		m = "mixed"
+	}
+	_, err := run(dir, "reset", "--"+m, rev)
+	return err
+}

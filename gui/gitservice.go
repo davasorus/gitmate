@@ -267,6 +267,10 @@ func (g *GitService) Reflog(limit int) ([]gitops.ReflogEntry, error) {
 	return gitops.Reflog(g.repoDir, limit)
 }
 
+func (g *GitService) Reset(rev, mode string) error {
+	return gitops.Reset(g.repoDir, rev, gitops.ResetMode(mode))
+}
+
 func (g *GitService) CurrentBranch() (string, error) {
 	return gitops.CurrentBranch(g.repoDir)
 }

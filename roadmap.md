@@ -161,10 +161,10 @@
 - [x] CLI: `gitmate rebase <base> [--continue|--abort]`
 - [x] GUI: Rebase button in Branches + rebase-in-progress banner (Continue/Abort), reuses Conflicts view; interactive editor deferred
 
-### 2.4 Reset  [ ]  (dangerous — guardrails required)
-- [ ] engine: reset soft / mixed / hard
-- [ ] CLI: `gitmate reset [--soft|--mixed|--hard] <rev>` (confirm on hard)
-- [ ] GUI: reset with explicit mode choice + confirm
+### 2.4 Reset  [x]  (dangerous — guardrails required)
+- [x] engine: Reset(rev, soft|mixed|hard)
+- [x] CLI: `gitmate reset <rev> [--soft|--hard]` (--hard needs --force)
+- [x] GUI: Reset to here (Soft/Mixed/Hard) on each Reflog entry; Hard needs confirm dialog
 
 ### 2.5 Cherry-pick / revert  [ ]
 - [ ] engine: cherry-pick <rev>, revert <rev>
@@ -178,7 +178,7 @@
 ### 2.7 Reflog  [x]  (the safety net / undo backbone)
 - [x] engine: Reflog(dir, limit) — parses selector/action/message
 - [x] CLI: `gitmate reflog [-n N]`
-- [x] GUI: Reflog view (read-only, color-coded by action); one-click restore deferred until 2.4 reset
+- [x] GUI: Reflog view color-coded; per-entry Reset to here (soft/mixed/hard) wired via 2.4
 
 ### 2.8 Blame  [ ]
 - [ ] engine: line-by-line authorship for a file
