@@ -1,5 +1,22 @@
 # gitmate — Roadmap to a Full Git Client (CLI + GUI)
 
+---
+
+## ⚠️ OPEN FUNCTIONAL GAPS (Tier 1/2 — re-opened by the hard reset to a464629)
+
+Two features were built then lost in a `git reset --hard`. Both must be
+re-implemented to make Tier 1/2 functionally complete. Doing them one at a time.
+
+- [ ] **1.7 stash apply** — have save/list/pop/drop; missing `apply` (apply and keep).
+- [ ] **2.5 GUI cherry-pick reachability** — History shows only the current branch, so
+  GUI cherry-pick can only pick commits already on the branch (a no-op). Needs a
+  History branch selector (log any ref) + label the cherry-pick/revert target.
+  CLI cherry-pick already works.
+
+Correctly NOT gaps (already Tier 3): remote management (3.1), clone (3.2).
+
+---
+
 > Living plan. gitmate is a Cobra CLI + Wails 3 (React/Tailwind/shadcn) desktop app
 > over one shared Go engine. Goal: a real, full-featured git client usable from both
 > the terminal and the UI — not a toy. This doc is the reference we build against.
@@ -136,7 +153,7 @@
 ### 1.7 Stash  [x]
 - [x] engine: stash save / list / pop / drop (apply deferred)
 - [x] CLI: `gitmate stash [save|list|pop|drop]`
-- [x] GUI: Stashes sidebar section (save, list, pop, drop w/ confirm)
+- [x] GUI: Stashes sidebar (save, list, pop, drop w/ confirm) — [ ] apply pending (re-open)
 
 ### 1.8 Show (inspect one commit)  [x]
 - [x] engine: commit metadata + diff for a rev (root-commit safe)
@@ -170,7 +187,7 @@
 - [x] CLI: `gitmate reset <rev> [--soft|--hard]` (--hard needs --force)
 - [x] GUI: Reset to here (Soft/Mixed/Hard) on each Reflog entry; Hard needs confirm dialog
 
-### 2.5 Cherry-pick / revert  [x]
+### 2.5 Cherry-pick / revert  [~] (CLI ✅; GUI cherry-pick reachability re-open — needs History branch browsing)
 - [x] engine: CherryPick/Revert (+continue/abort, SequencerInProgress) — reuses conflict flow
 - [x] CLI: `gitmate cherry-pick <rev>` / `revert <rev>` (--continue/--abort); GUI: Cherry-pick + Revert buttons on History commits, in-progress banners route to Conflicts view
 
@@ -203,6 +220,9 @@
 - [ ] GUI: clone dialog
 
 ### 3.3 Richer GitHub (REST)  [~]  (partial: issues list + improved PR create shipped)
+- [ ] CI does not build/typecheck the GUI (only cmd/ + internal/). This is why
+  mangled GUI files / missing frontend deps reached runtime instead of failing in
+  CI. Add a CI job: `go build ./gui/...` + a frontend typecheck/build. Hygiene.
 - [ ] Release ships only the CLI (`gitmate.exe`), not the Wails GUI. GoReleaser builds
   `cmd/gitmate` (CLI); the desktop GUI needs `wails3 build` per-platform (embeds frontend,
   icons, manifests), which GoReleaser doesn't do natively. Options: GoReleaser custom build

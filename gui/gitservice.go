@@ -255,6 +255,10 @@ func (g *GitService) StashPop(ref string) error {
 	return gitops.StashPop(g.repoDir, ref)
 }
 
+func (g *GitService) StashApply(ref string) error {
+	return gitops.StashApply(g.repoDir, ref)
+}
+
 func (g *GitService) StashDrop(ref string) error {
 	return gitops.StashDrop(g.repoDir, ref)
 }

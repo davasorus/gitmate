@@ -9,6 +9,7 @@ export function Stashes() {
 
   const doSave = () => run("stash-save", async () => { await service.StashSave(msg.trim(), true); setMsg(""); return "stashed changes"; }, "stashed");
   const doPop = (ref: string) => run(`stash-pop-${ref}`, () => service.StashPop(ref), `popped ${ref}`);
+  const doApply = (ref: string) => run(`stash-apply-${ref}`, () => service.StashApply(ref), `applied ${ref}`);
   const doDrop = (ref: string) => run(`stash-drop-${ref}`, async () => { await service.StashDrop(ref); setConfirmDrop(null); return `dropped ${ref}`; }, `dropped ${ref}`);
 
   return (
@@ -25,6 +26,7 @@ export function Stashes() {
             <span className="shrink-0 text-xs text-muted-foreground">{st.Branch}</span>
             <span className="truncate">{st.Message}</span>
             <span className="ml-auto flex shrink-0 gap-1">
+              <button onClick={() => doApply(st.Ref)} disabled={!!busy} className={cls.btnSm} title="apply but keep the stash">{busy === `stash-apply-${st.Ref}` ? "…" : "Apply"}</button>
               <button onClick={() => doPop(st.Ref)} disabled={!!busy} className={cls.btnSm}>{busy === `stash-pop-${st.Ref}` ? "…" : "Pop"}</button>
               <button onClick={() => setConfirmDrop(st.Ref)} disabled={!!busy} className={`${cls.btnSm} text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10`}>{busy === `stash-drop-${st.Ref}` ? "…" : "Drop"}</button>
             </span>
