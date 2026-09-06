@@ -8,12 +8,14 @@ import (
 
 	"github.com/google/go-github/v66/github"
 	"github.com/joho/godotenv"
+	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
 )
 
 // Client wraps the go-github client plus the resolved owner/repo.
 type Client struct {
 	gh    *github.Client
+	gql   *githubv4.Client
 	Owner string
 	Repo  string
 }
@@ -33,6 +35,7 @@ func New(ctx context.Context, owner, repo string) (*Client, error) {
 	httpClient := oauth2.NewClient(ctx, ts)
 	return &Client{
 		gh:    github.NewClient(httpClient),
+		gql:   githubv4.NewClient(httpClient),
 		Owner: owner,
 		Repo:  repo,
 	}, nil

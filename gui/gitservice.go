@@ -551,6 +551,45 @@ func (g *GitService) ReplyToReviewComment(number int, commentID int64, body stri
 	return client.ReplyToReviewComment(ctx, owner, repo, number, commentID, body)
 }
 
+func (g *GitService) PRDetail(number int) (*ghapi.PRDetail, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.PRDetailGraphQL(ctx, owner, repo, number)
+}
+
+func (g *GitService) ResolveThread(threadID string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.ResolveThread(ctx, threadID)
+}
+
+func (g *GitService) UnresolveThread(threadID string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.UnresolveThread(ctx, threadID)
+}
+
 func (g *GitService) CommentPR(number int, body string) (string, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
