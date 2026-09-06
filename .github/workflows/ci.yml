@@ -15,6 +15,9 @@ concurrency:
   group: ci-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
+env:
+  COVERAGE_MIN: "85" # minimum total coverage %; CI fails below this. Bump toward higher over time.
+
 jobs:
   # Gate: on a push to a branch that already has an open PR, skip the push run —
   # the pull_request run covers that branch. PR events always proceed.
@@ -103,8 +106,13 @@ jobs:
         shell: bash
         run: |
           go test -race -coverprofile=coverage.out -covermode=atomic ./internal/...
-          echo "----- coverage -----"
-          go tool cover -func=coverage.out | tail -1
+          total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
+          echo "----- total coverage: ${total}% (min ${COVERAGE_MIN}%) -----"
+          # numeric compare with awk (handles decimals)
+          if awk "BEGIN{exit !($total < $COVERAGE_MIN)}"; then
+            echo "::error::coverage ${total}% is below the required ${COVERAGE_MIN}%"
+            exit 1
+          fi
 
       - name: Upload coverage report
         if: matrix.os == 'ubuntu-latest'
