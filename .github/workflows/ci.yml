@@ -98,18 +98,21 @@ jobs:
       - name: Build
         run: go build ./cmd/... ./internal/...
 
-      - name: Test
-        if: matrix.os != 'ubuntu-latest'
+      # Race detection (all OSes): catches data races. Separate from coverage —
+      # -race alters branch execution and skews the coverage %, so it must not
+      # drive the coverage gate.
+      - name: Test (race)
         run: go test -race ./internal/...
 
-      - name: Test + coverage
+      # Coverage (Linux only): measured WITHOUT -race so the number is stable and
+      # reproducible locally (plain `go test`), then gated against COVERAGE_MIN.
+      - name: Coverage
         if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
-          go test -race -coverprofile=coverage.out -covermode=atomic ./internal/...
+          go test -coverprofile=coverage.out -covermode=count ./internal/...
           total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
           echo "----- total coverage: ${total}% (min ${COVERAGE_MIN}%) -----"
-          # numeric compare with awk (handles decimals)
           if awk "BEGIN{exit !($total < $COVERAGE_MIN)}"; then
             echo "::error::coverage ${total}% is below the required ${COVERAGE_MIN}%"
             exit 1
