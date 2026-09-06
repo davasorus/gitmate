@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/google/go-github/v75/github"
+	"github.com/google/go-github/v88/github"
 )
 
 // Release is a trimmed GitHub release view.

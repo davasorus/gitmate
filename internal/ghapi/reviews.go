@@ -3,7 +3,7 @@ package ghapi
 import (
 	"context"
 
-	"github.com/google/go-github/v75/github"
+	"github.com/google/go-github/v88/github"
 )
 
 // Review is a trimmed PR review (a whole-PR verdict).
@@ -77,7 +77,7 @@ func (c *Client) SubmitReview(ctx context.Context, owner, repo string, number in
 // ListRequestedReviewers returns users whose review has been requested but not
 // yet submitted.
 func (c *Client) ListRequestedReviewers(ctx context.Context, owner, repo string, number int) ([]Reviewer, error) {
-	rr, _, err := c.gh.PullRequests.ListReviewers(ctx, owner, repo, number, &github.ListOptions{PerPage: 50})
+	rr, _, err := c.gh.PullRequests.ListReviewers(ctx, owner, repo, number)
 	if err != nil {
 		return nil, err
 	}
