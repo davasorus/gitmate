@@ -191,6 +191,76 @@ func (g *GitService) RemoveLabel(number int, label string) error {
 	return client.RemoveLabel(ctx, owner, repo, number, label)
 }
 
+func (g *GitService) ListReleases() ([]ghapi.Release, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListReleases(ctx, owner, repo)
+}
+
+func (g *GitService) CreateRelease(tag, name, body string, draft, prerelease bool) (ghapi.Release, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return ghapi.Release{}, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return ghapi.Release{}, err
+	}
+	return client.CreateRelease(ctx, owner, repo, tag, name, body, draft, prerelease)
+}
+
+func (g *GitService) EditRelease(id int64, name, body string, draft, prerelease bool) (ghapi.Release, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return ghapi.Release{}, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return ghapi.Release{}, err
+	}
+	return client.EditRelease(ctx, owner, repo, id, name, body, draft, prerelease)
+}
+
+func (g *GitService) DeleteRelease(id int64) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.DeleteRelease(ctx, owner, repo, id)
+}
+
+// GenerateReleaseNotes returns [name, body] so it binds cleanly to TS.
+func (g *GitService) GenerateReleaseNotes(tag string) ([]string, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	name, body, err := client.GenerateReleaseNotes(ctx, owner, repo, tag)
+	if err != nil {
+		return nil, err
+	}
+	return []string{name, body}, nil
+}
+
 // resolve reads origin and parses owner/repo.
 func (g *GitService) resolve(ctx context.Context) (owner, repo string, err error) {
 	url, err := gitops.GetRemoteURL(g.repoDir, "origin")

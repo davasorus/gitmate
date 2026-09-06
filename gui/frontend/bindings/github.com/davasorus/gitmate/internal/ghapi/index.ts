@@ -5,5 +5,6 @@ export type {
     CheckRun,
     Issue,
     Label,
-    PR
+    PR,
+    Release
 } from "./models.js";

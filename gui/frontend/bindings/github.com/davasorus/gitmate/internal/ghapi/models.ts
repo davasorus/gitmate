@@ -49,3 +49,20 @@ export interface PR {
     "When": string;
     "Draft": boolean;
 }
+
+/**
+ * Release is a trimmed GitHub release view.
+ */
+export interface Release {
+    "ID": number;
+    "TagName": string;
+    "Name": string;
+    "Body": string;
+    "Draft": boolean;
+    "Prerelease": boolean;
+
+    /**
+     * HTML URL
+     */
+    "URL": string;
+}

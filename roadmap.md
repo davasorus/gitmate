@@ -234,8 +234,10 @@ Both CLI + GUI for everything.
       - apply: add / remove labels on a PR or issue (chips on rows: click to remove, +label to add)
       - manage definitions: Labels view — create/edit/delete repo label types (name/color/desc)
       - CLI: `gitmate label list|create|edit|delete|add|remove`
-- [ ] **releases — full CRUD:** list / create / edit / delete; asset upload + list;
-      generate release notes. Ties to tags 2.6.
+- [~] **releases — full CRUD:** (A3a DONE) list / create / edit / delete + generate-notes;
+      own Releases sidebar view (draft/prerelease flags, View/Edit/Delete, gen-notes button);
+      CLI `gitmate release list|create|delete|notes`. Ties to tags 2.6.
+      (A3b PENDING) asset upload + list — file handling, next sub-batch.
 - [ ] **PR reviews — full:** whole-PR review (approve / request-changes / comment);
       line-level review comments (diff-line targeting + threads); requested reviewers.
       NOTE: line-level review UI is the heaviest single piece in the project (bigger than

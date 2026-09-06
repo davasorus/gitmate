@@ -10,6 +10,7 @@ import { Tags } from "./views/Tags";
 import { Reflog } from "./views/Reflog";
 import { Remotes } from "./views/Remotes";
 import { Labels } from "./views/Labels";
+import { Releases } from "./views/Releases";
 
 export default function App() {
   const {
@@ -67,6 +68,7 @@ export default function App() {
           <NavItem id="labels" label="Labels" />
           <NavItem id="stashes" label="Stashes" badge={stashes.length} />
           <NavItem id="tags" label="Tags" badge={tags.length} />
+          <NavItem id="releases" label="Releases" />
           <NavItem id="reflog" label="Reflog" />
           <NavItem id="remotes" label="Remotes" />
         </nav>
@@ -146,6 +148,7 @@ export default function App() {
           {view === "tags" && <Tags />}
           {view === "remotes" && <Remotes />}
           {view === "labels" && <Labels />}
+          {view === "releases" && <Releases />}
           {view === "reflog" && <Reflog />}
         </div>
       </main>

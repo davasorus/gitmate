@@ -74,6 +74,10 @@ export function CreatePR(title: string, body: string, head: string, base: string
     return $Call.ByID(1421252495, title, body, head, base);
 }
 
+export function CreateRelease(tag: string, name: string, body: string, draft: boolean, prerelease: boolean): $CancellablePromise<ghapi$0.Release> {
+    return $Call.ByID(166699366, tag, name, body, draft, prerelease);
+}
+
 export function CreateTag(name: string, message: string): $CancellablePromise<void> {
     return $Call.ByID(2405478571, name, message);
 }
@@ -92,6 +96,10 @@ export function DeleteBranch(name: string, force: boolean): $CancellablePromise<
 
 export function DeleteLabel(name: string): $CancellablePromise<void> {
     return $Call.ByID(1785281120, name);
+}
+
+export function DeleteRelease(id: number): $CancellablePromise<void> {
+    return $Call.ByID(1545519419, id);
 }
 
 export function DeleteRemoteTag(name: string): $CancellablePromise<void> {
@@ -114,12 +122,23 @@ export function EditLabel(name: string, newName: string, color: string, descript
     return $Call.ByID(440390313, name, newName, color, description);
 }
 
+export function EditRelease(id: number, name: string, body: string, draft: boolean, prerelease: boolean): $CancellablePromise<ghapi$0.Release> {
+    return $Call.ByID(3597022626, id, name, body, draft, prerelease);
+}
+
 export function Fetch(): $CancellablePromise<void> {
     return $Call.ByID(3105763379);
 }
 
 export function FetchTags(): $CancellablePromise<void> {
     return $Call.ByID(2222523430);
+}
+
+/**
+ * GenerateReleaseNotes returns [name, body] so it binds cleanly to TS.
+ */
+export function GenerateReleaseNotes(tag: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(513076016, tag);
 }
 
 /**
@@ -135,6 +154,10 @@ export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | nul
 
 export function ListLabels(): $CancellablePromise<ghapi$0.Label[] | null> {
     return $Call.ByID(2781467806);
+}
+
+export function ListReleases(): $CancellablePromise<ghapi$0.Release[] | null> {
+    return $Call.ByID(1457386739);
 }
 
 export function ListRemotes(): $CancellablePromise<gitops$0.Remote[] | null> {
