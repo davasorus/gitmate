@@ -9,5 +9,5 @@ createRoot(document.getElementById("app")!).render(
     <GitmateProvider>
       <App />
     </GitmateProvider>
-  </StrictMode>
+  </StrictMode>,
 );

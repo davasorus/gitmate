@@ -162,6 +162,11 @@ func fmtInt(n int) string {
 // CancelRun cancels an in-progress workflow run.
 func (c *Client) CancelRun(ctx context.Context, owner, repo string, runID int64) error {
 	_, err := c.gh.Actions.CancelWorkflowRunByID(ctx, owner, repo, runID)
+	// GitHub returns 202 Accepted for cancel; go-github surfaces that as
+	// *AcceptedError. For an async cancel, "accepted" IS success.
+	if _, ok := err.(*github.AcceptedError); ok {
+		return nil
+	}
 	return err
 }
 

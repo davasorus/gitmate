@@ -16,19 +16,35 @@ export function DiffView({ files }: { files: FileDiff[] }) {
           ) : (
             (f.Hunks ?? []).map((h, hi) => (
               <div key={hi}>
-                <div className="bg-muted/50 px-3 py-1 text-xs text-muted-foreground">{h.Header}</div>
+                <div className="bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+                  {h.Header}
+                </div>
                 <div className="overflow-x-auto">
                   {(h.Lines ?? []).map((ln, li) => {
                     const add = ln.Kind === "add";
                     const rem = ln.Kind === "remove";
-                    const bg = add ? "bg-[var(--color-added)]/10" : rem ? "bg-[var(--color-removed)]/10" : "";
-                    const fg = add ? "text-[var(--color-added)]" : rem ? "text-[var(--color-removed)]" : "text-foreground";
+                    const bg = add
+                      ? "bg-[var(--color-added)]/10"
+                      : rem
+                        ? "bg-[var(--color-removed)]/10"
+                        : "";
+                    const fg = add
+                      ? "text-[var(--color-added)]"
+                      : rem
+                        ? "text-[var(--color-removed)]"
+                        : "text-foreground";
                     const marker = add ? "+" : rem ? "-" : " ";
                     return (
                       <div key={li} className={`flex ${bg} font-mono text-xs leading-5`}>
-                        <span className="w-10 shrink-0 select-none px-1 text-right text-muted-foreground/60">{ln.OldNum || ""}</span>
-                        <span className="w-10 shrink-0 select-none px-1 text-right text-muted-foreground/60">{ln.NewNum || ""}</span>
-                        <span className={`w-4 shrink-0 select-none text-center ${fg}`}>{marker}</span>
+                        <span className="w-10 shrink-0 select-none px-1 text-right text-muted-foreground/60">
+                          {ln.OldNum || ""}
+                        </span>
+                        <span className="w-10 shrink-0 select-none px-1 text-right text-muted-foreground/60">
+                          {ln.NewNum || ""}
+                        </span>
+                        <span className={`w-4 shrink-0 select-none text-center ${fg}`}>
+                          {marker}
+                        </span>
                         <span className={`whitespace-pre ${fg}`}>{ln.Content}</span>
                       </div>
                     );
