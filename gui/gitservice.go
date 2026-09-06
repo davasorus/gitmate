@@ -87,6 +87,32 @@ func (g *GitService) Issues(state string) ([]ghapi.Issue, error) {
 	return client.ListIssues(ctx, owner, repo, state)
 }
 
+func (g *GitService) SetPRState(number int, state string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.SetPRState(ctx, owner, repo, number, state)
+}
+
+func (g *GitService) SetIssueState(number int, state string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.SetIssueState(ctx, owner, repo, number, state)
+}
+
 // resolve reads origin and parses owner/repo.
 func (g *GitService) resolve(ctx context.Context) (owner, repo string, err error) {
 	url, err := gitops.GetRemoteURL(g.repoDir, "origin")

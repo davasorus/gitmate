@@ -33,3 +33,19 @@ func (c *Client) CreateIssue(ctx context.Context, owner, repo, title, body strin
 	}
 	return issue.GetNumber(), issue.GetHTMLURL(), nil
 }
+
+// SetIssueState closes or reopens an issue. state is "closed" or "open".
+func (c *Client) SetIssueState(ctx context.Context, owner, repo string, number int, state string) error {
+	_, _, err := c.gh.Issues.Edit(ctx, owner, repo, number, &github.IssueRequest{
+		State: github.String(state),
+	})
+	return err
+}
+
+// SetPRState closes or reopens a pull request. state is "closed" or "open".
+func (c *Client) SetPRState(ctx context.Context, owner, repo string, number int, state string) error {
+	_, _, err := c.gh.PullRequests.Edit(ctx, owner, repo, number, &github.PullRequest{
+		State: github.String(state),
+	})
+	return err
+}

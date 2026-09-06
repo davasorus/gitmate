@@ -1,16 +1,30 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useGit, cls } from "../context";
 import { CheckBadge } from "../components/CheckBadge";
-import type { CheckRun } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type { PR, CheckRun } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+
+type StateFilter = "open" | "closed" | "all";
 
 export function PullRequests() {
-  const { prs, branches, busy, run, service, flash, setBusy } = useGit();
+  const { branches, busy, run, service, flash, setBusy } = useGit();
   const [prTitle, setPrTitle] = useState("");
   const [prHead, setPrHead] = useState("");
   const [prBase, setPrBase] = useState("live");
   const [prBody, setPrBody] = useState("");
   const [prResult, setPrResult] = useState("");
   const [checks, setChecks] = useState<Record<number, CheckRun[]>>({});
+
+  // this view owns its PR list + state filter (open/closed/all)
+  const [filter, setFilter] = useState<StateFilter>("open");
+  const [prs, setPrs] = useState<PR[]>([]);
+
+  const loadPRs = useCallback(async (state: StateFilter) => {
+    setBusy("prs-load");
+    try { setPrs((await service.PRs(state)) ?? []); }
+    catch (e) { flash("err", String(e)); } finally { setBusy(""); }
+  }, [service, flash, setBusy]);
+
+  useEffect(() => { loadPRs(filter); }, [filter, loadPRs]);
 
   // prefill head with current branch + body with template, once
   useEffect(() => {
@@ -29,10 +43,14 @@ export function PullRequests() {
     if (!title) title = (await service.DefaultPRTitle(prHead)) || prHead;
     const url = await service.CreatePR(title, prBody, prHead, prBase);
     setPrResult(url); setPrTitle("");
+    await loadPRs(filter);
     return url;
   }, "PR opened");
-  const doMerge = (n: number) => run(`merge-${n}`, async () => { const sha = await service.MergePR(n, "merge"); return `merged #${n} (${sha.slice(0, 7)})`; }, `merged #${n}`);
- const loadChecks = async (n: number) => {
+  const doMerge = (n: number) => run(`merge-${n}`, async () => { const sha = await service.MergePR(n, "merge"); await loadPRs(filter); return `merged #${n} (${sha.slice(0, 7)})`; }, `merged #${n}`);
+  const doClose = (n: number) => run(`pr-close-${n}`, async () => { await service.SetPRState(n, "closed"); await loadPRs(filter); return `closed #${n}`; }, `closed #${n}`);
+  const doReopen = (n: number) => run(`pr-reopen-${n}`, async () => { await service.SetPRState(n, "open"); await loadPRs(filter); return `reopened #${n}`; }, `reopened #${n}`);
+
+  const loadChecks = async (n: number) => {
     setBusy(`checks-${n}`);
     try {
       const runs = (await service.PRChecks(n)) ?? [];
@@ -42,7 +60,17 @@ export function PullRequests() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pull requests</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Pull requests</h2>
+        <div className="flex items-center gap-1 text-xs">
+          {(["open", "closed", "all"] as StateFilter[]).map((f) => (
+            <button key={f} onClick={() => setFilter(f)}
+                    className={`rounded-md border border-border px-2 py-0.5 ${filter === f ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}>
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="space-y-2 rounded-lg border border-border p-3">
         <div className="text-xs text-muted-foreground">
@@ -64,7 +92,8 @@ export function PullRequests() {
       </div>
 
       <div className="rounded-lg border border-border">
-        {(prs ?? []).length ? (prs ?? []).map((p) => (
+        {busy === "prs-load" ? <div className="p-3 text-sm text-muted-foreground">…</div>
+          : (prs ?? []).length ? (prs ?? []).map((p) => (
           <div key={p.Number} className="border-b border-border p-3 last:border-0">
             <div className="flex items-baseline gap-2 text-sm">
               <span className="font-semibold text-[var(--color-ahead)]">#{p.Number}</span>
@@ -73,6 +102,8 @@ export function PullRequests() {
               <span className="ml-auto flex gap-1">
                 <button onClick={() => loadChecks(p.Number)} disabled={!!busy} className={cls.btnSm}>{busy === `checks-${p.Number}` ? "…" : "Checks"}</button>
                 <button onClick={() => doMerge(p.Number)} disabled={!!busy} className={cls.btnSm}>{busy === `merge-${p.Number}` ? "…" : "Merge"}</button>
+                <button onClick={() => doClose(p.Number)} disabled={!!busy} className={`${cls.btnSm} text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10`}>{busy === `pr-close-${p.Number}` ? "…" : "Close"}</button>
+                <button onClick={() => doReopen(p.Number)} disabled={!!busy} className={cls.btnSm}>{busy === `pr-reopen-${p.Number}` ? "…" : "Reopen"}</button>
               </span>
             </div>
             {checks[p.Number] && (
@@ -81,7 +112,7 @@ export function PullRequests() {
               </div>
             )}
           </div>
-        )) : <div className="p-3 text-sm italic text-muted-foreground">no open PRs</div>}
+        )) : <div className="p-3 text-sm italic text-muted-foreground">no {filter} PRs</div>}
       </div>
     </div>
   );

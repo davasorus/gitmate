@@ -229,7 +229,7 @@ minimal — half-features just send you back to the web UI. Full scope below. Al
 go-github; none require GraphQL. Order: close/reopen → labels → releases → PR reviews.
 Both CLI + GUI for everything.
 
-- [ ] **close / reopen** PRs and issues (state update) — CLI + GUI
+- [x] **close / reopen** PRs and issues (state update) — CLI + GUI; + open/closed/all filter in both views
 - [ ] **labels — full CRUD, two levels:**
       - apply: add / remove / set labels on a PR or issue (Issues API; works on both)
       - manage definitions: create / edit / delete repo label types (name + color)

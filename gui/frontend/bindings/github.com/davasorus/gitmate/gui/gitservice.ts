@@ -244,6 +244,14 @@ export function SequencerInProgress(): $CancellablePromise<[boolean, boolean]> {
     return $Call.ByID(365654410);
 }
 
+export function SetIssueState($number: number, state: string): $CancellablePromise<void> {
+    return $Call.ByID(3236175167, $number, state);
+}
+
+export function SetPRState($number: number, state: string): $CancellablePromise<void> {
+    return $Call.ByID(972438818, $number, state);
+}
+
 /**
  * SetRepoDir lets the frontend re-point the service at another repo.
  */
