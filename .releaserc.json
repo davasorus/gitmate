@@ -21,9 +21,8 @@
         ]
       }
     }],
-    ["@semantic-release/github", {
-      "successComment": false,
-      "failComment": false
+    ["@semantic-release/exec", {
+      "verifyReleaseCmd": "echo \"${nextRelease.version}\" > .release-version && printf '%s' \"${nextRelease.notes}\" > .release-notes.md"
     }]
   ]
 }

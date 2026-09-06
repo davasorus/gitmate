@@ -1,58 +1,129 @@
 name: Release
 
+# Two entry points into ONE pipeline:
+#   - push to live  → semantic-release DECIDES the version + notes
+#   - push of a v* tag (manual, e.g. from gitmate) → version = the tag
+# Both converge on: approve → build (CLI + GUI) → publish ONE immutable release.
 on:
   push:
+    branches: [live]
     tags: ["v*"]
 
 permissions:
-  contents: write # required so the workflow can create the GitHub Release
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  # CLI release via GoReleaser (linux/windows/darwin, amd64/arm64) + checksums.
-  cli:
+  # ---- Stage 1: decide the version + generate grouped notes ----
+  decide:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.out.outputs.version }}
+      release: ${{ steps.out.outputs.release }} # "true" if there's something to release
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # GoReleaser needs full history for the changelog
-      - uses: actions/setup-go@v5
+          fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_SSH_KEY }}
+          persist-credentials: true
+
+      - uses: actions/setup-node@v4
         with:
-          go-version: "1.25"
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: release --clean
+          node-version: "20"
+
+      - name: Install tooling
+        run: |
+          npm install -g semantic-release @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/exec conventional-changelog-conventionalcommits
+          npm install -g conventional-changelog-cli
+
+      # TAG path: version is the tag; generate grouped notes from previous-tag..this-tag.
+      - name: Notes from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          echo "$VER" > .release-version
+          # grouped notes for just this tag's range, conventionalcommits preset
+          npx conventional-changelog -p conventionalcommits -r 2 --skip-unstable > .release-notes.md || true
+          echo "release=true" >> "$GITHUB_OUTPUT"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+        id: tagnotes
+
+      # LIVE path: semantic-release decides version + writes notes via exec (dry-run).
+      - name: Decide via semantic-release
+        if: github.ref == 'refs/heads/live'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx semantic-release --dry-run || true
+          if [ -f .release-version ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$(cat .release-version)" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+        id: semrel
 
-  # GUI desktop app per-OS via Wails, attached to the same release.
-  gui:
+      - name: Collect outputs
+        id: out
+        run: |
+          if [ -f .release-version ]; then
+            echo "version=$(cat .release-version)" >> "$GITHUB_OUTPUT"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload version + notes
+        if: steps.out.outputs.release == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-meta
+          path: |
+            .release-version
+            .release-notes.md
+
+  # ---- Stage 2 (gate) + Stage 3: build CLI + GUI, then publish ONCE ----
+  build-cli:
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.25", cache: true }
+      - name: Build CLI (all platforms) via GoReleaser build-only
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: build --clean --snapshot
+      - name: Upload CLI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-artifacts
+          path: dist/**/gitmate*
+
+  build-gui:
+    needs: decide
+    if: needs.decide.outputs.release == 'true'
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            artifact: gitmate-gui-windows-amd64.exe
-          - os: macos-latest
-            artifact: gitmate-gui-darwin
-          - os: ubuntu-latest
-            artifact: gitmate-gui-linux-amd64
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
+        with: { go-version: "1.25" }
       - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      # Linux needs GTK/WebKit for the Wails webview build.
-      - name: Linux deps
+        with: { node-version: "20" }
+      - name: Linux GUI deps
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
-      - name: Install Wails v3
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: Install Wails
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
       - name: Frontend deps
         run: npm ci
@@ -60,10 +131,48 @@ jobs:
       - name: Build GUI
         run: wails3 build
         working-directory: gui
-      # attach the built binary to the release (path differs per OS under gui/bin)
-      - name: Upload GUI asset
-        uses: softprops/action-gh-release@v2
+      - name: Upload GUI artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: gui/bin/*
+          name: gui-${{ matrix.os }}
+          path: gui/bin/*
+
+  # ---- Publish: ONE immutable release with tag + notes + ALL assets ----
+  publish:
+    needs: [decide, build-cli, build-gui]
+    if: needs.decide.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    # gated approval before publish — required reviewer on this environment
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.RELEASE_SSH_KEY }} # tag push bypasses v* ruleset
+          persist-credentials: true
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - name: Assemble assets
+        run: |
+          mkdir -p out
+          find artifacts -type f \( -name 'gitmate*' -o -name '*.exe' -o -name 'gitmate-gui*' \) -exec cp {} out/ \; || true
+          ls -la out
+      - name: Tag (if not already a tag push)
+        if: github.ref == 'refs/heads/live'
+        run: |
+          VER="v$(cat artifacts/release-meta/.release-version)"
+          git tag "$VER"
+          git push origin "$VER"   # via SSH deploy key → bypasses ruleset
+      - name: Create the single immutable release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/live" ]; then
+            VER="v$(cat artifacts/release-meta/.release-version)"
+          else
+            VER="${GITHUB_REF_NAME}"
+          fi
+          gh release create "$VER" \
+            --title "$VER" \
+            --notes-file artifacts/release-meta/.release-notes.md \
+            out/*
