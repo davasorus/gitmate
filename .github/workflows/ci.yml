@@ -132,6 +132,14 @@ jobs:
         run: npm ci
         working-directory: gui/frontend
 
+      - name: Lint (ESLint)
+        run: npm run lint
+        working-directory: gui/frontend
+
+      - name: Format check (Prettier)
+        run: npm run format:check
+        working-directory: gui/frontend
+
       - name: Typecheck
         run: npx tsc --noEmit
         working-directory: gui/frontend
