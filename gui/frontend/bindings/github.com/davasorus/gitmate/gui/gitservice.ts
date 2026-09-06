@@ -375,6 +375,10 @@ export function RevertContinue(): $CancellablePromise<void> {
     return $Call.ByID(3855291498);
 }
 
+export function RunJobGraph(runID: number): $CancellablePromise<ghapi$0.JobNode[] | null> {
+    return $Call.ByID(1391988671, runID);
+}
+
 export function RunJobs(runID: number): $CancellablePromise<ghapi$0.Job[] | null> {
     return $Call.ByID(2818376490, runID);
 }

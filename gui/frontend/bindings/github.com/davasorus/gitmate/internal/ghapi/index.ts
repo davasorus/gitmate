@@ -11,6 +11,7 @@ export type {
     IssueComment,
     Job,
     JobLog,
+    JobNode,
     Label,
     PR,
     PRDetail,

@@ -118,6 +118,15 @@ export interface JobLog {
 }
 
 /**
+ * JobNode is a job in the workflow's dependency graph: its name and the jobs it
+ * needs (must complete first). Parsed from the workflow YAML.
+ */
+export interface JobNode {
+    "Name": string;
+    "Needs": string[] | null;
+}
+
+/**
  * Label is a repo label definition: name, hex color (no leading #), description.
  */
 export interface Label {

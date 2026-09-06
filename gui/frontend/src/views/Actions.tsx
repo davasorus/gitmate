@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useGit, cls } from "../context";
+import { RunFlow } from "../components/RunFlow";
 import { LogView } from "../components/LogView";
-import type { WorkflowRun, Job, DispatchableWorkflow, JobLog } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type { WorkflowRun, Job, DispatchableWorkflow, JobLog, JobNode } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StatusFilter = "all" | "success" | "failure" | "in_progress";
 
@@ -35,6 +36,8 @@ export function Actions() {
   const pollRef = useRef<number | null>(null);
   const [openLog, setOpenLog] = useState<number | null>(null); // jobID
   const [jobLog, setJobLog] = useState<JobLog | null>(null);
+  const [runViewMode, setRunViewMode] = useState<"tree" | "flow">("tree");
+  const [jobGraph, setJobGraph] = useState<JobNode[]>([]);
 
   const loadRuns = async () => {
     setBusy("runs-load");
@@ -57,9 +60,15 @@ export function Actions() {
     try { setJobs((await service.RunJobs(runID)) ?? []); }
     catch (e) { flash("err", String(e)); }
   };
+  const showFlow = async (runID: number) => {
+    setRunViewMode("flow");
+    try { setJobGraph((await service.RunJobGraph(runID)) ?? []); }
+    catch (e) { flash("err", String(e)); }
+  };
+
   const toggleRun = (r: WorkflowRun) => {
     if (openRun === r.ID) { setOpenRun(null); setJobs([]); return; }
-    setOpenRun(r.ID); loadJobs(r.ID);
+    setOpenRun(r.ID); setRunViewMode("tree"); setJobGraph([]); loadJobs(r.ID);
   };
 
   const doCancel = (r: WorkflowRun) => run(`cancel-${r.ID}`, async () => {
@@ -203,7 +212,13 @@ export function Actions() {
                   </button>
                   {openRun === r.ID && (
                     <div className="space-y-1 bg-background px-3 pb-2 pt-1">
-                      {(jobs ?? []).length ? (jobs ?? []).map((j) => (
+                      <div className="flex items-center gap-1 text-[10px]">
+                        <button onClick={() => setRunViewMode("tree")} className={`rounded border border-border px-1.5 py-0 ${runViewMode === "tree" ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}>Tree</button>
+                        <button onClick={() => showFlow(r.ID)} className={`rounded border border-border px-1.5 py-0 ${runViewMode === "flow" ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}>Flowchart</button>
+                      </div>
+                      {runViewMode === "flow" ? (
+                        <RunFlow graph={jobGraph} jobs={jobs} />
+                      ) : (<>{(jobs ?? []).length ? (jobs ?? []).map((j) => (
                         <div key={j.ID}>
                           <div className="flex items-center gap-2 text-xs">
                             <span className={statusColor(j.Status, j.Conclusion)}>●</span>
@@ -235,7 +250,7 @@ export function Actions() {
                             ))}
                           </div>
                         </div>
-                      )) : <div className="text-xs italic text-muted-foreground">no jobs (or still starting)</div>}
+                      )) : <div className="text-xs italic text-muted-foreground">no jobs (or still starting)</div>}</>)}
                       <div className="flex items-center gap-1 pt-1">
                         {isActive(r)
                           ? <button onClick={() => doCancel(r)} disabled={!!busy} className={`${cls.btnSm} text-[var(--color-removed)]`}>{busy === `cancel-${r.ID}` ? "…" : "Cancel"}</button>

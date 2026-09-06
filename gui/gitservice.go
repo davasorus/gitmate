@@ -655,6 +655,19 @@ func (g *GitService) JobLogs(jobID int64) (ghapi.JobLog, error) {
 	return client.JobLogs(ctx, owner, repo, jobID)
 }
 
+func (g *GitService) RunJobGraph(runID int64) ([]ghapi.JobNode, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.RunJobGraph(ctx, owner, repo, runID)
+}
+
 func (g *GitService) ListDispatchableWorkflows() ([]ghapi.DispatchableWorkflow, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)

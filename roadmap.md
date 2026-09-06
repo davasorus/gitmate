@@ -283,7 +283,7 @@ don't rip-and-replace). Decision rule:
 - [ ] audit each ghapi call against the rule; migrate the ones where GraphQL genuinely wins
 - [ ] mixed REST+GraphQL is expected and fine (GitHub explicitly supports it; node IDs bridge them)
 
-### 3.5 / Phase C — GitHub Actions (first-class)  [~]   ← C-1/C-1.5/C-2/C-3 done; C-4 (flowchart) remains
+### 3.5 / Phase C — GitHub Actions (first-class)  [x]   ← DONE (C-1 data+polling, C-1.5 grouping, C-2 controls, C-3 logs+color, C-4 flowchart)
 Actions as a first-class citizen: watch, control, view. Live feel via SMART POLLING
 (only the active run, only while viewing, back off when idle/done) — the standard
 approach for desktop git tools (VS Code/GitHub Desktop poll too). Both CLI + GUI.
@@ -296,14 +296,14 @@ Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → 
       auto-fetch MUST use a fixed controlled cadence (timer), never tied to render cycles.
       Effect deps = only the thing that should trigger a refetch.
 - [x] controls: cancel run; re-run (all/failed-only); trigger workflow_dispatch with DYNAMIC inputs (parse workflow YAML → render a field per declared input) — engine/service/CLI/GUI
-- [x] logs: download + display per-step logs AFTER completion — JobLogs (per-job, on-demand); best-effort per-step split via ##[group] markers, whole-job Raw fallback; CLI `actions logs <jobID>`; GUI Logs toggle per completed job
+- [x] logs: download + display per-step logs AFTER completion — JobLogs (per-job, on-demand); best-effort per-step split via ##[group] markers, whole-job Raw fallback; CLI `actions logs <jobID>`; GUI Logs toggle per completed job; colored log output (LogView): GitHub ##[error]/##[warning]/##[notice] markers + general failure-word heuristic, universal (any language/action), markers+timestamps stripped
       (public API has no live per-step log streaming — accepted limit)
 - [x] view 1: run-tree (indented jobs/steps list) — DONE
 - [x] **C-1.5 organize the run list** DONE (was under-scoped in C-1; a flat 30-run list is
   noise for a multi-workflow repo). Scope: group runs BY WORKFLOW; filter by STATUS
   (all/success/failure/in-progress); show richer per-run detail (trigger/event, branch,
   duration, run #). Engine adds WorkflowName + timing to the run; frontend groups + filters.
-- [ ] view 2: flowchart (job boxes + `needs:` dependency arrows) — layered on the same data, toggle
+- [x] view 2: flowchart DONE — RunJobGraph parses jobs+needs from workflow YAML; RunFlow renders depth-column DAG with SVG dependency arrows, boxes colored by live job status; Tree/Flowchart toggle in the run panel
 - [~] token needs `workflow` scope for dispatch/cancel — cancel/rerun/dispatch will 403 without it; regenerate token with workflow scope
 
 ### 3.6 — Webhooks  [DECLINED]

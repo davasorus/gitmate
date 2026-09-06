@@ -375,3 +375,72 @@ func splitStepLogs(raw string) []StepLog {
 	}
 	return steps
 }
+
+// JobNode is a job in the workflow's dependency graph: its name and the jobs it
+// needs (must complete first). Parsed from the workflow YAML.
+type JobNode struct {
+	Name  string
+	Needs []string
+}
+
+// RunJobGraph returns the job dependency graph for a run's workflow, parsed from
+// the workflow YAML (jobs.<name>.needs). The GUI overlays live job status onto
+// this to draw a flowchart. Falls back to a flat (no-edges) graph if YAML parse
+// fails or needs aren't declared.
+func (c *Client) RunJobGraph(ctx context.Context, owner, repo string, runID int64) ([]JobNode, error) {
+	rn, _, err := c.gh.Actions.GetWorkflowRunByID(ctx, owner, repo, runID)
+	if err != nil {
+		return nil, err
+	}
+	wfID := rn.GetWorkflowID()
+	wf, _, err := c.gh.Actions.GetWorkflowByID(ctx, owner, repo, wfID)
+	if err != nil {
+		return nil, err
+	}
+	content, _, _, err := c.gh.Repositories.GetContents(ctx, owner, repo, wf.GetPath(), nil)
+	if err != nil || content == nil {
+		return nil, err
+	}
+	raw, err := content.GetContent()
+	if err != nil {
+		return nil, err
+	}
+	return parseJobGraph(raw), nil
+}
+
+// parseJobGraph reads a workflow YAML and returns its jobs with their needs.
+func parseJobGraph(yml string) []JobNode {
+	var doc struct {
+		Jobs yaml.Node `yaml:"jobs"`
+	}
+	if err := yaml.Unmarshal([]byte(yml), &doc); err != nil {
+		return nil
+	}
+	if doc.Jobs.Kind != yaml.MappingNode {
+		return nil
+	}
+	var out []JobNode
+	for i := 0; i+1 < len(doc.Jobs.Content); i += 2 {
+		name := doc.Jobs.Content[i].Value
+		spec := doc.Jobs.Content[i+1]
+		node := JobNode{Name: name}
+		if spec.Kind == yaml.MappingNode {
+			for j := 0; j+1 < len(spec.Content); j += 2 {
+				if spec.Content[j].Value != "needs" {
+					continue
+				}
+				nv := spec.Content[j+1]
+				switch nv.Kind {
+				case yaml.ScalarNode:
+					node.Needs = append(node.Needs, nv.Value)
+				case yaml.SequenceNode:
+					for _, n := range nv.Content {
+						node.Needs = append(node.Needs, n.Value)
+					}
+				}
+			}
+		}
+		out = append(out, node)
+	}
+	return out
+}
