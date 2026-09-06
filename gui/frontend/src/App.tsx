@@ -8,6 +8,7 @@ import { Stashes } from "./views/Stashes";
 import { Conflicts } from "./views/Conflicts";
 import { Tags } from "./views/Tags";
 import { Reflog } from "./views/Reflog";
+import { Remotes } from "./views/Remotes";
 
 export default function App() {
   const {
@@ -65,8 +66,7 @@ export default function App() {
           <NavItem id="stashes" label="Stashes" badge={stashes.length} />
           <NavItem id="tags" label="Tags" badge={tags.length} />
           <NavItem id="reflog" label="Reflog" />
-          <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Soon</div>
-          <div className="px-3 py-1 text-sm text-muted-foreground/50">Remotes</div>
+          <NavItem id="remotes" label="Remotes" />
         </nav>
         <div className="border-t border-border p-2">
           <div className="mb-1 flex gap-1">
@@ -142,6 +142,7 @@ export default function App() {
           {view === "stashes" && <Stashes />}
           {view === "conflicts" && <Conflicts />}
           {view === "tags" && <Tags />}
+          {view === "remotes" && <Remotes />}
           {view === "reflog" && <Reflog />}
         </div>
       </main>

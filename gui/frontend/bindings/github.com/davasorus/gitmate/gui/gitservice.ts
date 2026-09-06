@@ -18,6 +18,10 @@ import * as ghapi$0 from "../internal/ghapi/models.js";
 // @ts-ignore: Unused imports
 import * as gitops$0 from "../internal/gitops/models.js";
 
+export function AddRemote(name: string, url: string): $CancellablePromise<void> {
+    return $Call.ByID(2602220066, name, url);
+}
+
 export function Blame(path: string): $CancellablePromise<gitops$0.BlameLine[] | null> {
     return $Call.ByID(2208585044, path);
 }
@@ -105,6 +109,10 @@ export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | nul
     return $Call.ByID(1294470425, state);
 }
 
+export function ListRemotes(): $CancellablePromise<gitops$0.Remote[] | null> {
+    return $Call.ByID(2290322204);
+}
+
 export function ListTags(): $CancellablePromise<gitops$0.Tag[] | null> {
     return $Call.ByID(933116764);
 }
@@ -188,8 +196,16 @@ export function Reflog(limit: number): $CancellablePromise<gitops$0.ReflogEntry[
     return $Call.ByID(1601046040, limit);
 }
 
+export function RemoveRemote(name: string): $CancellablePromise<void> {
+    return $Call.ByID(2331660635, name);
+}
+
 export function RenameBranch(oldName: string, newName: string): $CancellablePromise<void> {
     return $Call.ByID(1363441787, oldName, newName);
+}
+
+export function RenameRemote(oldName: string, newName: string): $CancellablePromise<void> {
+    return $Call.ByID(424528649, oldName, newName);
 }
 
 export function Reset(rev: string, mode: string): $CancellablePromise<void> {

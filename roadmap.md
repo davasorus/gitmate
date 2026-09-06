@@ -210,9 +210,9 @@ Correctly NOT gaps (already Tier 3): remote management (3.1), clone (3.2).
 
 ## TIER 3 — Remotes & GitHub depth
 
-### 3.1 Remotes  [ ]
-- [ ] engine: remote remove / rename / list (add exists)
-- [ ] CLI + GUI remote management
+### 3.1 Remotes  [x]
+- [x] engine: ListRemotes / RemoveRemote / RenameRemote (AddRemote existed)
+- [x] CLI: `gitmate remote list|add|remove|rename`; GUI: Remotes sidebar view (list w/ URLs, add, rename, remove w/ confirm)
 
 ### 3.2 Clone  [ ]
 - [ ] engine: clone an existing repo

@@ -279,6 +279,13 @@ func (g *GitService) Blame(path string) ([]gitops.BlameLine, error) {
 	return gitops.Blame(g.repoDir, path)
 }
 
+func (g *GitService) ListRemotes() ([]gitops.Remote, error) { return gitops.ListRemotes(g.repoDir) }
+func (g *GitService) AddRemote(name, url string) error      { return gitops.AddRemote(g.repoDir, name, url) }
+func (g *GitService) RemoveRemote(name string) error        { return gitops.RemoveRemote(g.repoDir, name) }
+func (g *GitService) RenameRemote(oldName, newName string) error {
+	return gitops.RenameRemote(g.repoDir, oldName, newName)
+}
+
 func (g *GitService) Reset(rev, mode string) error {
 	return gitops.Reset(g.repoDir, rev, gitops.ResetMode(mode))
 }
