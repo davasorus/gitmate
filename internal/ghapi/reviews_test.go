@@ -18,18 +18,15 @@ func TestListReviews(t *testing.T) {
 }
 
 func TestSubmitReview(t *testing.T) {
-	c, _ := newTestClient(t, routeHandler(t,
-		route{method: "POST", path: "/repos/o/r/pulls/1/reviews", body: `{"id":6,"state":"COMMENTED"}`}))
-	err := c.SubmitReview(context.Background(), "o", "r", 1, "COMMENT", "note",
-		[]ReviewComment{{Path: "a.go", Line: 3, Body: "hi"}})
-	if err != nil {
+	c, _ := newTestClient(t, routeHandler(t, route{method: "POST", path: "/repos/o/r/pulls/1/reviews", body: `{"id":6,"state":"COMMENTED"}`}))
+	if err := c.SubmitReview(context.Background(), "o", "r", 1, "COMMENT", "note",
+		[]ReviewComment{{Path: "a.go", Line: 3, Body: "hi"}}); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestListRequestedReviewers(t *testing.T) {
-	c, _ := newTestClient(t, jsonHandler(t, "/repos/o/r/pulls/1/requested_reviewers",
-		`{"users":[{"login":"bob"}],"teams":[]}`))
+	c, _ := newTestClient(t, jsonHandler(t, "/repos/o/r/pulls/1/requested_reviewers", `{"users":[{"login":"bob"}],"teams":[]}`))
 	rr, err := c.ListRequestedReviewers(context.Background(), "o", "r", 1)
 	if err != nil {
 		t.Fatal(err)
@@ -40,16 +37,14 @@ func TestListRequestedReviewers(t *testing.T) {
 }
 
 func TestRequestReviewers(t *testing.T) {
-	c, _ := newTestClient(t, routeHandler(t,
-		route{method: "POST", path: "/repos/o/r/pulls/1/requested_reviewers", body: `{"number":1}`}))
+	c, _ := newTestClient(t, routeHandler(t, route{method: "POST", path: "/repos/o/r/pulls/1/requested_reviewers", body: `{"number":1}`}))
 	if err := c.RequestReviewers(context.Background(), "o", "r", 1, []string{"bob"}); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestRemoveReviewer(t *testing.T) {
-	c, _ := newTestClient(t, routeHandler(t,
-		route{method: "DELETE", path: "/repos/o/r/pulls/1/requested_reviewers", status: 200, body: `{"number":1}`}))
+	c, _ := newTestClient(t, routeHandler(t, route{method: "DELETE", path: "/repos/o/r/pulls/1/requested_reviewers", body: `{"number":1}`}))
 	if err := c.RemoveReviewer(context.Background(), "o", "r", 1, "bob"); err != nil {
 		t.Fatal(err)
 	}
@@ -80,8 +75,7 @@ func TestListIssueComments(t *testing.T) {
 }
 
 func TestReplyToReviewComment(t *testing.T) {
-	c, _ := newTestClient(t, routeHandler(t,
-		route{method: "POST", path: "/repos/o/r/pulls/1/comments", body: `{"id":9}`}))
+	c, _ := newTestClient(t, routeHandler(t, route{method: "POST", path: "/repos/o/r/pulls/1/comments", body: `{"id":9}`}))
 	if err := c.ReplyToReviewComment(context.Background(), "o", "r", 1, 7, "reply"); err != nil {
 		t.Fatal(err)
 	}

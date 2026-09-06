@@ -6,8 +6,8 @@ import (
 )
 
 func TestListReleases(t *testing.T) {
-	body := `[{"id":1,"tag_name":"v1.0","name":"one","body":"notes","draft":false,"prerelease":false,"immutable":true,"html_url":"http://x/1"}]`
-	c, _ := newTestClient(t, jsonHandler(t, "/repos/o/r/releases", body))
+	c, _ := newTestClient(t, jsonHandler(t, "/repos/o/r/releases",
+		`[{"id":1,"tag_name":"v1.0","name":"one","body":"notes","draft":false,"prerelease":false,"immutable":true,"html_url":"http://x/1"}]`))
 	rels, err := c.ListReleases(context.Background(), "o", "r")
 	if err != nil {
 		t.Fatal(err)
@@ -18,8 +18,7 @@ func TestListReleases(t *testing.T) {
 }
 
 func TestCreateRelease(t *testing.T) {
-	c, _ := newTestClient(t, routeHandler(t,
-		route{method: "POST", path: "/repos/o/r/releases", body: `{"id":2,"tag_name":"v2.0","name":"two"}`}))
+	c, _ := newTestClient(t, routeHandler(t, route{method: "POST", path: "/repos/o/r/releases", body: `{"id":2,"tag_name":"v2.0","name":"two"}`}))
 	rel, err := c.CreateRelease(context.Background(), "o", "r", "v2.0", "two", "b", false, false)
 	if err != nil {
 		t.Fatal(err)
@@ -30,8 +29,7 @@ func TestCreateRelease(t *testing.T) {
 }
 
 func TestEditRelease(t *testing.T) {
-	c, _ := newTestClient(t, routeHandler(t,
-		route{method: "PATCH", path: "/repos/o/r/releases/2", body: `{"id":2,"name":"edited"}`}))
+	c, _ := newTestClient(t, routeHandler(t, route{method: "PATCH", path: "/repos/o/r/releases/2", body: `{"id":2,"name":"edited"}`}))
 	rel, err := c.EditRelease(context.Background(), "o", "r", 2, "edited", "b", false, false)
 	if err != nil {
 		t.Fatal(err)
@@ -42,16 +40,14 @@ func TestEditRelease(t *testing.T) {
 }
 
 func TestDeleteRelease(t *testing.T) {
-	c, _ := newTestClient(t, routeHandler(t,
-		route{method: "DELETE", path: "/repos/o/r/releases/2", status: 204}))
+	c, _ := newTestClient(t, routeHandler(t, route{method: "DELETE", path: "/repos/o/r/releases/2", status: 204}))
 	if err := c.DeleteRelease(context.Background(), "o", "r", 2); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestGenerateReleaseNotes(t *testing.T) {
-	c, _ := newTestClient(t, routeHandler(t,
-		route{method: "POST", path: "/repos/o/r/releases/generate-notes", body: `{"name":"v3 notes","body":"changelog"}`}))
+	c, _ := newTestClient(t, routeHandler(t, route{method: "POST", path: "/repos/o/r/releases/generate-notes", body: `{"name":"v3 notes","body":"changelog"}`}))
 	name, body, err := c.GenerateReleaseNotes(context.Background(), "o", "r", "v3.0")
 	if err != nil {
 		t.Fatal(err)
@@ -73,16 +69,20 @@ func TestListAssets(t *testing.T) {
 	}
 }
 
-func TestDeleteAsset(t *testing.T) {
+func TestUploadAsset(t *testing.T) {
 	c, _ := newTestClient(t, routeHandler(t,
-		route{method: "DELETE", path: "/repos/o/r/releases/assets/10", status: 204}))
-	if err := c.DeleteAsset(context.Background(), "o", "r", 10); err != nil {
+		route{method: "POST", path: "/repos/o/r/releases/2/assets",
+			body: `{"id":50,"name":"bin.zip","size":11,"browser_download_url":"http://x/bin.zip"}`}))
+	asset, err := c.UploadAsset(context.Background(), "o", "r", 2, "bin.zip", []byte("hello-world"))
+	if err != nil {
 		t.Fatal(err)
+	}
+	if asset.ID != 50 || asset.Name != "bin.zip" {
+		t.Fatalf("asset wrong: %+v", asset)
 	}
 }
 
 func TestDownloadAsset(t *testing.T) {
-	// DownloadAsset fetches the asset (GET on the asset endpoint) then its content.
 	c, _ := newTestClient(t, routeHandler(t,
 		route{method: "GET", path: "/repos/o/r/releases/assets/10", body: `hello-bytes`}))
 	data, err := c.DownloadAsset(context.Background(), "o", "r", 10)
@@ -91,5 +91,12 @@ func TestDownloadAsset(t *testing.T) {
 	}
 	if string(data) != "hello-bytes" {
 		t.Fatalf("got %q", string(data))
+	}
+}
+
+func TestDeleteAsset(t *testing.T) {
+	c, _ := newTestClient(t, routeHandler(t, route{method: "DELETE", path: "/repos/o/r/releases/assets/10", status: 204}))
+	if err := c.DeleteAsset(context.Background(), "o", "r", 10); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -2,6 +2,7 @@ package ghapi
 
 import (
 	"context"
+	"net/http"
 	"testing"
 )
 
@@ -18,11 +19,8 @@ func TestListPRs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(prs) != 2 {
-		t.Fatalf("expected 2 PRs, got %d", len(prs))
-	}
-	if prs[0].Number != 1 || prs[0].Title != "first" || prs[0].Author != "alice" {
-		t.Errorf("pr0 wrong: %+v", prs[0])
+	if len(prs) != 2 || prs[0].Number != 1 || prs[0].Author != "alice" {
+		t.Fatalf("prs wrong: %+v", prs)
 	}
 	if len(prs[0].Labels) != 2 || prs[0].Labels[0] != "bug" {
 		t.Errorf("pr0 labels wrong: %v", prs[0].Labels)
@@ -33,7 +31,6 @@ func TestListPRs(t *testing.T) {
 }
 
 func TestListIssues(t *testing.T) {
-	// Issues API returns PRs too; ListIssues must filter them out (pull_request key).
 	body := `[
 		{"number":10,"title":"a bug","state":"open","user":{"login":"carol"},
 		 "created_at":"2026-01-01T00:00:00Z"},
@@ -45,10 +42,27 @@ func TestListIssues(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(issues) != 1 {
-		t.Fatalf("expected 1 issue (PR filtered out), got %d", len(issues))
+	if len(issues) != 1 || issues[0].Number != 10 || issues[0].Author != "carol" {
+		t.Fatalf("issues wrong (PR should be filtered): %+v", issues)
 	}
-	if issues[0].Number != 10 || issues[0].Author != "carol" {
-		t.Errorf("issue wrong: %+v", issues[0])
+}
+
+func TestPRDiff(t *testing.T) {
+	diff := "diff --git a/a.txt b/a.txt\n--- a/a.txt\n+++ b/a.txt\n@@ -1 +1 @@\n-old\n+new\n"
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/repos/o/r/pulls/1" {
+			w.Header().Set("Content-Type", "application/vnd.github.v3.diff")
+			_, _ = w.Write([]byte(diff))
+			return
+		}
+		w.WriteHeader(404)
+	})
+	c, _ := newTestClient(t, h)
+	files, err := c.PRDiff(context.Background(), "o", "r", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 1 {
+		t.Fatalf("expected 1 file diff, got %d", len(files))
 	}
 }

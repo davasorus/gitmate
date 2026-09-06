@@ -7,7 +7,6 @@ import (
 )
 
 func TestPRDetailGraphQL(t *testing.T) {
-	// githubv4 POSTs a query to /; return a canned data payload matching the query shape.
 	resp := `{"data":{"repository":{"pullRequest":{
 		"number":1,"title":"t","state":"OPEN","body":"b",
 		"author":{"login":"alice"},
@@ -41,9 +40,8 @@ func TestPRDetailGraphQL(t *testing.T) {
 }
 
 func TestResolveThread(t *testing.T) {
-	resp := `{"data":{"resolveReviewThread":{"thread":{"id":"T1"}}}}`
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(resp))
+		_, _ = w.Write([]byte(`{"data":{"resolveReviewThread":{"thread":{"id":"T1"}}}}`))
 	})
 	c, _ := newGQLTestClient(t, h)
 	if err := c.ResolveThread(context.Background(), "T1"); err != nil {
@@ -52,9 +50,8 @@ func TestResolveThread(t *testing.T) {
 }
 
 func TestUnresolveThread(t *testing.T) {
-	resp := `{"data":{"unresolveReviewThread":{"thread":{"id":"T1"}}}}`
 	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write([]byte(resp))
+		_, _ = w.Write([]byte(`{"data":{"unresolveReviewThread":{"thread":{"id":"T1"}}}}`))
 	})
 	c, _ := newGQLTestClient(t, h)
 	if err := c.UnresolveThread(context.Background(), "T1"); err != nil {
