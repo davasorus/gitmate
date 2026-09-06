@@ -2,14 +2,72 @@ name: CI
 
 on:
   push:
-    branches: [live]
   pull_request:
 
 permissions:
   contents: read
+  pull-requests: read
+
+# Run CI on every push and every PR, but avoid double runs when a push lands on a
+# branch that already has an open PR: both events share the same head branch, so
+# grouping by it (and cancelling in-progress) collapses the duplicate into one run.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
+  # Gate: on a push to a branch that already has an open PR, skip the push run —
+  # the pull_request run covers that branch. PR events always proceed.
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.decide.outputs.should_run }}
+    steps:
+      - name: Decide whether this run should proceed
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # push event: is there an open PR whose head is this branch?
+          prs=$(gh pr list --repo "${{ github.repository }}" --head "${{ github.ref_name }}" --state open --json number --jq 'length')
+          if [ "$prs" -gt 0 ]; then
+            echo "push on a branch with an open PR → skipping (PR CI covers it)"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Detect which areas changed so we can skip jobs that aren't affected.
+  changes:
+    needs: gate
+    if: ${{ needs.gate.outputs.should_run == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            go:
+              - '**/*.go'
+              - 'go.mod'
+              - 'go.sum'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'gui/frontend/**'
+              - 'gui/**/*.go'
+              - '.github/workflows/ci.yml'
+
   go:
+    needs: changes
+    if: ${{ needs.changes.outputs.go == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,7 +75,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.25"
-          cache: true
+          cache: true # caches the Go module + build cache
 
       - name: Vet
         run: go vet ./cmd/... ./internal/...
@@ -35,6 +93,8 @@ jobs:
           args: ./cmd/... ./internal/...
 
   frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,6 +110,14 @@ jobs:
           cache: npm
           cache-dependency-path: gui/frontend/package-lock.json
 
+      # Cache the compiled wails3 binary so it isn't rebuilt from source every run.
+      - name: Cache wails3
+        id: cache-wails
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/wails3
+          key: wails3-${{ runner.os }}-v3.0.0-beta.16
+
       # bindings are generated (not committed), so produce them before the build.
       # Wails' Go package needs GTK4/WebKit to compile (even for binding generation).
       - name: Linux GUI deps
@@ -58,6 +126,7 @@ jobs:
           sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 
       - name: Install Wails v3
+        if: steps.cache-wails.outputs.cache-hit != 'true'
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
 
       - name: Generate bindings
