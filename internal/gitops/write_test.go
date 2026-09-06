@@ -150,3 +150,108 @@ func TestRebaseClean(t *testing.T) {
 		t.Fatal("clean rebase should not be in progress")
 	}
 }
+
+func TestPushFetchPull(t *testing.T) {
+	dir := newRemoteRepo(t) // also exercises Push (setUpstream=true)
+	if err := Fetch(dir, "origin"); err != nil {
+		t.Fatal(err)
+	}
+	if err := Pull(dir, false); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGetRemoteURL(t *testing.T) {
+	dir := newRemoteRepo(t)
+	url, err := GetRemoteURL(dir, "origin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if url == "" {
+		t.Fatal("expected a remote url")
+	}
+}
+
+func TestMergeAbort(t *testing.T) {
+	dir := makeConflict(t) // from conflict_test.go — leaves a conflicted merge
+	if !MergeInProgress(dir) {
+		t.Fatal("expected merge in progress")
+	}
+	if err := MergeAbort(dir); err != nil {
+		t.Fatal(err)
+	}
+	if MergeInProgress(dir) {
+		t.Fatal("merge should be aborted")
+	}
+}
+
+func TestRebaseAbort(t *testing.T) {
+	dir := makeConflict(t)
+	// abort the merge first, then create a rebase conflict
+	_ = MergeAbort(dir)
+	base, _ := CurrentBranch(dir)
+	if err := SwitchNew(dir, "topic"); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, dir, "a.txt", "topic\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "topic change")
+	if err := Switch(dir, base); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, dir, "a.txt", "mainline\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "main change")
+	if err := Switch(dir, "topic"); err != nil {
+		t.Fatal(err)
+	}
+	_ = Rebase(dir, base) // conflicts
+	if RebaseInProgress(dir) {
+		if err := RebaseAbort(dir); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestCherryPickAbort(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "base\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "base")
+	base, _ := CurrentBranch(dir)
+	if err := SwitchNew(dir, "b"); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, dir, "a.txt", "theirs\n")
+	_ = Stage(dir)
+	sha, _ := CreateCommit(dir, "conflicting")
+	if err := Switch(dir, base); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, dir, "a.txt", "ours\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "ours")
+	_ = CherryPick(dir, sha) // conflicts
+	if cp, _ := SequencerInProgress(dir); cp {
+		if err := CherryPickAbort(dir); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestRevertAbort(t *testing.T) {
+	// revert of a commit that conflicts with later state
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "v1\n")
+	_ = Stage(dir)
+	sha, _ := CreateCommit(dir, "v1")
+	writeFile(t, dir, "a.txt", "v2\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "v2")
+	_ = Revert(dir, sha) // may conflict
+	if _, rev := SequencerInProgress(dir); rev {
+		if err := RevertAbort(dir); err != nil {
+			t.Fatal(err)
+		}
+	}
+}

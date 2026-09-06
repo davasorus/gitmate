@@ -477,3 +477,61 @@ func TestClone(t *testing.T) {
 		t.Fatalf("expected a.txt in clone: %v", err)
 	}
 }
+
+// newRemoteRepo makes a bare repo (acting as origin) + a working clone wired to
+// it, with one pushed commit on the current branch. Returns the working dir.
+func newRemoteRepo(t *testing.T) string {
+	t.Helper()
+	bare := t.TempDir()
+	if _, err := run(bare, "init", "--bare"); err != nil {
+		t.Fatal(err)
+	}
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "hello\n")
+	if err := Stage(dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+	if err := AddRemote(dir, "origin", bare); err != nil {
+		t.Fatal(err)
+	}
+	// push the ACTUAL current branch (newTestRepo's default may be master, not main)
+	br, err := CurrentBranch(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Push(dir, "origin", br, true); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func TestStatusVariedStates(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "keep.txt", "keep\n")
+	writeFile(t, dir, "del.txt", "gone\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "init")
+
+	// added (new staged file), deleted (removed staged), modified (changed)
+	writeFile(t, dir, "new.txt", "added\n")
+	writeFile(t, dir, "keep.txt", "changed\n")
+	if _, err := run(dir, "rm", "del.txt"); err != nil {
+		t.Fatal(err)
+	}
+	_ = Stage(dir)
+
+	st, err := GetStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st == nil {
+		t.Fatal("expected status")
+	}
+	// exercise the parse paths; expect staged file changes present
+	if len(st.Changes) == 0 {
+		t.Fatalf("expected file changes, got %+v", st)
+	}
+}

@@ -56,3 +56,11 @@ func TestReadConflictAndResolveTheirs(t *testing.T) {
 		t.Fatalf("expected no conflicts after resolve, got %v", files)
 	}
 }
+
+func TestParseConflictHunks(t *testing.T) {
+	content := "line1\n<<<<<<< HEAD\nours\n=======\ntheirs\n>>>>>>> other\nline2\n"
+	hunks := parseConflictHunks(content)
+	if len(hunks) != 1 {
+		t.Fatalf("expected 1 conflict hunk, got %d", len(hunks))
+	}
+}
