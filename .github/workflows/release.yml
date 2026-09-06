@@ -34,10 +34,10 @@ jobs:
       # the full rendered release notes as OUTPUTS (reliable — no file writing).
       - name: Compute version + notes (dry run, creates nothing)
         id: semrel
-        uses: cycjimmy/semantic-release-action@v4
+        uses: cycjimmy/semantic-release-action@v6
         with:
           dry_run: true
-          semantic_version: 24
+          semantic_version: 25
           extra_plugins: |
             @semantic-release/commit-analyzer
             @semantic-release/release-notes-generator
@@ -99,8 +99,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: actions/setup-go@v5
-        with: { go-version: "1.25", cache: true }
+      - uses: ./.github/actions/setup-go
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
@@ -120,15 +119,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with: { go-version: "1.25" }
-      - uses: actions/setup-node@v4
-        with: { node-version: "20" }
-      - name: Linux GUI deps
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
-      - name: Install Wails
-        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
+      - uses: ./.github/actions/wails-setup
       - name: Frontend deps
         run: npm ci
         working-directory: gui/frontend
