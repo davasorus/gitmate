@@ -132,7 +132,7 @@ jobs:
         run: npm ci
         working-directory: gui/frontend
 
-      - name: Lint (ESLint)
+      - name: Lint (oxlint)
         run: npm run lint
         working-directory: gui/frontend
 
