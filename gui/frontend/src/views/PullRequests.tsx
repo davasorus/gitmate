@@ -111,7 +111,8 @@ export function PullRequests() {
   const submitReview = (n: number, event: "APPROVE" | "REQUEST_CHANGES" | "COMMENT") => {
     if (event !== "APPROVE" && !reviewBody.trim()) { flash("err", "A comment is required for request-changes and comment."); return; }
     run(`review-${n}`, async () => {
-      await service.SubmitReview(n, event, reviewBody, pending);
+      await service.SubmitReview(n, event, reviewBody,
+        (pending ?? []).map((c) => ({ Path: c.path, Line: c.line, Body: c.body })));
       setPending([]);
       setReviewBody("");
       await loadReview(n);

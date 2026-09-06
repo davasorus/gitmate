@@ -142,16 +142,16 @@ func (c *Client) UploadAsset(ctx context.Context, owner, repo string, releaseID 
 	if err != nil {
 		return Asset{}, err
 	}
-	defer os.Remove(tmp.Name())
+	defer func() { _ = os.Remove(tmp.Name()) }()
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return Asset{}, err
 	}
 	if _, err := tmp.Seek(0, io.SeekStart); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return Asset{}, err
 	}
-	defer tmp.Close()
+	defer func() { _ = tmp.Close() }()
 
 	asset, _, err := c.gh.Repositories.UploadReleaseAsset(ctx, owner, repo, releaseID,
 		&github.UploadOptions{Name: name}, tmp)
@@ -167,7 +167,7 @@ func (c *Client) DownloadAsset(ctx context.Context, owner, repo string, assetID 
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 	return io.ReadAll(rc)
 }
 
