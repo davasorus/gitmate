@@ -5,7 +5,7 @@ on:
         branches: [live] # releases are cut from live ONLY
 
 permissions:
-    contents: write # create releases + tags
+    contents: write
     issues: write
     pull-requests: write
 
@@ -19,9 +19,14 @@ jobs:
         # gated approval before publish: this environment carries a required reviewer
         environment: release
         steps:
+            # Check out over SSH using the write-enabled deploy key, so the tag push
+            # is authenticated as the deploy key (which bypasses the v* tag ruleset)
+            # rather than GITHUB_TOKEN (which the ruleset blocks).
             - uses: actions/checkout@v4
               with:
                   fetch-depth: 0 # semantic-release needs full history + tags
+                  ssh-key: ${{ secrets.RELEASE_SSH_KEY }}
+                  persist-credentials: true # keep the SSH remote for the tag push
 
             - uses: actions/setup-node@v4
               with:
@@ -33,4 +38,7 @@ jobs:
             - name: Run semantic-release
               run: npx semantic-release
               env:
+                  # @semantic-release/github still needs a token for the GitHub API
+                  # (creating the Release object). The TAG push goes over SSH (deploy key)
+                  # from the checkout above, so it bypasses the ruleset.
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
