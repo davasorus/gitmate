@@ -1,0 +1,35 @@
+# Normalize line endings to LF in the repo; check out native per-OS.
+# Kills the CRLF churn that produced whole-tree phantom diffs on Windows.
+* text=auto eol=lf
+
+# Explicitly binary (never touch): images, archives, fonts, compiled output.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.exe binary
+*.syso binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+
+# Go, TS, JS, config → text with LF
+*.go text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+
+# Windows-specific files that genuinely want CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v88/github"
 	"github.com/joho/godotenv"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
@@ -31,10 +31,17 @@ func New(ctx context.Context, owner, repo string) (*Client, error) {
 	if token == "" {
 		return nil, errors.New("no GitHub token found — set GITHUB_TOKEN, add it to a .env file, or run `gh auth login`")
 	}
+	// v88 API (official README): NewClient takes ONLY options and returns
+	// (client, error) — no positional http.Client arg. Auth via WithAuthToken.
+	gh, err := github.NewClient(github.WithAuthToken(token))
+	if err != nil {
+		return nil, err
+	}
+	// shurcooL/githubv4 still takes an *http.Client; build an oauth2 one for it.
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token})
 	httpClient := oauth2.NewClient(ctx, ts)
 	return &Client{
-		gh:    github.NewClient(httpClient),
+		gh:    gh,
 		gql:   githubv4.NewClient(httpClient),
 		Owner: owner,
 		Repo:  repo,

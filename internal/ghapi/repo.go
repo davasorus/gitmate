@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v88/github"
 )
 
 // ParseRepo extracts owner/repo from a git remote URL in either form:
@@ -36,9 +36,9 @@ func ParseRepo(url string) (owner, repo string, err error) {
 // account. Passing "" as the org means "create it on my own account."
 func (c *Client) CreateRepo(ctx context.Context, name, description string, private bool) (string, error) {
 	repo := &github.Repository{
-		Name:        github.String(name),
-		Description: github.String(description),
-		Private:     github.Bool(private),
+		Name:        github.Ptr(name),
+		Description: github.Ptr(description),
+		Private:     github.Ptr(private),
 	}
 	created, _, err := c.gh.Repositories.Create(ctx, "", repo)
 	if err != nil {

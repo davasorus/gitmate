@@ -3,7 +3,7 @@ module github.com/davasorus/gitmate
 go 1.25.0
 
 require (
-	github.com/google/go-github/v66 v66.0.0
+	github.com/google/go-github/v88 v88.0.0
 	github.com/joho/godotenv v1.5.1
 	github.com/shurcooL/githubv4 v0.0.0-20260209031235-2402fdf4a9ed
 	github.com/spf13/cobra v1.10.2
@@ -17,7 +17,7 @@ require (
 	github.com/coder/websocket v1.8.14 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.2.2 // indirect
-	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jchv/go-winloader v0.0.0-20250406163304-c1995be93bd1 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect

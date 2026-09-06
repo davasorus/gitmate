@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/davasorus/gitmate/internal/gitops"
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v88/github"
 )
 
 // PR is a trimmed pull-request view.
