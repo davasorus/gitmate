@@ -15,6 +15,7 @@ type PR struct {
 	State  string
 	When   time.Time
 	Draft  bool
+	Labels []string
 }
 
 // Issue is a trimmed issue view.
@@ -24,12 +25,14 @@ type Issue struct {
 	Author string
 	State  string
 	When   time.Time
+	Labels []string
 }
 
-// ListPRs returns open pull requests for owner/repo.
+// ListPRs returns pull requests for owner/repo in the given state
+// ("open", "closed", or "all").
 func (c *Client) ListPRs(ctx context.Context, owner, repo, state string) ([]PR, error) {
 	opts := &github.PullRequestListOptions{
-		State:       state, // "open", "closed", or "all"
+		State:       state,
 		ListOptions: github.ListOptions{PerPage: 30},
 	}
 	raw, _, err := c.gh.PullRequests.List(ctx, owner, repo, opts)
@@ -45,6 +48,7 @@ func (c *Client) ListPRs(ctx context.Context, owner, repo, state string) ([]PR, 
 			State:  p.GetState(),
 			When:   p.GetCreatedAt().Time,
 			Draft:  p.GetDraft(),
+			Labels: labelNames(p.Labels),
 		})
 	}
 	return prs, nil
@@ -72,6 +76,7 @@ func (c *Client) ListIssues(ctx context.Context, owner, repo, state string) ([]I
 			Author: i.GetUser().GetLogin(),
 			State:  i.GetState(),
 			When:   i.GetCreatedAt().Time,
+			Labels: labelNames(i.Labels),
 		})
 	}
 	return issues, nil
