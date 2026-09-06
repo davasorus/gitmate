@@ -210,48 +210,172 @@ Correctly NOT gaps (already Tier 3): remote management (3.1), clone (3.2).
 
 ## TIER 3 — Remotes & GitHub depth
 
+Plan of record (agreed): build **everything except a GitHub App** (no multi-user
+auth model — no use for it). Sequenced by dependency + difficulty:
+**A (REST features) → B (GraphQL) → C (Actions/workflow-dispatch) → D (Webhooks)**.
+One feature at a time. Hygiene/release-engineering items live in their own section
+below, not interleaved with features.
+
 ### 3.1 Remotes  [x]
 - [x] engine: ListRemotes / RemoveRemote / RenameRemote (AddRemote existed)
-- [x] CLI: `gitmate remote list|add|remove|rename`; GUI: Remotes sidebar view (list w/ URLs, add, rename, remove w/ confirm)
+- [x] CLI: `gitmate remote list|add|remove|rename`; GUI: Remotes sidebar view
 
 ### 3.2 Clone  [x]
-- [x] engine: Clone(url, dest) — runs in parent dir, returns repo path
-- [x] CLI: `gitmate clone <url> [dir]`
-- [x] GUI: Clone card in Remotes view (URL + optional dest); points app at the clone on success
+- [x] engine: Clone(url, dest); CLI `gitmate clone <url> [dir]`; GUI Clone card (points app at clone)
 
-### 3.3 Richer GitHub (REST)  [~]  (partial: issues list + improved PR create shipped)
-- [ ] CI does not build/typecheck the GUI (only cmd/ + internal/). This is why
-  mangled GUI files / missing frontend deps reached runtime instead of failing in
-  CI. Add a CI job: `go build ./gui/...` + a frontend typecheck/build. Hygiene.
-- [ ] Release ships only the CLI (`gitmate.exe`), not the Wails GUI. GoReleaser builds
-  `cmd/gitmate` (CLI); the desktop GUI needs `wails3 build` per-platform (embeds frontend,
-  icons, manifests), which GoReleaser doesn't do natively. Options: GoReleaser custom build
-  invoking wails3, or a separate release job running `wails3 build` and attaching artifacts.
-  Pairs with the workflow_dispatch release item.
-- [ ] Binaries are unsigned — Windows SmartScreen warns on download/run. Signing needs an
-  Authenticode cert (Windows) / Apple Developer cert + notarization (macOS) stored as CI
-  secrets; has real cost + setup. Defer until distributing to actual users.
-- [ ] PR reviews + review comments
-- [ ] labels, assignees, milestones
-- [ ] releases list / create (ties to tags 2.6)
-- [ ] close/reopen PRs and issues
+### 3.3 / Phase A — Richer GitHub (REST)  [~]
+Scope decision: this is the MAIN git/GitHub tool, so features are built COMPLETE, not
+minimal — half-features just send you back to the web UI. Full scope below. All via
+go-github; none require GraphQL. Order: close/reopen → labels → releases → PR reviews.
+Both CLI + GUI for everything.
 
-### 3.4 GraphQL path  [ ]
-- [ ] fetch a PR's full context (reviews + checks + comments) in one query
-- [ ] use where REST would need many round-trips (PR detail view)
+- [ ] **close / reopen** PRs and issues (state update) — CLI + GUI
+- [ ] **labels — full CRUD, two levels:**
+      - apply: add / remove / set labels on a PR or issue (Issues API; works on both)
+      - manage definitions: create / edit / delete repo label types (name + color)
+- [ ] **releases — full CRUD:** list / create / edit / delete; asset upload + list;
+      generate release notes. Ties to tags 2.6.
+- [ ] **PR reviews — full:** whole-PR review (approve / request-changes / comment);
+      line-level review comments (diff-line targeting + threads); requested reviewers.
+      NOTE: line-level review UI is the heaviest single piece in the project (bigger than
+      conflict resolution) — will be its own multi-part build when reached, kept last.
+- [ ] (same API family, in scope) assignees, milestones, edit/delete comments, lock conversations
 
-### 3.5 Webhooks (live updates)  [ ]  (only piece needing a server)
-- [ ] Release ships only the CLI (`gitmate.exe`), not the Wails GUI. GoReleaser builds
-  `cmd/gitmate` (CLI); the GUI needs `wails3 build` per-platform, which GoReleaser doesn't
-  do natively. Options: GoReleaser custom build invoking wails3, or a separate workflow job
-  running `wails3 build` and attaching the artifacts. Pairs with the workflow_dispatch
-  release item. (Raised during Tier 2; deferred to Tier 3 per roadmap discipline.)
-- [ ] Binaries are unsigned (Windows SmartScreen warning). Needs Authenticode cert (Windows)
-  / Apple Developer cert + notarization (macOS) stored as CI secrets — cost + setup. Defer
-  until distributing to real users. (Tier 3 at earliest.)
-- [ ] small HTTP server to receive events (HMAC-SHA256 verify, constant-time compare)
-- [ ] push events → GUI updates live instead of polling
-- [ ] biggest new concept; largest infra commitment
+### 3.4 / Phase B — GraphQL (full client layer)  [ ]
+Scope: build a REAL GraphQL client as a peer to the REST client (not a one-off query),
+because it unlocks capability, not just efficiency:
+  - GraphQL-only features exist (e.g. Projects V2 has NO REST equivalent)
+  - 1 nested query replaces ~11 REST calls for aggregated reads
+  - separate rate-limit budget from REST (more total headroom)
+- [ ] add GraphQL client (shurcooL/githubv4) alongside go-github in internal/ghapi
+- [ ] first use: PR detail view — one query for reviews + review-comments + checks + labels + assignees
+- [ ] depends on Phase A: the REST write-actions should exist before the rich read view shows them
+- [ ] leaves the door open for GraphQL-only features later (Projects V2, etc.)
+
+### 3.7 / Later — REST→GraphQL migration pass (Phase 4 or late Phase 3)  [ ]
+Deliberate per-endpoint pass AFTER Phase B exists (don't migrate against a moving target,
+don't rip-and-replace). Decision rule:
+  - USE GRAPHQL for: nested/aggregated reads (PR detail, dashboards), GraphQL-only features
+  - KEEP REST for: simple single-resource reads, and most writes/mutations (clearer, already built)
+- [ ] audit each ghapi call against the rule; migrate the ones where GraphQL genuinely wins
+- [ ] mixed REST+GraphQL is expected and fine (GitHub explicitly supports it; node IDs bridge them)
+
+### 3.5 / Phase C — GitHub Actions (first-class)  [ ]
+Actions as a first-class citizen: watch, control, view. Live feel via SMART POLLING
+(only the active run, only while viewing, back off when idle/done) — the standard
+approach for desktop git tools (VS Code/GitHub Desktop poll too). Both CLI + GUI.
+Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → (4) flowchart.
+
+- [ ] data: list workflows + runs; open run → jobs → steps with status (queued/running/passed/failed)
+- [ ] smart polling for live status (targeted, backs off — not a firehose)
+- [ ] controls: cancel run; trigger workflow_dispatch (with inputs); re-run
+- [ ] logs: download + display per-step logs AFTER completion
+      (public API has no live per-step log streaming — accepted limit)
+- [ ] view 1: run-tree (indented jobs/steps list) — the data foundation
+- [ ] view 2: flowchart (job boxes + `needs:` dependency arrows) — layered on the same data, toggle
+- [ ] token needs `workflow` scope for dispatch/cancel
+
+### 3.6 — Webhooks  [DECLINED]
+Considered for live updates; declined. Webhooks require GitHub to POST to a public URL,
+i.e. a hosted server + app↔server channel — wrong fit for a personal desktop tool, and
+comparable tools (VS Code, GitHub Desktop) don't use them; they poll. Smart polling (in
+Phase C) covers the live-update need with zero infrastructure. Revisit only if gitmate
+ever gains a server component for another reason.
+
+---
+
+## TIER 3 / Phase D — hygiene & release engineering  [ ]
+
+1. [ ] **GUI in releases** — release currently ships only the CLI. Build the Wails desktop
+   app per-platform (`wails3 build`) and attach as release assets alongside the CLI.
+   Scope: platforms TBD (at least Windows, the dev target).
+2. [x] **Signing** — DECIDED: do NOT sign (free cert routes all need token/pipeline friction).
+   Ship SHA256 checksums (GoReleaser already generates them) + document "unsigned, Run anyway,
+   verify checksums, or build from source." (Doc part lands in Phase F.) Optional later:
+   SignPath Foundation free OSS signing if the SmartScreen warning ever matters.
+3. [ ] **Bindings → generate-in-CI** — stop committing gui/frontend/bindings/ (wails3 dev
+   rewrites them → git noise). Re-ignore them; have CI run `wails3 generate bindings` before
+   the frontend build. Removes the drift and the committed generated code.
+4. [ ] **.gitattributes** — normalize line endings to kill the CRLF churn (core.autocrlf
+   caused whole-tree phantom diffs). Commit a .gitattributes with text=auto + eol rules.
+
+---
+
+## TIER 3 / Phase E — CI/CD efficacy & GitHub-flow optimization  [ ]
+Big phase — its own mini-roadmap, built in ordered sub-steps. Organizing principle:
+a TWO-TRUNK model (`live` = production, `dev` = development) that everything else
+configures around. Covers CI quality, CD/release maturity, and process/governance.
+
+### E-0 — Two-trunk foundation (do FIRST)
+- [ ] create `dev` branch; make it the default PR target
+- [ ] flow: feat/* → PR → dev → (accumulate) → PR dev → live (release). Emergencies:
+      hotfix → live, then back-merge live → dev to prevent drift.
+- [ ] branch protection on BOTH trunks (require green CI + PR review); no direct pushes
+- [ ] enforce: production commits only via live; development only via dev
+- [ ] Dependabot retargeted to `dev` (never straight to production trunk)
+
+### E-1 — CI quality (after E-0)
+- [ ] triggers reworked for two trunks + PATH FILTERS (skip Go job on frontend-only changes, etc.)
+- [ ] caching audit (Go modules + npm actually cached, not re-fetched)
+- [ ] reusable/composite workflows — DRY the repeated checkout+setup-go across ci.yml/release.yml
+- [ ] MATRIX builds — multi-OS (Linux/Windows/macOS) so CI proves cross-platform (for sharing + WSL/Linux use)
+- [ ] frontend lint standard: add ESLint + Prettier (frontend has tsc only, no lint/format) — enforce in CI
+- [ ] Go formatting gate (gofmt -l fail-if-unformatted)
+- [ ] code coverage reporting (go test -cover; surface it; maybe threshold)
+
+### E-2 — CD / release pipeline (the capstone)
+- [ ] GUI in releases via a MATRIX `wails3 build` job (reuses E-1 matrix); attach desktop artifacts alongside CLI
+- [ ] releases cut from `live` ONLY (enforced)
+- [ ] TWO release paths:
+      (a) manual tag — restricted to authorized users via a TAG PROTECTION RULESET on `v*`
+          (note: CODEOWNERS does NOT gate tags; tag protection rulesets do)
+      (b) automated: semantic-release on live → auto-version + release notes GROUPED BY
+          conventional-commit type (feat/fix/breaking → Features/Fixes/…)
+- [ ] gated approval before publish: GitHub Actions ENVIRONMENT with required reviewer
+- [ ] conventional commits: SOFT adoption — semantic-release parses what it can; NOT hard-
+      enforced by commit-lint (not all commits will follow the format, and that's accepted)
+
+### E-3 — process/governance (light)
+- [ ] required status checks tied to branch protection (green CI is a GATE, not a suggestion)
+- [ ] Dependabot auto-merge on green minor/patch (optional)
+- [ ] PR templates / CODEOWNERS (borders on Phase F docs)
+
+## TIER 3 / Phase F — documentation sweep  [ ]  (LAST — after A–E settle)
+Document the FINISHED system, not the moving one (that is why F is last). Written as if a
+reviewer will read it (public repo), even though the real audience is future-me. Living, not
+one-time.
+
+WRITING STANDARD: **ASD-STE100 Simplified Technical English** for ALL documentation — every
+doc AND every code comment. Rules we follow: approved/controlled vocabulary (one word = one
+meaning, no synonyms), short sentences (~20 words procedures / ~25 descriptions), active
+voice, present tense, one instruction per sentence, no ambiguity/jargon. STE is a WRITING
+DISCIPLINE we apply by hand — we do NOT buy an STE checker tool (paying to heuristically lint
+prose is not worth it).
+
+ENFORCEMENT (machine): only that documentation EXISTS. CI fails if exported code lacks
+comments. STE *style* is human-followed, not machine-validated.
+
+### Front 1 — GitHub / repo docs
+- [ ] README (what it is, features, screenshots, install/build, usage) — the front door
+- [ ] CONTRIBUTING (build, two-trunk flow, commit conventions, local CI)
+- [ ] install/release docs incl. the Phase-D unsigned-binary note (Run anyway / verify checksums / build from source)
+- [ ] LICENSE (confirm one exists — public repo)
+- [ ] issue/PR templates, CODEOWNERS (overlaps E-3 governance)
+
+### Front 2 — Code docs (everything, enforced-to-exist)
+- [ ] godoc comment on EVERY exported Go symbol (internal/gitops, internal/ghapi, gui service)
+- [ ] frontend documented (components/props, context, shared-engine→service→views architecture)
+- [ ] ARCHITECTURE.md (extract the fixed decisions: shared engine, os/exec strategy, two frontends)
+- [ ] CI ENFORCES existence: linter rule requiring comments on exported symbols (e.g. revive /
+      golangci-lint exported-comment rule) — undocumented exports FAIL CI
+
+### Front 3 — Process docs
+- [ ] build/dev setup (wails3 dev, GITHUB_TOKEN, generate-bindings, gotchas: Windows path casing, working-dir)
+- [ ] release process (E-2 two-path model: manual tag vs semantic-release; how to cut a release)
+- [ ] CI/CD explainer (what the workflows do, the two-trunk model)
+
+### Living
+- [ ] docs stay current: CI existence-check + PR expectation that docs update with code
 
 ---
 
