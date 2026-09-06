@@ -20,9 +20,6 @@
           { "type": "style", "hidden": true }
         ]
       }
-    }],
-    ["@semantic-release/exec", {
-      "verifyReleaseCmd": "echo \"${nextRelease.version}\" > .release-version && printf '%s' \"${nextRelease.notes}\" > .release-notes.md"
     }]
   ]
 }
