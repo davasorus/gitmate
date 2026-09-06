@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 
 	"github.com/davasorus/gitmate/internal/ghapi"
 	"github.com/davasorus/gitmate/internal/gitops"
@@ -241,6 +242,70 @@ func (g *GitService) DeleteRelease(id int64) error {
 		return err
 	}
 	return client.DeleteRelease(ctx, owner, repo, id)
+}
+
+func (g *GitService) ListAssets(releaseID int64) ([]ghapi.Asset, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListAssets(ctx, owner, repo, releaseID)
+}
+
+// UploadAsset takes the file name and its base64-encoded contents (from the
+// frontend file input) and attaches it to the release.
+func (g *GitService) UploadAsset(releaseID int64, name, dataB64 string) (ghapi.Asset, error) {
+	data, err := base64.StdEncoding.DecodeString(dataB64)
+	if err != nil {
+		return ghapi.Asset{}, err
+	}
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return ghapi.Asset{}, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return ghapi.Asset{}, err
+	}
+	return client.UploadAsset(ctx, owner, repo, releaseID, name, data)
+}
+
+// DownloadAsset returns the asset's contents base64-encoded so the frontend can
+// trigger a browser download.
+func (g *GitService) DownloadAsset(assetID int64) (string, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return "", err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return "", err
+	}
+	data, err := client.DownloadAsset(ctx, owner, repo, assetID)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func (g *GitService) DeleteAsset(assetID int64) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.DeleteAsset(ctx, owner, repo, assetID)
 }
 
 // GenerateReleaseNotes returns [name, body] so it binds cleanly to TS.

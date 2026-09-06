@@ -90,6 +90,10 @@ export function DefaultPRTitle(branch: string): $CancellablePromise<string> {
     return $Call.ByID(2798687038, branch);
 }
 
+export function DeleteAsset(assetID: number): $CancellablePromise<void> {
+    return $Call.ByID(726459054, assetID);
+}
+
 export function DeleteBranch(name: string, force: boolean): $CancellablePromise<void> {
     return $Call.ByID(1821812546, name, force);
 }
@@ -116,6 +120,14 @@ export function Diff(path: string, staged: boolean): $CancellablePromise<gitops$
 
 export function DiscardPath(path: string): $CancellablePromise<void> {
     return $Call.ByID(2677726826, path);
+}
+
+/**
+ * DownloadAsset returns the asset's contents base64-encoded so the frontend can
+ * trigger a browser download.
+ */
+export function DownloadAsset(assetID: number): $CancellablePromise<string> {
+    return $Call.ByID(820770519, assetID);
 }
 
 export function EditLabel(name: string, newName: string, color: string, description: string): $CancellablePromise<void> {
@@ -150,6 +162,10 @@ export function GetRepoDir(): $CancellablePromise<string> {
 
 export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | null> {
     return $Call.ByID(1294470425, state);
+}
+
+export function ListAssets(releaseID: number): $CancellablePromise<ghapi$0.Asset[] | null> {
+    return $Call.ByID(1953238676, releaseID);
 }
 
 export function ListLabels(): $CancellablePromise<ghapi$0.Label[] | null> {
@@ -356,4 +372,12 @@ export function SwitchNew(branch: string): $CancellablePromise<void> {
 
 export function UnstagePath(path: string): $CancellablePromise<void> {
     return $Call.ByID(3753426035, path);
+}
+
+/**
+ * UploadAsset takes the file name and its base64-encoded contents (from the
+ * frontend file input) and attaches it to the release.
+ */
+export function UploadAsset(releaseID: number, name: string, dataB64: string): $CancellablePromise<ghapi$0.Asset> {
+    return $Call.ByID(996616100, releaseID, name, dataB64);
 }

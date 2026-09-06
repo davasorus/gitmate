@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -20,7 +22,7 @@ func init() {
 	releaseCreateCmd.Flags().BoolVar(&relDraft, "draft", false, "create as draft")
 	releaseCreateCmd.Flags().BoolVar(&relPrerelease, "prerelease", false, "mark as prerelease")
 	releaseCreateCmd.Flags().BoolVar(&relGenNotes, "generate-notes", false, "auto-generate notes from PRs/commits")
-	releaseCmd.AddCommand(releaseListCmd, releaseCreateCmd, releaseDeleteCmd, releaseNotesCmd)
+	releaseCmd.AddCommand(releaseListCmd, releaseCreateCmd, releaseDeleteCmd, releaseNotesCmd, assetsCmd)
 	rootCmd.AddCommand(releaseCmd)
 }
 
@@ -130,4 +132,105 @@ var releaseNotesCmd = &cobra.Command{
 		fmt.Printf("# %s\n\n%s\n", name, body)
 		return nil
 	},
+}
+
+func parseAssetID(a string) (int64, error) {
+	var id int64
+	if _, err := fmt.Sscan(a, &id); err != nil {
+		return 0, fmt.Errorf("invalid id %q", a)
+	}
+	return id, nil
+}
+
+var assetsCmd = &cobra.Command{
+	Use:   "assets",
+	Short: "Manage release assets (list/upload/download/delete)",
+}
+
+func init() {
+	assetListCmd := &cobra.Command{
+		Use: "list <releaseID>", Short: "List assets", Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			id, err := parseAssetID(args[0])
+			if err != nil {
+				return err
+			}
+			client, ctx, owner, repo, err := ghClient()
+			if err != nil {
+				return err
+			}
+			as, err := client.ListAssets(ctx, owner, repo, id)
+			if err != nil {
+				return err
+			}
+			for _, a := range as {
+				fmt.Printf("%d\t%s\t%d bytes\n", a.ID, a.Name, a.Size)
+			}
+			return nil
+		},
+	}
+	assetUploadCmd := &cobra.Command{
+		Use: "upload <releaseID> <file>", Short: "Upload a file as an asset", Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			id, err := parseAssetID(args[0])
+			if err != nil {
+				return err
+			}
+			data, err := os.ReadFile(args[1])
+			if err != nil {
+				return err
+			}
+			client, ctx, owner, repo, err := ghClient()
+			if err != nil {
+				return err
+			}
+			a, err := client.UploadAsset(ctx, owner, repo, id, filepath.Base(args[1]), data)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("uploaded %s (asset %d)\n", a.Name, a.ID)
+			return nil
+		},
+	}
+	assetDownloadCmd := &cobra.Command{
+		Use: "download <assetID> <dest>", Short: "Download an asset", Args: cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			id, err := parseAssetID(args[0])
+			if err != nil {
+				return err
+			}
+			client, ctx, owner, repo, err := ghClient()
+			if err != nil {
+				return err
+			}
+			data, err := client.DownloadAsset(ctx, owner, repo, id)
+			if err != nil {
+				return err
+			}
+			if err := os.WriteFile(args[1], data, 0o644); err != nil {
+				return err
+			}
+			fmt.Printf("downloaded to %s\n", args[1])
+			return nil
+		},
+	}
+	assetDeleteCmd := &cobra.Command{
+		Use: "delete <assetID>", Short: "Delete an asset", Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			id, err := parseAssetID(args[0])
+			if err != nil {
+				return err
+			}
+			client, ctx, owner, repo, err := ghClient()
+			if err != nil {
+				return err
+			}
+			if err := client.DeleteAsset(ctx, owner, repo, id); err != nil {
+				return err
+			}
+			fmt.Printf("deleted asset %d\n", id)
+			return nil
+		},
+	}
+	assetsCmd.AddCommand(assetListCmd, assetUploadCmd, assetDownloadCmd, assetDeleteCmd)
 }

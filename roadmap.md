@@ -223,7 +223,7 @@ below, not interleaved with features.
 ### 3.2 Clone  [x]
 - [x] engine: Clone(url, dest); CLI `gitmate clone <url> [dir]`; GUI Clone card (points app at clone)
 
-### 3.3 / Phase A — Richer GitHub (REST)  [~]
+### 3.3 / Phase A — Richer GitHub (REST)  [~]   ← 3 of 4 done; PR reviews remain
 Scope decision: this is the MAIN git/GitHub tool, so features are built COMPLETE, not
 minimal — half-features just send you back to the web UI. Full scope below. All via
 go-github; none require GraphQL. Order: close/reopen → labels → releases → PR reviews.
@@ -232,12 +232,21 @@ Both CLI + GUI for everything.
 - [x] **close / reopen** PRs and issues (state update) — CLI + GUI; + open/closed/all filter in both views
 - [x] **labels — full CRUD, two levels:** DONE
       - apply: add / remove labels on a PR or issue (chips on rows: click to remove, +label to add)
-      - manage definitions: Labels view — create/edit/delete repo label types (name/color/desc)
+      - manage definitions: Labels view — create/edit/delete repo label types (name/color/desc);
+        native color picker + randomizer (no hex memorization)
       - CLI: `gitmate label list|create|edit|delete|add|remove`
-- [~] **releases — full CRUD:** (A3a DONE) list / create / edit / delete + generate-notes;
-      own Releases sidebar view (draft/prerelease flags, View/Edit/Delete, gen-notes button);
-      CLI `gitmate release list|create|delete|notes`. Ties to tags 2.6.
-      (A3b PENDING) asset upload + list — file handling, next sub-batch.
+- [x] **releases — full CRUD:** DONE (verified end-to-end on immutable AND non-immutable repos)
+      - list / create / edit / delete + generate-notes; own Releases sidebar view
+        (draft/prerelease flags, View/Edit/Delete, gen-notes button)
+      - assets full CRUD — list / upload / download / delete via base64 over the JS boundary
+        (no native dialog: <input type=file> upload, browser Blob download). Upload uses
+        go-github official UploadReleaseAsset via temp file (hand-rolled HTTP caused HTTP/2
+        PROTOCOL_ERROR).
+      - IMMUTABLE releases handled first-rate: detect via raw-JSON "immutable" field; badge;
+        upload control replaced with a locked note; asset-Delete + release-Delete disabled;
+        handler-level guards flash a clear error if any path fires; all upload failures surface
+        as toasts (no silent no-op).
+      - CLI: `gitmate release list|create|delete|notes` + `release assets list|upload|download|delete`
 - [ ] **PR reviews — full:** whole-PR review (approve / request-changes / comment);
       line-level review comments (diff-line targeting + threads); requested reviewers.
       NOTE: line-level review UI is the heaviest single piece in the project (bigger than
@@ -305,6 +314,8 @@ ever gains a server component for another reason.
    the frontend build. Removes the drift and the committed generated code.
 4. [ ] **.gitattributes** — normalize line endings to kill the CRLF churn (core.autocrlf
    caused whole-tree phantom diffs). Commit a .gitattributes with text=auto + eol rules.
+5. [ ] **Bump go-github** — v66 predates the typed `Immutable` release field (added Sept
+   2025); we currently read it from raw JSON. Bump for the native field + a year of fixes.
 
 ---
 
