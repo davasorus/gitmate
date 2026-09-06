@@ -612,3 +612,38 @@ func TestUnstageAndDeleteBranchErrors(t *testing.T) {
 		t.Fatal("expected error deleting non-existent branch")
 	}
 }
+
+func TestStatusRenameAndConflict(t *testing.T) {
+	// rename → porcelain case '2'
+	dir := newTestRepo(t)
+	writeFile(t, dir, "orig.txt", "content\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "init")
+	if _, err := run(dir, "mv", "orig.txt", "renamed.txt"); err != nil {
+		t.Fatal(err)
+	}
+	_ = Stage(dir)
+	st, err := GetStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Changes) == 0 {
+		t.Fatalf("expected a rename change, got %+v", st)
+	}
+
+	// conflict → porcelain case 'u'
+	cdir := makeConflict(t) // leaves a.txt unmerged
+	cst, err := GetStatus(cdir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sawConflict := false
+	for _, ch := range cst.Changes {
+		if ch.Staged == "conflict" {
+			sawConflict = true
+		}
+	}
+	if !sawConflict {
+		t.Fatalf("expected a conflict change, got %+v", cst.Changes)
+	}
+}

@@ -73,3 +73,30 @@ func TestSmartDeleteTag(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestListTagsWithRemote(t *testing.T) {
+	dir := newRemoteRepo(t)
+	if err := CreateTag(dir, "v1.0", "rel"); err != nil {
+		t.Fatal(err)
+	}
+	if err := PushTag(dir, "v1.0"); err != nil {
+		t.Fatal(err)
+	}
+	// now ListTags exercises the ls-remote branch and marks the tag Remote
+	tags, err := ListTags(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found *Tag
+	for i := range tags {
+		if tags[i].Name == "v1.0" {
+			found = &tags[i]
+		}
+	}
+	if found == nil {
+		t.Fatal("v1.0 not listed")
+	}
+	if !found.Remote {
+		t.Fatalf("expected v1.0 marked Remote after push, got %+v", *found)
+	}
+}
