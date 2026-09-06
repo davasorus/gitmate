@@ -304,6 +304,12 @@ Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → 
   (all/success/failure/in-progress); show richer per-run detail (trigger/event, branch,
   duration, run #). Engine adds WorkflowName + timing to the run; frontend groups + filters.
 - [x] view 2: flowchart DONE — RunJobGraph parses jobs+needs from workflow YAML; RunFlow renders depth-column DAG with SVG dependency arrows, boxes colored by live job status; Tree/Flowchart toggle in the run panel
+  - [ ] FLOWCHART GAP (deferred to end of project): matrix jobs not handled. A YAML job
+    with strategy.matrix declares ONE node (e.g. "build"), but the run expands it into
+    N jobs ("build (ubuntu-latest)", "build (windows-latest)"...). Current RunFlow matches
+    node→job by exact name, so matrix legs don't render/color correctly. DECISION: option B —
+    render ONE BOX PER MATRIX LEG (reflects what actually runs), not an aggregate. Needs:
+    parse strategy.matrix from the YAML to expand nodes, fan the needs: edges to each leg.
 - [~] token needs `workflow` scope for dispatch/cancel — cancel/rerun/dispatch will 403 without it; regenerate token with workflow scope
 
 ### 3.6 — Webhooks  [DECLINED]

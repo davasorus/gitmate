@@ -1,0 +1,36 @@
+name: Semantic Release
+
+on:
+    push:
+        branches: [live] # releases are cut from live ONLY
+
+permissions:
+    contents: write # create releases + tags
+    issues: write
+    pull-requests: write
+
+concurrency:
+    group: semantic-release
+    cancel-in-progress: false
+
+jobs:
+    release:
+        runs-on: ubuntu-latest
+        # gated approval before publish: this environment carries a required reviewer
+        environment: release
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # semantic-release needs full history + tags
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+
+            - name: Install semantic-release
+              run: npm install -g semantic-release @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/github conventional-changelog-conventionalcommits
+
+            - name: Run semantic-release
+              run: npx semantic-release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
