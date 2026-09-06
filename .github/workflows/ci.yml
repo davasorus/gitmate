@@ -2,22 +2,95 @@ name: CI
 
 on:
   push:
-    branches: [live]
   pull_request:
 
 permissions:
   contents: read
+  pull-requests: read
+
+# Run CI on every push and every PR, but avoid double runs when a push lands on a
+# branch that already has an open PR: both events share the same head branch, so
+# grouping by it (and cancelling in-progress) collapses the duplicate into one run.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  COVERAGE_MIN: "85" # minimum total coverage %; CI fails below this. Bump toward higher over time.
 
 jobs:
-  go:
+  # Gate: on a push to a branch that already has an open PR, skip the push run —
+  # the pull_request run covers that branch. PR events always proceed.
+  gate:
     runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.decide.outputs.should_run }}
+    steps:
+      - name: Decide whether this run should proceed
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # push event: is there an open PR whose head is this branch?
+          prs=$(gh pr list --repo "${{ github.repository }}" --head "${{ github.ref_name }}" --state open --json number --jq 'length')
+          if [ "$prs" -gt 0 ]; then
+            echo "push on a branch with an open PR → skipping (PR CI covers it)"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Detect which areas changed so we can skip jobs that aren't affected.
+  changes:
+    needs: gate
+    if: ${{ needs.gate.outputs.should_run == 'true' }}
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
+      - uses: dorny/paths-filter@v4
+        id: filter
         with:
-          go-version: "1.25"
-          cache: true
+          filters: |
+            go:
+              - '**/*.go'
+              - 'go.mod'
+              - 'go.sum'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'gui/frontend/**'
+              - 'gui/**/*.go'
+              - '.github/workflows/ci.yml'
+
+  go:
+    needs: changes
+    if: ${{ needs.changes.outputs.go == 'true' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-go
+
+      - name: gofmt (fail if unformatted)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          unformatted=$(gofmt -l cmd internal)
+          if [ -n "$unformatted" ]; then
+            echo "These files are not gofmt-formatted:"
+            echo "$unformatted"
+            echo "Run: gofmt -w cmd internal"
+            exit 1
+          fi
 
       - name: Vet
         run: go vet ./cmd/... ./internal/...
@@ -25,30 +98,62 @@ jobs:
       - name: Build
         run: go build ./cmd/... ./internal/...
 
-      - name: Test
+      # Race detection (all OSes): catches data races. Separate from coverage —
+      # -race alters branch execution and skews the coverage %, so it must not
+      # drive the coverage gate.
+      - name: Test (race)
         run: go test -race ./internal/...
 
+      # Coverage (Linux only): measured WITHOUT -race so the number is stable and
+      # reproducible locally (plain `go test`), then gated against COVERAGE_MIN.
+      - name: Coverage
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          go test -coverprofile=coverage.out -covermode=count ./internal/...
+          go tool cover -func=coverage.out   # TEMP: per-function coverage to diagnose Linux vs local gap
+          total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
+          echo "----- total coverage: ${total}% (min ${COVERAGE_MIN}%) -----"
+          if awk "BEGIN{exit !($total < $COVERAGE_MIN)}"; then
+            echo "::error::coverage ${total}% is below the required ${COVERAGE_MIN}%"
+            exit 1
+          fi
+
+      - name: Upload coverage report
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out
+
       - name: golangci-lint
+        if: matrix.os == 'ubuntu-latest' # lint is OS-agnostic; run once
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.13.2
           args: ./cmd/... ./internal/...
 
   frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.25"
-          cache: true
+      - uses: ./.github/actions/setup-go
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: npm
           cache-dependency-path: gui/frontend/package-lock.json
+
+      # Cache the compiled wails3 binary so it isn't rebuilt from source every run.
+      - name: Cache wails3
+        id: cache-wails
+        uses: actions/cache@v6
+        with:
+          path: ~/go/bin/wails3
+          key: wails3-${{ runner.os }}-v3.0.0-beta.16
 
       # bindings are generated (not committed), so produce them before the build.
       # Wails' Go package needs GTK4/WebKit to compile (even for binding generation).
@@ -58,6 +163,7 @@ jobs:
           sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
 
       - name: Install Wails v3
+        if: steps.cache-wails.outputs.cache-hit != 'true'
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
 
       - name: Generate bindings
@@ -66,6 +172,14 @@ jobs:
 
       - name: Install
         run: npm ci
+        working-directory: gui/frontend
+
+      - name: Lint (oxlint)
+        run: npm run lint
+        working-directory: gui/frontend
+
+      - name: Format check (Prettier)
+        run: npm run format:check
         working-directory: gui/frontend
 
       - name: Typecheck

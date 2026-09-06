@@ -49,7 +49,9 @@ export function LogView({ text }: { text: string }) {
         const { kind, clean } = classify(stripped);
         if (kind === "group" && clean === "") return null; // hide bare endgroup
         return (
-          <div key={i} className={kindClass[kind]}>{clean || "\u00A0"}</div>
+          <div key={i} className={kindClass[kind]}>
+            {clean || "\u00A0"}
+          </div>
         );
       })}
     </pre>

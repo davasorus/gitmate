@@ -3,17 +3,20 @@ version: 2
 updates:
   - package-ecosystem: "gomod"
     directory: "/"
+    target-branch: "dev-Branch" # E-0: dependency PRs land on dev, never straight to live
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "npm"
     directory: "/gui/frontend"
+    target-branch: "dev-Branch"
     schedule:
       interval: "weekly"
     open-pull-requests-limit: 5
 
   - package-ecosystem: "github-actions"
     directory: "/"
+    target-branch: "dev-Branch"
     schedule:
       interval: "weekly"

@@ -4,7 +4,11 @@ import type { JobNode, Job } from "../../bindings/github.com/davasorus/gitmate/i
 // depth, with arrows for dependencies, each box colored by the live job status.
 export function RunFlow({ graph, jobs }: { graph: JobNode[]; jobs: Job[] }) {
   if (!graph || graph.length === 0) {
-    return <div className="text-xs italic text-muted-foreground">no job graph (workflow YAML unavailable or no jobs)</div>;
+    return (
+      <div className="text-xs italic text-muted-foreground">
+        no job graph (workflow YAML unavailable or no jobs)
+      </div>
+    );
   }
 
   // live status per job name (from the run's jobs)
@@ -44,7 +48,12 @@ export function RunFlow({ graph, jobs }: { graph: JobNode[]; jobs: Job[] }) {
   }
 
   // layout geometry
-  const colW = 180, rowH = 56, boxW = 150, boxH = 34, padX = 20, padY = 16;
+  const colW = 180,
+    rowH = 56,
+    boxW = 150,
+    boxH = 34,
+    padX = 20,
+    padY = 16;
   const pos = new Map<string, { x: number; y: number }>();
   columns.forEach((col, ci) => {
     col.forEach((n, ri) => {
@@ -61,13 +70,26 @@ export function RunFlow({ graph, jobs }: { graph: JobNode[]; jobs: Job[] }) {
         {/* dependency arrows */}
         {graph.flatMap((n) =>
           (n.Needs ?? []).map((dep, di) => {
-            const from = pos.get(dep), to = pos.get(n.Name);
+            const from = pos.get(dep),
+              to = pos.get(n.Name);
             if (!from || !to) return null;
-            const x1 = from.x + boxW, y1 = from.y + boxH / 2;
-            const x2 = to.x, y2 = to.y + boxH / 2;
-            return <line key={`${n.Name}-${dep}-${di}`} x1={x1} y1={y1} x2={x2} y2={y2}
-                         stroke="var(--color-border, #444)" strokeWidth={1.5} markerEnd="url(#arrow)" />;
-          })
+            const x1 = from.x + boxW,
+              y1 = from.y + boxH / 2;
+            const x2 = to.x,
+              y2 = to.y + boxH / 2;
+            return (
+              <line
+                key={`${n.Name}-${dep}-${di}`}
+                x1={x1}
+                y1={y1}
+                x2={x2}
+                y2={y2}
+                stroke="var(--color-border, #444)"
+                strokeWidth={1.5}
+                markerEnd="url(#arrow)"
+              />
+            );
+          }),
         )}
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
@@ -80,10 +102,23 @@ export function RunFlow({ graph, jobs }: { graph: JobNode[]; jobs: Job[] }) {
           const c = color(n.Name);
           return (
             <g key={n.Name}>
-              <rect x={p.x} y={p.y} width={boxW} height={boxH} rx={6}
-                    fill="var(--color-card, #1a1a1a)" stroke={c} strokeWidth={2} />
+              <rect
+                x={p.x}
+                y={p.y}
+                width={boxW}
+                height={boxH}
+                rx={6}
+                fill="var(--color-card, #1a1a1a)"
+                stroke={c}
+                strokeWidth={2}
+              />
               <circle cx={p.x + 12} cy={p.y + boxH / 2} r={4} fill={c} />
-              <text x={p.x + 24} y={p.y + boxH / 2 + 4} fontSize={11} fill="var(--color-foreground, #ddd)">
+              <text
+                x={p.x + 24}
+                y={p.y + boxH / 2 + 4}
+                fontSize={11}
+                fill="var(--color-foreground, #ddd)"
+              >
                 {n.Name.length > 16 ? n.Name.slice(0, 15) + "…" : n.Name}
               </text>
             </g>

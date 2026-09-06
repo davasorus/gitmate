@@ -41,19 +41,31 @@ export function ReviewDiff({
         const path = f.NewPath || f.OldPath;
         return (
           <div key={fi} className="overflow-hidden rounded-md border border-border">
-            <div className="border-b border-border bg-muted px-3 py-1.5 text-xs text-[var(--color-ahead)]">{path}</div>
+            <div className="border-b border-border bg-muted px-3 py-1.5 text-xs text-[var(--color-ahead)]">
+              {path}
+            </div>
             {f.Binary ? (
               <div className="px-3 py-2 text-xs italic text-muted-foreground">binary file</div>
             ) : (
               (f.Hunks ?? []).map((h, hi) => (
                 <div key={hi}>
-                  <div className="bg-muted/50 px-3 py-1 text-xs text-muted-foreground">{h.Header}</div>
+                  <div className="bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+                    {h.Header}
+                  </div>
                   <div className="overflow-x-auto">
                     {(h.Lines ?? []).map((ln, li) => {
                       const add = ln.Kind === "add";
                       const rem = ln.Kind === "remove";
-                      const bg = add ? "bg-[var(--color-added)]/10" : rem ? "bg-[var(--color-removed)]/10" : "";
-                      const fg = add ? "text-[var(--color-added)]" : rem ? "text-[var(--color-removed)]" : "text-foreground";
+                      const bg = add
+                        ? "bg-[var(--color-added)]/10"
+                        : rem
+                          ? "bg-[var(--color-removed)]/10"
+                          : "";
+                      const fg = add
+                        ? "text-[var(--color-added)]"
+                        : rem
+                          ? "text-[var(--color-removed)]"
+                          : "text-foreground";
                       const marker = add ? "+" : rem ? "-" : " ";
                       // Comment target: any line present on the new side (add or context) with a NewNum.
                       const canComment = !rem && ln.NewNum > 0;
@@ -61,54 +73,117 @@ export function ReviewDiff({
                       return (
                         <div key={li}>
                           <div className={`group flex ${bg} font-mono text-xs leading-5`}>
-                            <span className="w-10 shrink-0 select-none px-1 text-right text-muted-foreground/60">{ln.OldNum || ""}</span>
-                            <span className="w-10 shrink-0 select-none px-1 text-right text-muted-foreground/60">{ln.NewNum || ""}</span>
-                            <span className={`w-4 shrink-0 select-none text-center ${fg}`}>{marker}</span>
+                            <span className="w-10 shrink-0 select-none px-1 text-right text-muted-foreground/60">
+                              {ln.OldNum || ""}
+                            </span>
+                            <span className="w-10 shrink-0 select-none px-1 text-right text-muted-foreground/60">
+                              {ln.NewNum || ""}
+                            </span>
+                            <span className={`w-4 shrink-0 select-none text-center ${fg}`}>
+                              {marker}
+                            </span>
                             <span className={`flex-1 whitespace-pre ${fg}`}>{ln.Content}</span>
                             {canComment && !existing && (
                               <button
                                 onClick={() => setDraft({ path, line: ln.NewNum, body: "" })}
                                 className="mr-1 hidden shrink-0 select-none rounded bg-[var(--color-ahead)]/20 px-1 text-[10px] text-[var(--color-ahead)] group-hover:block"
-                                title="comment on this line">＋</button>
+                                title="comment on this line"
+                              >
+                                ＋
+                              </button>
                             )}
                           </div>
                           {/* existing review-comment thread(s) anchored to this line */}
-                          {canComment && existingAt(path, ln.NewNum).map((ec) => (
-                            <div key={ec.ID} className="ml-24 mr-2 my-1 rounded border border-border bg-muted/30 px-2 py-1 text-xs">
-                              <div><span className="font-medium">{ec.Author}</span></div>
-                              <div className="whitespace-pre-wrap">{ec.Body}</div>
-                              {replyTo && replyTo.id === ec.ID ? (
-                                <div className="mt-1 space-y-1">
-                                  <textarea autoFocus value={replyTo.body} onChange={(e) => setReplyTo({ id: ec.ID, body: e.target.value })}
-                                            placeholder="reply…" className="h-14 w-full resize-y rounded border border-border bg-transparent p-1 text-xs" />
-                                  <div className="flex gap-1">
-                                    <button onClick={() => { if (replyTo.body.trim()) onReply(ec.ID, replyTo.body.trim()); setReplyTo(null); }}
-                                            className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-muted">Reply</button>
-                                    <button onClick={() => setReplyTo(null)} className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-muted">Cancel</button>
-                                  </div>
+                          {canComment &&
+                            existingAt(path, ln.NewNum).map((ec) => (
+                              <div
+                                key={ec.ID}
+                                className="ml-24 mr-2 my-1 rounded border border-border bg-muted/30 px-2 py-1 text-xs"
+                              >
+                                <div>
+                                  <span className="font-medium">{ec.Author}</span>
                                 </div>
-                              ) : (
-                                <button onClick={() => setReplyTo({ id: ec.ID, body: "" })} className="mt-1 text-[10px] text-[var(--color-ahead)] hover:underline">reply</button>
-                              )}
-                            </div>
-                          ))}
+                                <div className="whitespace-pre-wrap">{ec.Body}</div>
+                                {replyTo && replyTo.id === ec.ID ? (
+                                  <div className="mt-1 space-y-1">
+                                    <textarea
+                                      autoFocus
+                                      value={replyTo.body}
+                                      onChange={(e) =>
+                                        setReplyTo({ id: ec.ID, body: e.target.value })
+                                      }
+                                      placeholder="reply…"
+                                      className="h-14 w-full resize-y rounded border border-border bg-transparent p-1 text-xs"
+                                    />
+                                    <div className="flex gap-1">
+                                      <button
+                                        onClick={() => {
+                                          if (replyTo.body.trim())
+                                            onReply(ec.ID, replyTo.body.trim());
+                                          setReplyTo(null);
+                                        }}
+                                        className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-muted"
+                                      >
+                                        Reply
+                                      </button>
+                                      <button
+                                        onClick={() => setReplyTo(null)}
+                                        className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-muted"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() => setReplyTo({ id: ec.ID, body: "" })}
+                                    className="mt-1 text-[10px] text-[var(--color-ahead)] hover:underline"
+                                  >
+                                    reply
+                                  </button>
+                                )}
+                              </div>
+                            ))}
                           {/* pending comment shown under its line */}
                           {existing && (
                             <div className="ml-24 mr-2 my-1 rounded border border-[var(--color-ahead)]/40 bg-[var(--color-ahead)]/5 px-2 py-1 text-xs">
                               <div className="whitespace-pre-wrap">{existing.body}</div>
-                              <button onClick={() => onRemove(path, ln.NewNum)} className="mt-1 text-[10px] text-[var(--color-removed)] hover:underline">remove</button>
+                              <button
+                                onClick={() => onRemove(path, ln.NewNum)}
+                                className="mt-1 text-[10px] text-[var(--color-removed)] hover:underline"
+                              >
+                                remove
+                              </button>
                             </div>
                           )}
                           {/* draft editor open on this line */}
                           {draft && draft.path === path && draft.line === ln.NewNum && (
                             <div className="ml-24 mr-2 my-1 space-y-1 rounded border border-border bg-background px-2 py-1">
-                              <textarea autoFocus value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })}
-                                        placeholder={`comment on ${path}:${ln.NewNum}`}
-                                        className="h-16 w-full resize-y rounded border border-border bg-transparent p-1 text-xs" />
+                              <textarea
+                                autoFocus
+                                value={draft.body}
+                                onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+                                placeholder={`comment on ${path}:${ln.NewNum}`}
+                                className="h-16 w-full resize-y rounded border border-border bg-transparent p-1 text-xs"
+                              />
                               <div className="flex gap-1">
-                                <button onClick={() => { if (draft.body.trim()) { onAdd({ path, line: ln.NewNum, body: draft.body.trim() }); } setDraft(null); }}
-                                        className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-muted">Add comment</button>
-                                <button onClick={() => setDraft(null)} className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-muted">Cancel</button>
+                                <button
+                                  onClick={() => {
+                                    if (draft.body.trim()) {
+                                      onAdd({ path, line: ln.NewNum, body: draft.body.trim() });
+                                    }
+                                    setDraft(null);
+                                  }}
+                                  className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-muted"
+                                >
+                                  Add comment
+                                </button>
+                                <button
+                                  onClick={() => setDraft(null)}
+                                  className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-muted"
+                                >
+                                  Cancel
+                                </button>
                               </div>
                             </div>
                           )}

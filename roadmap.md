@@ -304,6 +304,12 @@ Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → 
   (all/success/failure/in-progress); show richer per-run detail (trigger/event, branch,
   duration, run #). Engine adds WorkflowName + timing to the run; frontend groups + filters.
 - [x] view 2: flowchart DONE — RunJobGraph parses jobs+needs from workflow YAML; RunFlow renders depth-column DAG with SVG dependency arrows, boxes colored by live job status; Tree/Flowchart toggle in the run panel
+  - [ ] FLOWCHART GAP (deferred to end of project): matrix jobs not handled. A YAML job
+    with strategy.matrix declares ONE node (e.g. "build"), but the run expands it into
+    N jobs ("build (ubuntu-latest)", "build (windows-latest)"...). Current RunFlow matches
+    node→job by exact name, so matrix legs don't render/color correctly. DECISION: option B —
+    render ONE BOX PER MATRIX LEG (reflects what actually runs), not an aggregate. Needs:
+    parse strategy.matrix from the YAML to expand nodes, fan the needs: edges to each leg.
 - [~] token needs `workflow` scope for dispatch/cancel — cancel/rerun/dispatch will 403 without it; regenerate token with workflow scope
 
 ### 3.6 — Webhooks  [DECLINED]
@@ -347,31 +353,28 @@ configures around. Covers CI quality, CD/release maturity, and process/governanc
 - [ ] enforce: production commits only via live; development only via dev
 - [ ] Dependabot retargeted to `dev` (never straight to production trunk)
 
-### E-1 — CI quality (after E-0)
-- [ ] triggers reworked for two trunks + PATH FILTERS (skip Go job on frontend-only changes, etc.)
-- [ ] caching audit (Go modules + npm actually cached, not re-fetched)
-- [ ] reusable/composite workflows — DRY the repeated checkout+setup-go across ci.yml/release.yml
-- [ ] MATRIX builds — multi-OS (Linux/Windows/macOS) so CI proves cross-platform (for sharing + WSL/Linux use)
-- [ ] frontend lint standard: add ESLint + Prettier (frontend has tsc only, no lint/format) — enforce in CI
-- [ ] Go formatting gate (gofmt -l fail-if-unformatted)
-- [ ] code coverage reporting (go test -cover; surface it; maybe threshold)
+### E-1 — CI quality (after E-0)  [x] DONE
+- [x] triggers: CI on all pushes + PRs; gate skips push run when branch has open PR; dorny/paths-filter skips go/frontend by change area; concurrency dedupes
+- [x] caching: Go module+build cache, npm cache, wails3 binary cache
+- [x] composite action .github/actions/setup-go (checkout+setup-go+cache); used by go+frontend jobs. NOTE: release.yml not yet migrated to it — finish in end-of-E cleanup
+- [x] matrix: go job runs ubuntu/windows/macos (fail-fast:false); lint/gofmt/coverage Linux-only
+- [x] lint+format: OXLINT (not ESLint — typescript-eslint hard-locks TS<6.1, unusable on our TS7; oxlint is tsgo/TS7-native) + Prettier; both enforced in CI
+- [x] gofmt gate: fails build if cmd/internal not gofmt-clean (Linux-only)
+- [x] coverage: -coverprofile, prints total, uploads artifact; THRESHOLD via workflow env COVERAGE_MIN=85 (PR-gated to change), fails under. NOTE: don't make it a required check until actually at 85%
 
-### E-2 — CD / release pipeline (the capstone)
-- [ ] GUI in releases via a MATRIX `wails3 build` job (reuses E-1 matrix); attach desktop artifacts alongside CLI
-- [ ] releases cut from `live` ONLY (enforced)
+### E-2 — CD / release pipeline (the capstone)  [x] DONE (settings pending: release env + tag ruleset)
+- [x] GUI in releases via MATRIX wails3 build (release.yml, from Phase D)
+- [x] releases cut from live: semantic-release.yml triggers on push to live only
 - [ ] TWO release paths:
-      (a) manual tag — restricted to authorized users via a TAG PROTECTION RULESET on `v*`
-          (note: CODEOWNERS does NOT gate tags; tag protection rulesets do)
-      (b) automated: semantic-release on live → auto-version + release notes GROUPED BY
-          conventional-commit type (feat/fix/breaking → Features/Fixes/…)
-- [ ] gated approval before publish: GitHub Actions ENVIRONMENT with required reviewer
-- [ ] conventional commits: SOFT adoption — semantic-release parses what it can; NOT hard-
-      enforced by commit-lint (not all commits will follow the format, and that's accepted)
+      (a) [~] manual tag path exists (release.yml on v*); YOU must add the TAG PROTECTION RULESET on v* in Settings
+      (b) [x] automated: semantic-release on live → auto-version + notes grouped by type (.releaserc.json)
+- [~] gated approval: semantic-release.yml uses environment 'release' — YOU must add a required reviewer to that env in Settings
+- [x] soft conventional-commits: semantic-release parses; no commit-lint (accepted). PR template nudges the format.
 
-### E-3 — process/governance (light)
-- [ ] required status checks tied to branch protection (green CI is a GATE, not a suggestion)
-- [ ] Dependabot auto-merge on green minor/patch (optional)
-- [ ] PR templates / CODEOWNERS (borders on Phase F docs)
+### E-3 — process/governance (light)  [~] files DONE; branch-protection settings pending
+- [~] required status checks: YOU set in Settings → Branches (require go/frontend/coverage on dev-Branch + live)
+- [x] Dependabot auto-merge on green patch/minor: .github/workflows/dependabot-automerge.yml
+- [x] PR template (.github/pull_request_template.md) + CODEOWNERS (.github/CODEOWNERS — @davasorus owns .github + .releaserc)
 
 ## TIER 3 / Phase F — documentation sweep  [ ]  (LAST — after A–E settle)
 Document the FINISHED system, not the moving one (that is why F is last). Written as if a

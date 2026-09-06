@@ -45,4 +45,8 @@
   }
 }
 
-body { background: var(--color-background); color: var(--color-foreground); margin: 0; }
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  margin: 0;
+}
