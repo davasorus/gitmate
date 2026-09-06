@@ -512,7 +512,7 @@ func (g *GitService) PRDiff(number int) ([]gitops.FileDiff, error) {
 	return client.PRDiff(ctx, owner, repo, number)
 }
 
-func (g *GitService) SubmitReview(number int, event, body string) error {
+func (g *GitService) SubmitReview(number int, event, body string, comments []ghapi.ReviewComment) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
 	if err != nil {
@@ -522,7 +522,7 @@ func (g *GitService) SubmitReview(number int, event, body string) error {
 	if err != nil {
 		return err
 	}
-	return client.SubmitReview(ctx, owner, repo, number, event, body)
+	return client.SubmitReview(ctx, owner, repo, number, event, body, comments)
 }
 
 func (g *GitService) ListRequestedReviewers(number int) ([]ghapi.Reviewer, error) {

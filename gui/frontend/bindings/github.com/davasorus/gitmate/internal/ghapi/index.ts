@@ -9,5 +9,6 @@ export type {
     PR,
     Release,
     Review,
+    ReviewComment,
     Reviewer
 } from "./models.js";

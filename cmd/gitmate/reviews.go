@@ -41,7 +41,7 @@ var reviewCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if err := client.SubmitReview(ctx, owner, repo, n, event, reviewBody); err != nil {
+		if err := client.SubmitReview(ctx, owner, repo, n, event, reviewBody, nil); err != nil {
 			return err
 		}
 		fmt.Printf("submitted %s review on #%d\n", args[1], n)

@@ -382,8 +382,8 @@ export function Status(): $CancellablePromise<gitops$0.Status | null> {
     return $Call.ByID(1385891039);
 }
 
-export function SubmitReview($number: number, event: string, body: string): $CancellablePromise<void> {
-    return $Call.ByID(3295771057, $number, event, body);
+export function SubmitReview($number: number, event: string, body: string, comments: ghapi$0.ReviewComment[] | null): $CancellablePromise<void> {
+    return $Call.ByID(3295771057, $number, event, body, comments);
 }
 
 export function Switch(branch: string): $CancellablePromise<void> {

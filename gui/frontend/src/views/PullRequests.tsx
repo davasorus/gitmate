@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useGit, cls } from "../context";
 import { CheckBadge } from "../components/CheckBadge";
-import { DiffView } from "../components/DiffView";
+import { ReviewDiff, type PendingComment } from "../components/ReviewDiff";
 import type { PR, CheckRun, Review, Reviewer } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 import type { FileDiff } from "../../bindings/github.com/davasorus/gitmate/internal/gitops";
 
@@ -67,6 +67,7 @@ export function PullRequests() {
   const [labelInput, setLabelInput] = useState<Record<number, string>>({});
   const [openReview, setOpenReview] = useState<number | null>(null);
   const [prDiff, setPrDiff] = useState<FileDiff[]>([]);
+  const [pending, setPending] = useState<PendingComment[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
   const [reviewBody, setReviewBody] = useState("");
@@ -78,17 +79,19 @@ export function PullRequests() {
       setReviews((await service.ListReviews(n)) ?? []);
       setReviewers((await service.ListRequestedReviewers(n)) ?? []);
       setPrDiff((await service.PRDiff(n)) ?? []);
+      setPending([]);
       setOpenReview(n);
     } catch (e) { flash("err", String(e)); } finally { setBusy(""); }
   };
   const toggleReview = (n: number) => {
-    if (openReview === n) { setOpenReview(null); setReviews([]); setReviewers([]); setReviewBody(""); setPrDiff([]); return; }
+    if (openReview === n) { setOpenReview(null); setReviews([]); setReviewers([]); setReviewBody(""); setPrDiff([]); setPending([]); return; }
     loadReview(n);
   };
   const submitReview = (n: number, event: "APPROVE" | "REQUEST_CHANGES" | "COMMENT") => {
     if (event !== "APPROVE" && !reviewBody.trim()) { flash("err", "A comment is required for request-changes and comment."); return; }
     run(`review-${n}`, async () => {
-      await service.SubmitReview(n, event, reviewBody);
+      await service.SubmitReview(n, event, reviewBody, pending);
+      setPending([]);
       setReviewBody("");
       await loadReview(n);
       return `review submitted on #${n}`;
@@ -177,7 +180,11 @@ export function PullRequests() {
             {openReview === p.Number && (
               <div className="mt-2 space-y-2 rounded-md border border-border bg-background p-2">
                 <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Changed files</div>
-                <div className="max-h-96 overflow-auto rounded border border-border"><DiffView files={prDiff ?? []} /></div>
+                <div className="max-h-96 overflow-auto rounded border border-border">
+                  <ReviewDiff files={prDiff ?? []} pending={pending}
+                    onAdd={(c) => setPending((ps) => [...ps.filter((x) => !(x.path === c.path && x.line === c.line)), c])}
+                    onRemove={(path, line) => setPending((ps) => ps.filter((x) => !(x.path === path && x.line === line)))} />
+                </div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reviews</div>
                 {(reviews ?? []).length ? (reviews ?? []).map((rv) => (
                   <div key={rv.ID} className="flex items-baseline gap-2 text-xs">
@@ -206,7 +213,8 @@ export function PullRequests() {
                 <textarea value={reviewBody} onChange={(e) => setReviewBody(e.target.value)}
                           placeholder="review comment (required for request-changes / comment)"
                           className={`${cls.input} h-20 w-full resize-y text-xs`} />
-                <div className="flex gap-1">
+                <div className="flex items-center gap-1">
+                  {(pending ?? []).length > 0 && <span className="mr-1 text-[10px] text-[var(--color-ahead)]">{pending.length} pending line comment(s)</span>}
                   <button onClick={() => submitReview(p.Number, "APPROVE")} disabled={!!busy} className={`${cls.btnSm} text-[var(--color-added)]`}>{busy === `review-${p.Number}` ? "…" : "Approve"}</button>
                   <button onClick={() => submitReview(p.Number, "REQUEST_CHANGES")} disabled={!!busy} className={`${cls.btnSm} text-[var(--color-removed)]`}>Request changes</button>
                   <button onClick={() => submitReview(p.Number, "COMMENT")} disabled={!!busy} className={cls.btnSm}>Comment</button>

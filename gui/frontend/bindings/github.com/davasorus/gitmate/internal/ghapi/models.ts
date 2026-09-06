@@ -91,6 +91,17 @@ export interface Review {
 }
 
 /**
+ * ReviewComment is a pending line comment to attach to a submitted review.
+ * Path is the file path; Line is the line number in the file's new version;
+ * Body is the comment text.
+ */
+export interface ReviewComment {
+    "Path": string;
+    "Line": number;
+    "Body": string;
+}
+
+/**
  * Reviewer is a requested (not-yet-submitted) reviewer on a PR.
  */
 export interface Reviewer {
