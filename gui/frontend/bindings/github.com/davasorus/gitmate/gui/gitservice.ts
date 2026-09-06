@@ -34,6 +34,10 @@ export function Branches(): $CancellablePromise<gitops$0.Branch[] | null> {
     return $Call.ByID(3913623929);
 }
 
+export function CancelRun(runID: number): $CancellablePromise<void> {
+    return $Call.ByID(1044576492, runID);
+}
+
 export function CherryPick(rev: string): $CancellablePromise<void> {
     return $Call.ByID(4264862881, rev);
 }
@@ -164,12 +168,24 @@ export function GetRepoDir(): $CancellablePromise<string> {
     return $Call.ByID(2807244446);
 }
 
+export function GetRun(runID: number): $CancellablePromise<ghapi$0.WorkflowRun> {
+    return $Call.ByID(1972643456, runID);
+}
+
 export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | null> {
     return $Call.ByID(1294470425, state);
 }
 
+export function JobLogs(jobID: number): $CancellablePromise<ghapi$0.JobLog> {
+    return $Call.ByID(3461752551, jobID);
+}
+
 export function ListAssets(releaseID: number): $CancellablePromise<ghapi$0.Asset[] | null> {
     return $Call.ByID(1953238676, releaseID);
+}
+
+export function ListDispatchableWorkflows(): $CancellablePromise<ghapi$0.DispatchableWorkflow[] | null> {
+    return $Call.ByID(1071859323);
 }
 
 export function ListIssueComments($number: number): $CancellablePromise<ghapi$0.IssueComment[] | null> {
@@ -198,6 +214,10 @@ export function ListReviewComments($number: number): $CancellablePromise<ghapi$0
 
 export function ListReviews($number: number): $CancellablePromise<ghapi$0.Review[] | null> {
     return $Call.ByID(3728537402, $number);
+}
+
+export function ListRuns(limit: number): $CancellablePromise<ghapi$0.WorkflowRun[] | null> {
+    return $Call.ByID(4052380023, limit);
 }
 
 export function ListTags(): $CancellablePromise<gitops$0.Tag[] | null> {
@@ -319,6 +339,14 @@ export function RequestReviewers($number: number, logins: string[] | null): $Can
     return $Call.ByID(4134688474, $number, logins);
 }
 
+export function RerunFailed(runID: number): $CancellablePromise<void> {
+    return $Call.ByID(3190066500, runID);
+}
+
+export function RerunRun(runID: number): $CancellablePromise<void> {
+    return $Call.ByID(651277306, runID);
+}
+
 export function Reset(rev: string, mode: string): $CancellablePromise<void> {
     return $Call.ByID(478003792, rev, mode);
 }
@@ -345,6 +373,14 @@ export function RevertAbort(): $CancellablePromise<void> {
 
 export function RevertContinue(): $CancellablePromise<void> {
     return $Call.ByID(3855291498);
+}
+
+export function RunJobGraph(runID: number): $CancellablePromise<ghapi$0.JobNode[] | null> {
+    return $Call.ByID(1391988671, runID);
+}
+
+export function RunJobs(runID: number): $CancellablePromise<ghapi$0.Job[] | null> {
+    return $Call.ByID(2818376490, runID);
 }
 
 export function SequencerInProgress(): $CancellablePromise<[boolean, boolean]> {
@@ -416,6 +452,14 @@ export function Switch(branch: string): $CancellablePromise<void> {
 
 export function SwitchNew(branch: string): $CancellablePromise<void> {
     return $Call.ByID(637393581, branch);
+}
+
+/**
+ * TriggerDispatch fires a workflow_dispatch. inputs is a JSON-ish string map from
+ * the frontend; values pass through as strings (GitHub accepts string inputs).
+ */
+export function TriggerDispatch(workflowFile: string, ref: string, inputs: { [_ in string]?: string } | null): $CancellablePromise<void> {
+    return $Call.ByID(3276770057, workflowFile, ref, inputs);
 }
 
 export function UnresolveThread(threadID: string): $CancellablePromise<void> {

@@ -4,9 +4,14 @@
 export type {
     Asset,
     CheckRun,
+    DispatchInput,
+    DispatchableWorkflow,
     ExistingComment,
     Issue,
     IssueComment,
+    Job,
+    JobLog,
+    JobNode,
     Label,
     PR,
     PRDetail,
@@ -17,5 +22,8 @@ export type {
     Release,
     Review,
     ReviewComment,
-    Reviewer
+    Reviewer,
+    Step,
+    StepLog,
+    WorkflowRun
 } from "./models.js";
