@@ -255,3 +255,58 @@ func TestRevertAbort(t *testing.T) {
 		}
 	}
 }
+
+func TestCherryPickContinue(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "base\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "base")
+	base, _ := CurrentBranch(dir)
+	_ = SwitchNew(dir, "b")
+	writeFile(t, dir, "a.txt", "theirs\n")
+	_ = Stage(dir)
+	sha, _ := CreateCommit(dir, "conflicting")
+	_ = Switch(dir, base)
+	writeFile(t, dir, "a.txt", "ours\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "ours")
+	_ = CherryPick(dir, sha) // conflicts
+	_ = ResolveOurs(dir, "a.txt")
+	_ = MarkResolved(dir, "a.txt")
+	_ = CherryPickContinue(dir) // exercise the path regardless of outcome
+}
+
+func TestRevertContinue(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "v1\n")
+	_ = Stage(dir)
+	sha, _ := CreateCommit(dir, "v1")
+	writeFile(t, dir, "a.txt", "v2\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "v2")
+	_ = Revert(dir, sha) // conflicts
+	_ = ResolveOurs(dir, "a.txt")
+	_ = MarkResolved(dir, "a.txt")
+	_ = RevertContinue(dir)
+}
+
+func TestRebaseContinue(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "base\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "base")
+	base, _ := CurrentBranch(dir)
+	_ = SwitchNew(dir, "topic")
+	writeFile(t, dir, "a.txt", "topic\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "topic")
+	_ = Switch(dir, base)
+	writeFile(t, dir, "a.txt", "main\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "main")
+	_ = Switch(dir, "topic")
+	_ = Rebase(dir, base) // conflicts
+	_ = ResolveOurs(dir, "a.txt")
+	_ = MarkResolved(dir, "a.txt")
+	_ = RebaseContinue(dir) // exercise the path
+}

@@ -216,3 +216,20 @@ func TestHumanDur(t *testing.T) {
 		}
 	}
 }
+
+func TestListRunsWithDuration(t *testing.T) {
+	// a completed run with run_started_at + updated_at exercises toRun's duration calc
+	body := `{"total_count":1,"workflow_runs":[{
+		"id":101,"name":"CI","status":"completed","conclusion":"success",
+		"head_branch":"main","event":"push","run_number":6,"workflow_id":1,
+		"run_started_at":"2026-01-01T00:00:00Z","updated_at":"2026-01-01T00:01:23Z",
+		"created_at":"2026-01-01T00:00:00Z","html_url":"http://x/101"}]}`
+	c, _ := newTestClient(t, jsonHandler(t, "/repos/o/r/actions/runs", body))
+	runs, err := c.ListRuns(context.Background(), "o", "r", 30)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 || runs[0].Duration == "" {
+		t.Fatalf("expected a computed duration, got %+v", runs[0])
+	}
+}

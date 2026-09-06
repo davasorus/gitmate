@@ -535,3 +535,45 @@ func TestStatusVariedStates(t *testing.T) {
 		t.Fatalf("expected file changes, got %+v", st)
 	}
 }
+
+func TestStatusUpstreamAheadBehind(t *testing.T) {
+	// working repo with an origin → gives branch.upstream + branch.ab header lines
+	dir := newRemoteRepo(t)
+	// make a local commit so we're ahead of origin
+	writeFile(t, dir, "ahead.txt", "x\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "ahead commit")
+
+	st, err := GetStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Upstream == "" {
+		t.Fatalf("expected an upstream to be parsed, got %+v", st)
+	}
+	if st.Ahead < 1 {
+		t.Fatalf("expected ahead>=1, got %d", st.Ahead)
+	}
+}
+
+func TestStatusDetachedHead(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "one\n")
+	_ = Stage(dir)
+	sha, _ := CreateCommit(dir, "one")
+	writeFile(t, dir, "a.txt", "two\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "two")
+
+	// detach HEAD at the first commit
+	if _, err := run(dir, "checkout", sha); err != nil {
+		t.Fatal(err)
+	}
+	st, err := GetStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.Detached {
+		t.Fatalf("expected detached HEAD, got %+v", st)
+	}
+}
