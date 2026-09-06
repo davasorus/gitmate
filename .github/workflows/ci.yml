@@ -76,6 +76,18 @@ jobs:
     steps:
       - uses: ./.github/actions/setup-go
 
+      - name: gofmt (fail if unformatted)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          unformatted=$(gofmt -l cmd internal)
+          if [ -n "$unformatted" ]; then
+            echo "These files are not gofmt-formatted:"
+            echo "$unformatted"
+            echo "Run: gofmt -w cmd internal"
+            exit 1
+          fi
+
       - name: Vet
         run: go vet ./cmd/... ./internal/...
 
