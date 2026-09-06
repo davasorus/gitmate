@@ -4,7 +4,7 @@ import { CheckBadge } from "../components/CheckBadge";
 import { ReviewDiff, type PendingComment } from "../components/ReviewDiff";
 import type { PR, CheckRun, Review, Reviewer } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 import type { FileDiff } from "../../bindings/github.com/davasorus/gitmate/internal/gitops";
-import type { ExistingComment, IssueComment } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type { ExistingComment, IssueComment, PRDetailThread } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StateFilter = "open" | "closed" | "all";
 
@@ -70,6 +70,7 @@ export function PullRequests() {
   const [prDiff, setPrDiff] = useState<FileDiff[]>([]);
   const [pending, setPending] = useState<PendingComment[]>([]);
   const [existing, setExisting] = useState<ExistingComment[]>([]);
+  const [threads, setThreads] = useState<PRDetailThread[]>([]);
   const [issueComments, setIssueComments] = useState<IssueComment[]>([]);
   const [generalComment, setGeneralComment] = useState("");
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -80,19 +81,32 @@ export function PullRequests() {
   const loadReview = async (n: number) => {
     setBusy(`review-load-${n}`);
     try {
-      setReviews((await service.ListReviews(n)) ?? []);
-      setReviewers((await service.ListRequestedReviewers(n)) ?? []);
+      // Phase B: ONE GraphQL query for the aggregated read data (reviews, threads
+      // with resolve state, labels, assignees) — replaces several REST read calls.
+      const detail = await service.PRDetail(n);
+      setReviews(((detail?.Reviews) ?? []).map((r) => ({ ID: 0, Author: r.Author, State: r.State, Body: r.Body })));
+      setReviewers(((detail?.Assignees) ?? []).map((login) => ({ Login: login })));
+      setThreads((detail?.Threads) ?? []);
+      // diff (patch) + general issue-comment stream are not in the GraphQL PR detail:
       setPrDiff((await service.PRDiff(n)) ?? []);
-      setExisting((await service.ListReviewComments(n)) ?? []);
       setIssueComments((await service.ListIssueComments(n)) ?? []);
+      // line-anchored existing comments for inline rendering (from the GraphQL threads):
+      setExisting(((detail?.Threads) ?? []).flatMap((t) =>
+        (t.Comments ?? []).map((c) => ({ ID: 0, Path: t.Path, Line: t.Line, Author: c.Author, Body: c.Body, InReplyTo: 0 }))));
       setPending([]);
       setOpenReview(n);
     } catch (e) { flash("err", String(e)); } finally { setBusy(""); }
   };
   const toggleReview = (n: number) => {
-    if (openReview === n) { setOpenReview(null); setReviews([]); setReviewers([]); setReviewBody(""); setPrDiff([]); setPending([]); setExisting([]); setIssueComments([]); return; }
+    if (openReview === n) { setOpenReview(null); setReviews([]); setReviewers([]); setReviewBody(""); setPrDiff([]); setPending([]); setExisting([]); setIssueComments([]); setThreads([]); return; }
     loadReview(n);
   };
+  const toggleResolve = (n: number, t: PRDetailThread) =>
+    run(`resolve-${t.ID}`, async () => {
+      if (t.IsResolved) { await service.UnresolveThread(t.ID); } else { await service.ResolveThread(t.ID); }
+      await loadReview(n);
+      return t.IsResolved ? "thread unresolved" : "thread resolved";
+    }, t.IsResolved ? "unresolved" : "resolved");
   const replyToComment = (n: number, commentID: number, body: string) =>
     run(`reply-${commentID}`, async () => {
       await service.ReplyToReviewComment(n, commentID, body);
@@ -220,6 +234,24 @@ export function PullRequests() {
                   </div>
                 )) : <div className="text-xs italic text-muted-foreground">no reviews yet</div>}
 
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Review threads</div>
+                {(threads ?? []).length ? (threads ?? []).map((t) => (
+                  <div key={t.ID} className="rounded border border-border px-2 py-1 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[var(--color-modified)]">{t.Path}:{t.Line}</span>
+                      {t.IsResolved
+                        ? <span className="rounded bg-[var(--color-added)]/20 px-1 text-[10px] uppercase text-[var(--color-added)]">resolved</span>
+                        : <span className="rounded bg-[var(--color-behind)]/20 px-1 text-[10px] uppercase text-[var(--color-behind)]">open</span>}
+                      <button onClick={() => toggleResolve(p.Number, t)} disabled={!!busy}
+                              className={`${cls.btnSm} ml-auto`}>
+                        {busy === `resolve-${t.ID}` ? "…" : (t.IsResolved ? "Unresolve" : "Resolve")}
+                      </button>
+                    </div>
+                    {(t.Comments ?? []).map((c, ci) => (
+                      <div key={ci} className="mt-0.5 pl-2"><span className="font-medium">{c.Author}</span>: <span className="text-muted-foreground">{c.Body}</span></div>
+                    ))}
+                  </div>
+                )) : <div className="text-xs italic text-muted-foreground">no review threads</div>}
                 <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Conversation</div>
                 {(issueComments ?? []).length ? (issueComments ?? []).map((ic) => (
                   <div key={ic.ID} className="text-xs"><span className="font-medium">{ic.Author}</span>: <span className="text-muted-foreground">{ic.Body}</span></div>

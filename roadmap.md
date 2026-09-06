@@ -258,7 +258,7 @@ Both CLI + GUI for everything.
       - DEFERRED to Phase B: resolve/unresolve threads (GraphQL-only) — now built in B
 - [ ] (same API family, NOT yet built — future) assignees, milestones, edit/delete comments, lock conversations
 
-### 3.4 / Phase B — GraphQL (full client layer)  [~]   ← engine+service DONE; PR-detail GUI wiring remains
+### 3.4 / Phase B — GraphQL (full client layer)  [x]   ← DONE
 Scope: build a REAL GraphQL client as a peer to the REST client (not a one-off query),
 because it unlocks capability, not just efficiency:
   - GraphQL-only features exist (e.g. Projects V2 has NO REST equivalent)
@@ -268,9 +268,10 @@ because it unlocks capability, not just efficiency:
 - [x] engine+service: PRDetailGraphQL — ONE query returns reviews + review threads (with IDs +
       resolve state) + checks + labels + assignees; ResolveThread/UnresolveThread mutations
       (GraphQL-ONLY — no REST equivalent). Service: PRDetail / ResolveThread / UnresolveThread.
-- [ ] GUI wiring (REMAINING): review panel READS via the single PRDetail query (replacing the
-      several REST *read* calls); diff stays REST (PRDiff — GraphQL has no patch); writes stay
-      REST (migrating those is 3.7, not now); resolve/unresolve buttons on threads.
+- [x] GUI wiring: DONE — review panel loads reviews/threads/labels/assignees via the single
+      PRDetail query (replaced 3 REST read calls: ListReviews/ListRequestedReviewers/ListReviewComments);
+      diff stays REST (PRDiff); writes stay REST (3.7 migration deferred); Review-threads section
+      with Resolve/Unresolve buttons (GraphQL-only mutation) + resolve state badges.
 - [x] depends on Phase A: REST write-actions exist (Phase A merged) ✓
 - [ ] leaves the door open for GraphQL-only features later (Projects V2, etc.)
 
