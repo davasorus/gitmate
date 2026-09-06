@@ -113,6 +113,84 @@ func (g *GitService) SetIssueState(number int, state string) error {
 	return client.SetIssueState(ctx, owner, repo, number, state)
 }
 
+func (g *GitService) ListLabels() ([]ghapi.Label, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListLabels(ctx, owner, repo)
+}
+
+func (g *GitService) CreateLabel(name, color, description string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.CreateLabel(ctx, owner, repo, name, color, description)
+}
+
+func (g *GitService) EditLabel(name, newName, color, description string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.EditLabel(ctx, owner, repo, name, newName, color, description)
+}
+
+func (g *GitService) DeleteLabel(name string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.DeleteLabel(ctx, owner, repo, name)
+}
+
+func (g *GitService) AddLabels(number int, labels []string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.AddLabels(ctx, owner, repo, number, labels)
+}
+
+func (g *GitService) RemoveLabel(number int, label string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.RemoveLabel(ctx, owner, repo, number, label)
+}
+
 // resolve reads origin and parses owner/repo.
 func (g *GitService) resolve(ctx context.Context) (owner, repo string, err error) {
 	url, err := gitops.GetRemoteURL(g.repoDir, "origin")

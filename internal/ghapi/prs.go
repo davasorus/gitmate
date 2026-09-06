@@ -76,3 +76,11 @@ func (c *Client) ListIssues(ctx context.Context, owner, repo, state string) ([]I
 	}
 	return issues, nil
 }
+
+func labelNames(ls []*github.Label) []string {
+	names := make([]string, 0, len(ls))
+	for _, l := range ls {
+		names = append(names, l.GetName())
+	}
+	return names
+}

@@ -18,6 +18,10 @@ import * as ghapi$0 from "../internal/ghapi/models.js";
 // @ts-ignore: Unused imports
 import * as gitops$0 from "../internal/gitops/models.js";
 
+export function AddLabels($number: number, labels: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(2840114755, $number, labels);
+}
+
 export function AddRemote(name: string, url: string): $CancellablePromise<void> {
     return $Call.ByID(2602220066, name, url);
 }
@@ -62,6 +66,10 @@ export function CreateIssue(title: string, body: string): $CancellablePromise<st
     return $Call.ByID(4181657864, title, body);
 }
 
+export function CreateLabel(name: string, color: string, description: string): $CancellablePromise<void> {
+    return $Call.ByID(1900097333, name, color, description);
+}
+
 export function CreatePR(title: string, body: string, head: string, base: string): $CancellablePromise<string> {
     return $Call.ByID(1421252495, title, body, head, base);
 }
@@ -82,6 +90,10 @@ export function DeleteBranch(name: string, force: boolean): $CancellablePromise<
     return $Call.ByID(1821812546, name, force);
 }
 
+export function DeleteLabel(name: string): $CancellablePromise<void> {
+    return $Call.ByID(1785281120, name);
+}
+
 export function DeleteRemoteTag(name: string): $CancellablePromise<void> {
     return $Call.ByID(75779088, name);
 }
@@ -96,6 +108,10 @@ export function Diff(path: string, staged: boolean): $CancellablePromise<gitops$
 
 export function DiscardPath(path: string): $CancellablePromise<void> {
     return $Call.ByID(2677726826, path);
+}
+
+export function EditLabel(name: string, newName: string, color: string, description: string): $CancellablePromise<void> {
+    return $Call.ByID(440390313, name, newName, color, description);
 }
 
 export function Fetch(): $CancellablePromise<void> {
@@ -115,6 +131,10 @@ export function GetRepoDir(): $CancellablePromise<string> {
 
 export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | null> {
     return $Call.ByID(1294470425, state);
+}
+
+export function ListLabels(): $CancellablePromise<ghapi$0.Label[] | null> {
+    return $Call.ByID(2781467806);
 }
 
 export function ListRemotes(): $CancellablePromise<gitops$0.Remote[] | null> {
@@ -202,6 +222,10 @@ export function RebaseInProgress(): $CancellablePromise<boolean> {
 
 export function Reflog(limit: number): $CancellablePromise<gitops$0.ReflogEntry[] | null> {
     return $Call.ByID(1601046040, limit);
+}
+
+export function RemoveLabel($number: number, label: string): $CancellablePromise<void> {
+    return $Call.ByID(540707925, $number, label);
 }
 
 export function RemoveRemote(name: string): $CancellablePromise<void> {

@@ -230,9 +230,10 @@ go-github; none require GraphQL. Order: close/reopen → labels → releases →
 Both CLI + GUI for everything.
 
 - [x] **close / reopen** PRs and issues (state update) — CLI + GUI; + open/closed/all filter in both views
-- [ ] **labels — full CRUD, two levels:**
-      - apply: add / remove / set labels on a PR or issue (Issues API; works on both)
-      - manage definitions: create / edit / delete repo label types (name + color)
+- [x] **labels — full CRUD, two levels:** DONE
+      - apply: add / remove labels on a PR or issue (chips on rows: click to remove, +label to add)
+      - manage definitions: Labels view — create/edit/delete repo label types (name/color/desc)
+      - CLI: `gitmate label list|create|edit|delete|add|remove`
 - [ ] **releases — full CRUD:** list / create / edit / delete; asset upload + list;
       generate release notes. Ties to tags 2.6.
 - [ ] **PR reviews — full:** whole-PR review (approve / request-changes / comment);
@@ -268,6 +269,10 @@ Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → 
 
 - [ ] data: list workflows + runs; open run → jobs → steps with status (queued/running/passed/failed)
 - [ ] smart polling for live status (targeted, backs off — not a firehose)
+      ⚠️ LESSON (Phase A close/reopen): a useEffect→useCallback loop with unstable deps
+      caused an infinite fetch that tripped GitHub's SECONDARY RATE LIMIT in <1s. Any
+      auto-fetch MUST use a fixed controlled cadence (timer), never tied to render cycles.
+      Effect deps = only the thing that should trigger a refetch.
 - [ ] controls: cancel run; trigger workflow_dispatch (with inputs); re-run
 - [ ] logs: download + display per-step logs AFTER completion
       (public API has no live per-step log streaming — accepted limit)

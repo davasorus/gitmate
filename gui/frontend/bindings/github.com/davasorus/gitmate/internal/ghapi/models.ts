@@ -30,6 +30,15 @@ export interface Issue {
 }
 
 /**
+ * Label is a repo label definition: name, hex color (no leading #), description.
+ */
+export interface Label {
+    "Name": string;
+    "Color": string;
+    "Description": string;
+}
+
+/**
  * PR is a trimmed pull-request view.
  */
 export interface PR {

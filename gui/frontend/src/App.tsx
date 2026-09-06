@@ -9,6 +9,7 @@ import { Conflicts } from "./views/Conflicts";
 import { Tags } from "./views/Tags";
 import { Reflog } from "./views/Reflog";
 import { Remotes } from "./views/Remotes";
+import { Labels } from "./views/Labels";
 
 export default function App() {
   const {
@@ -63,6 +64,7 @@ export default function App() {
           <NavItem id="branches" label="Branches" badge={branches.length} />
           <NavItem id="prs" label="Pull Requests" badge={prs.length} />
           <NavItem id="issues" label="Issues" badge={issues.length} />
+          <NavItem id="labels" label="Labels" />
           <NavItem id="stashes" label="Stashes" badge={stashes.length} />
           <NavItem id="tags" label="Tags" badge={tags.length} />
           <NavItem id="reflog" label="Reflog" />
@@ -143,6 +145,7 @@ export default function App() {
           {view === "conflicts" && <Conflicts />}
           {view === "tags" && <Tags />}
           {view === "remotes" && <Remotes />}
+          {view === "labels" && <Labels />}
           {view === "reflog" && <Reflog />}
         </div>
       </main>

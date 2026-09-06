@@ -62,6 +62,9 @@ export function PullRequests() {
   const doMerge = (n: number) => run(`merge-${n}`, async () => { const sha = await service.MergePR(n, "merge"); await reload(); return `merged #${n} (${sha.slice(0, 7)})`; }, `merged #${n}`);
   const doClose = (n: number) => run(`pr-close-${n}`, async () => { await service.SetPRState(n, "closed"); await reload(); return `closed #${n}`; }, `closed #${n}`);
   const doReopen = (n: number) => run(`pr-reopen-${n}`, async () => { await service.SetPRState(n, "open"); await reload(); return `reopened #${n}`; }, `reopened #${n}`);
+  const [labelInput, setLabelInput] = useState<Record<number, string>>({});
+  const doAddLabel = (n: number, label: string) => run(`lbl-add-${n}`, async () => { await service.AddLabels(n, [label]); setLabelInput((m) => ({ ...m, [n]: "" })); await reload(); return `labeled #${n}`; }, `labeled #${n}`);
+  const doRemoveLabel = (n: number, label: string) => run(`lbl-rm-${n}-${label}`, async () => { await service.RemoveLabel(n, label); await reload(); return `unlabeled #${n}`; }, `unlabeled #${n}`);
 
   const loadChecks = async (n: number) => {
     setBusy(`checks-${n}`);
@@ -124,6 +127,17 @@ export function PullRequests() {
                 {checks[p.Number].length ? checks[p.Number].map((r, i) => <CheckBadge key={i} run={r} />) : <div className="text-xs italic text-muted-foreground">no checks reported</div>}
               </div>
             )}
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              {(p.Labels ?? []).map((l) => (
+                <button key={l} onClick={() => doRemoveLabel(p.Number, l)} disabled={!!busy}
+                        className="rounded-full border border-border px-2 py-0.5 text-[10px] hover:bg-[var(--color-removed)]/10" title="click to remove">
+                  {l} ✕
+                </button>
+              ))}
+              <input value={labelInput[p.Number] ?? ""} onChange={(e) => setLabelInput((m) => ({ ...m, [p.Number]: e.target.value }))}
+                     onKeyDown={(e) => { if (e.key === "Enter" && (labelInput[p.Number] ?? "").trim()) doAddLabel(p.Number, labelInput[p.Number].trim()); }}
+                     placeholder="+ label" className={`${cls.input} h-6 w-24 px-2 py-0 text-[10px]`} />
+            </div>
           </div>
         )) : <div className="p-3 text-sm italic text-muted-foreground">no {filter} PRs</div>}
       </div>
