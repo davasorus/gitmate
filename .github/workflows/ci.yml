@@ -13,7 +13,7 @@ permissions:
 # grouping by it (and cancelling in-progress) collapses the duplicate into one run.
 concurrency:
   group: ci-${{ github.head_ref || github.ref_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 env:
   COVERAGE_MIN: "85" # minimum total coverage %; CI fails below this. Bump toward higher over time.
