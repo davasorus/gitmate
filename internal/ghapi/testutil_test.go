@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-github/v88/github"
+	"github.com/shurcooL/githubv4"
 )
 
 // newTestClient spins up an httptest server with the given handler and returns a
@@ -18,6 +19,7 @@ func newTestClient(t *testing.T, handler http.Handler) (*Client, *httptest.Serve
 	// tests register plain paths like "/repos/o/r/pulls".
 	stripped := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.URL.Path = strings.TrimPrefix(r.URL.Path, "/api/v3")
+		r.URL.Path = strings.TrimPrefix(r.URL.Path, "/api/uploads")
 		handler.ServeHTTP(w, r)
 	})
 	srv := httptest.NewServer(stripped)
@@ -75,4 +77,14 @@ func routeHandler(t *testing.T, routes ...route) http.Handler {
 		}
 		w.WriteHeader(404)
 	})
+}
+
+// newGQLTestClient returns a *Client whose GraphQL client points at an httptest
+// server. The handler should respond to POST / with a {"data":...} JSON body.
+func newGQLTestClient(t *testing.T, handler http.Handler) (*Client, *httptest.Server) {
+	t.Helper()
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+	gql := githubv4.NewEnterpriseClient(srv.URL, srv.Client())
+	return &Client{gql: gql, Owner: "o", Repo: "r"}, srv
 }
