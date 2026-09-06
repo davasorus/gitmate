@@ -63,6 +63,17 @@ export interface IssueComment {
 }
 
 /**
+ * Job is a job within a run; Steps are its steps.
+ */
+export interface Job {
+    "ID": number;
+    "Name": string;
+    "Status": string;
+    "Conclusion": string;
+    "Steps": Step[] | null;
+}
+
+/**
  * Label is a repo label definition: name, hex color (no leading #), description.
  */
 export interface Label {
@@ -175,4 +186,45 @@ export interface ReviewComment {
  */
 export interface Reviewer {
     "Login": string;
+}
+
+export interface Step {
+    "Name": string;
+    "Status": string;
+    "Conclusion": string;
+    "Number": number;
+}
+
+/**
+ * WorkflowRun is one execution of a workflow.
+ */
+export interface WorkflowRun {
+    "ID": number;
+    "Name": string;
+    "WorkflowID": number;
+
+    /**
+     * for grouping (falls back to Name)
+     */
+    "WorkflowName": string;
+
+    /**
+     * queued, in_progress, completed
+     */
+    "Status": string;
+
+    /**
+     * success, failure, cancelled, "" while running
+     */
+    "Conclusion": string;
+    "Branch": string;
+    "Event": string;
+    "Number": number;
+    "CreatedAt": string;
+
+    /**
+     * human-readable run duration ("1m23s"), "" if not finished/started
+     */
+    "Duration": string;
+    "URL": string;
 }

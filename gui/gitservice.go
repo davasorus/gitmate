@@ -564,6 +564,45 @@ func (g *GitService) PRDetail(number int) (*ghapi.PRDetail, error) {
 	return client.PRDetailGraphQL(ctx, owner, repo, number)
 }
 
+func (g *GitService) ListRuns(limit int) ([]ghapi.WorkflowRun, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListRuns(ctx, owner, repo, limit)
+}
+
+func (g *GitService) RunJobs(runID int64) ([]ghapi.Job, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListRunJobs(ctx, owner, repo, runID)
+}
+
+func (g *GitService) GetRun(runID int64) (ghapi.WorkflowRun, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return ghapi.WorkflowRun{}, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return ghapi.WorkflowRun{}, err
+	}
+	return client.GetRun(ctx, owner, repo, runID)
+}
+
 func (g *GitService) ResolveThread(threadID string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)

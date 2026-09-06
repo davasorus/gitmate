@@ -283,14 +283,14 @@ don't rip-and-replace). Decision rule:
 - [ ] audit each ghapi call against the rule; migrate the ones where GraphQL genuinely wins
 - [ ] mixed REST+GraphQL is expected and fine (GitHub explicitly supports it; node IDs bridge them)
 
-### 3.5 / Phase C — GitHub Actions (first-class)  [ ]
+### 3.5 / Phase C — GitHub Actions (first-class)  [~]   ← C-1 done (data+run-tree+polling); C-2/3/4 remain
 Actions as a first-class citizen: watch, control, view. Live feel via SMART POLLING
 (only the active run, only while viewing, back off when idle/done) — the standard
 approach for desktop git tools (VS Code/GitHub Desktop poll too). Both CLI + GUI.
 Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → (4) flowchart.
 
-- [ ] data: list workflows + runs; open run → jobs → steps with status (queued/running/passed/failed)
-- [ ] smart polling for live status (targeted, backs off — not a firehose)
+- [x] data: ListWorkflows/ListRuns/GetRun/ListRunJobs (engine); ListRuns/RunJobs/GetRun (service); CLI `actions runs|view`; GUI Actions view — runs list + jobs/steps tree, status color-coded
+- [x] smart polling: fixed 5s timer, ONLY the open+active run, stops on completion/unmount, timer-driven not render-driven (applied the Phase A infinite-fetch lesson)
       ⚠️ LESSON (Phase A close/reopen): a useEffect→useCallback loop with unstable deps
       caused an infinite fetch that tripped GitHub's SECONDARY RATE LIMIT in <1s. Any
       auto-fetch MUST use a fixed controlled cadence (timer), never tied to render cycles.
@@ -298,7 +298,11 @@ Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → 
 - [ ] controls: cancel run; trigger workflow_dispatch (with inputs); re-run
 - [ ] logs: download + display per-step logs AFTER completion
       (public API has no live per-step log streaming — accepted limit)
-- [ ] view 1: run-tree (indented jobs/steps list) — the data foundation
+- [x] view 1: run-tree (indented jobs/steps list) — DONE
+- [x] **C-1.5 organize the run list** DONE (was under-scoped in C-1; a flat 30-run list is
+  noise for a multi-workflow repo). Scope: group runs BY WORKFLOW; filter by STATUS
+  (all/success/failure/in-progress); show richer per-run detail (trigger/event, branch,
+  duration, run #). Engine adds WorkflowName + timing to the run; frontend groups + filters.
 - [ ] view 2: flowchart (job boxes + `needs:` dependency arrows) — layered on the same data, toggle
 - [ ] token needs `workflow` scope for dispatch/cancel
 
@@ -454,6 +458,12 @@ comments. STE *style* is human-followed, not machine-validated.
   cheap+local, fetch is network). After this, Reload becomes a rarely-needed manual
   override, not the primary refresh mechanism. Supersedes the earlier bare
   "reload on window focus" note.
+  (3) **Prune stale remote-tracking branches:** the periodic/focus fetch must use
+  `fetch --prune` so branches deleted on origin (origin/foo) stop showing locally.
+  Currently plain fetch leaves stale origin/* refs — deleted-on-remote branches
+  linger in the branch list until a manual prune. Folding --prune into the
+  auto-refresh fetch fixes this for free. (Reported: deleted remote branches not
+  reflected locally.)
 - [ ] Branch-row actions: five equal-weight buttons (Switch/Merge/Rebase/Rename/Delete)
   feel cluttered, BUT the Integrate-menu redesign attempted mid-Tier-2 was worse
   (hidden click-to-switch, over-engineered dropdowns) and was reverted. Revisit in the

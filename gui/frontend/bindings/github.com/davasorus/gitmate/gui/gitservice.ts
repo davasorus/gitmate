@@ -164,6 +164,10 @@ export function GetRepoDir(): $CancellablePromise<string> {
     return $Call.ByID(2807244446);
 }
 
+export function GetRun(runID: number): $CancellablePromise<ghapi$0.WorkflowRun> {
+    return $Call.ByID(1972643456, runID);
+}
+
 export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | null> {
     return $Call.ByID(1294470425, state);
 }
@@ -198,6 +202,10 @@ export function ListReviewComments($number: number): $CancellablePromise<ghapi$0
 
 export function ListReviews($number: number): $CancellablePromise<ghapi$0.Review[] | null> {
     return $Call.ByID(3728537402, $number);
+}
+
+export function ListRuns(limit: number): $CancellablePromise<ghapi$0.WorkflowRun[] | null> {
+    return $Call.ByID(4052380023, limit);
 }
 
 export function ListTags(): $CancellablePromise<gitops$0.Tag[] | null> {
@@ -345,6 +353,10 @@ export function RevertAbort(): $CancellablePromise<void> {
 
 export function RevertContinue(): $CancellablePromise<void> {
     return $Call.ByID(3855291498);
+}
+
+export function RunJobs(runID: number): $CancellablePromise<ghapi$0.Job[] | null> {
+    return $Call.ByID(2818376490, runID);
 }
 
 export function SequencerInProgress(): $CancellablePromise<[boolean, boolean]> {

@@ -7,6 +7,7 @@ export type {
     ExistingComment,
     Issue,
     IssueComment,
+    Job,
     Label,
     PR,
     PRDetail,
@@ -17,5 +18,7 @@ export type {
     Release,
     Review,
     ReviewComment,
-    Reviewer
+    Reviewer,
+    Step,
+    WorkflowRun
 } from "./models.js";
