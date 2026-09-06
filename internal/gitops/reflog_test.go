@@ -16,3 +16,12 @@ func TestReflog(t *testing.T) {
 		t.Fatal("expected reflog entries after a commit")
 	}
 }
+
+func TestItoa(t *testing.T) {
+	cases := map[int]string{0: "0", 7: "7", 42: "42", -5: "-5"}
+	for n, want := range cases {
+		if got := itoa(n); got != want {
+			t.Errorf("itoa(%d) = %q, want %q", n, got, want)
+		}
+	}
+}
