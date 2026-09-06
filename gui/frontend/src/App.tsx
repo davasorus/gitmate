@@ -8,6 +8,9 @@ import { Stashes } from "./views/Stashes";
 import { Conflicts } from "./views/Conflicts";
 import { Tags } from "./views/Tags";
 import { Reflog } from "./views/Reflog";
+import { Remotes } from "./views/Remotes";
+import { Labels } from "./views/Labels";
+import { Releases } from "./views/Releases";
 
 export default function App() {
   const {
@@ -62,11 +65,12 @@ export default function App() {
           <NavItem id="branches" label="Branches" badge={branches.length} />
           <NavItem id="prs" label="Pull Requests" badge={prs.length} />
           <NavItem id="issues" label="Issues" badge={issues.length} />
+          <NavItem id="labels" label="Labels" />
           <NavItem id="stashes" label="Stashes" badge={stashes.length} />
           <NavItem id="tags" label="Tags" badge={tags.length} />
+          <NavItem id="releases" label="Releases" />
           <NavItem id="reflog" label="Reflog" />
-          <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Soon</div>
-          <div className="px-3 py-1 text-sm text-muted-foreground/50">Remotes</div>
+          <NavItem id="remotes" label="Remotes" />
         </nav>
         <div className="border-t border-border p-2">
           <div className="mb-1 flex gap-1">
@@ -142,6 +146,9 @@ export default function App() {
           {view === "stashes" && <Stashes />}
           {view === "conflicts" && <Conflicts />}
           {view === "tags" && <Tags />}
+          {view === "remotes" && <Remotes />}
+          {view === "labels" && <Labels />}
+          {view === "releases" && <Releases />}
           {view === "reflog" && <Reflog />}
         </div>
       </main>

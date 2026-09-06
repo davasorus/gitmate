@@ -55,11 +55,11 @@ func Diff(dir string, opts DiffOptions) ([]FileDiff, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseUnifiedDiff(out), nil
+	return ParseUnifiedDiff(out), nil
 }
 
-// parseUnifiedDiff turns `git diff` output into []FileDiff.
-func parseUnifiedDiff(out string) []FileDiff {
+// ParseUnifiedDiff turns `git diff` output into []FileDiff.
+func ParseUnifiedDiff(out string) []FileDiff {
 	var files []FileDiff
 	var cur *FileDiff
 	var hunk *Hunk

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 
 	"github.com/davasorus/gitmate/internal/ghapi"
 	"github.com/davasorus/gitmate/internal/gitops"
@@ -85,6 +86,244 @@ func (g *GitService) Issues(state string) ([]ghapi.Issue, error) {
 		return nil, err
 	}
 	return client.ListIssues(ctx, owner, repo, state)
+}
+
+func (g *GitService) SetPRState(number int, state string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.SetPRState(ctx, owner, repo, number, state)
+}
+
+func (g *GitService) SetIssueState(number int, state string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.SetIssueState(ctx, owner, repo, number, state)
+}
+
+func (g *GitService) ListLabels() ([]ghapi.Label, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListLabels(ctx, owner, repo)
+}
+
+func (g *GitService) CreateLabel(name, color, description string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.CreateLabel(ctx, owner, repo, name, color, description)
+}
+
+func (g *GitService) EditLabel(name, newName, color, description string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.EditLabel(ctx, owner, repo, name, newName, color, description)
+}
+
+func (g *GitService) DeleteLabel(name string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.DeleteLabel(ctx, owner, repo, name)
+}
+
+func (g *GitService) AddLabels(number int, labels []string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.AddLabels(ctx, owner, repo, number, labels)
+}
+
+func (g *GitService) RemoveLabel(number int, label string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.RemoveLabel(ctx, owner, repo, number, label)
+}
+
+func (g *GitService) ListReleases() ([]ghapi.Release, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListReleases(ctx, owner, repo)
+}
+
+func (g *GitService) CreateRelease(tag, name, body string, draft, prerelease bool) (ghapi.Release, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return ghapi.Release{}, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return ghapi.Release{}, err
+	}
+	return client.CreateRelease(ctx, owner, repo, tag, name, body, draft, prerelease)
+}
+
+func (g *GitService) EditRelease(id int64, name, body string, draft, prerelease bool) (ghapi.Release, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return ghapi.Release{}, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return ghapi.Release{}, err
+	}
+	return client.EditRelease(ctx, owner, repo, id, name, body, draft, prerelease)
+}
+
+func (g *GitService) DeleteRelease(id int64) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.DeleteRelease(ctx, owner, repo, id)
+}
+
+func (g *GitService) ListAssets(releaseID int64) ([]ghapi.Asset, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListAssets(ctx, owner, repo, releaseID)
+}
+
+// UploadAsset takes the file name and its base64-encoded contents (from the
+// frontend file input) and attaches it to the release.
+func (g *GitService) UploadAsset(releaseID int64, name, dataB64 string) (ghapi.Asset, error) {
+	data, err := base64.StdEncoding.DecodeString(dataB64)
+	if err != nil {
+		return ghapi.Asset{}, err
+	}
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return ghapi.Asset{}, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return ghapi.Asset{}, err
+	}
+	return client.UploadAsset(ctx, owner, repo, releaseID, name, data)
+}
+
+// DownloadAsset returns the asset's contents base64-encoded so the frontend can
+// trigger a browser download.
+func (g *GitService) DownloadAsset(assetID int64) (string, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return "", err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return "", err
+	}
+	data, err := client.DownloadAsset(ctx, owner, repo, assetID)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func (g *GitService) DeleteAsset(assetID int64) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.DeleteAsset(ctx, owner, repo, assetID)
+}
+
+// GenerateReleaseNotes returns [name, body] so it binds cleanly to TS.
+func (g *GitService) GenerateReleaseNotes(tag string) ([]string, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	name, body, err := client.GenerateReleaseNotes(ctx, owner, repo, tag)
+	if err != nil {
+		return nil, err
+	}
+	return []string{name, body}, nil
 }
 
 // resolve reads origin and parses owner/repo.
@@ -247,6 +486,136 @@ func (g *GitService) PRChecks(number int) ([]ghapi.CheckRun, error) {
 	return client.PRChecks(ctx, owner, repo, number)
 }
 
+func (g *GitService) ListReviews(number int) ([]ghapi.Review, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListReviews(ctx, owner, repo, number)
+}
+
+func (g *GitService) PRDiff(number int) ([]gitops.FileDiff, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.PRDiff(ctx, owner, repo, number)
+}
+
+func (g *GitService) ListReviewComments(number int) ([]ghapi.ExistingComment, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListReviewComments(ctx, owner, repo, number)
+}
+
+func (g *GitService) ListIssueComments(number int) ([]ghapi.IssueComment, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListIssueComments(ctx, owner, repo, number)
+}
+
+func (g *GitService) ReplyToReviewComment(number int, commentID int64, body string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.ReplyToReviewComment(ctx, owner, repo, number, commentID, body)
+}
+
+func (g *GitService) CommentPR(number int, body string) (string, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return "", err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return "", err
+	}
+	return client.CommentPR(ctx, owner, repo, number, body)
+}
+
+func (g *GitService) SubmitReview(number int, event, body string, comments []ghapi.ReviewComment) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.SubmitReview(ctx, owner, repo, number, event, body, comments)
+}
+
+func (g *GitService) ListRequestedReviewers(number int) ([]ghapi.Reviewer, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListRequestedReviewers(ctx, owner, repo, number)
+}
+
+func (g *GitService) RequestReviewers(number int, logins []string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.RequestReviewers(ctx, owner, repo, number, logins)
+}
+
+func (g *GitService) RemoveReviewer(number int, login string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.RemoveReviewer(ctx, owner, repo, number, login)
+}
+
 func (g *GitService) StashSave(message string, includeUntracked bool) error {
 	return gitops.StashSave(g.repoDir, message, includeUntracked)
 }
@@ -277,6 +646,24 @@ func (g *GitService) Reflog(limit int) ([]gitops.ReflogEntry, error) {
 
 func (g *GitService) Blame(path string) ([]gitops.BlameLine, error) {
 	return gitops.Blame(g.repoDir, path)
+}
+
+func (g *GitService) ListRemotes() ([]gitops.Remote, error) { return gitops.ListRemotes(g.repoDir) }
+func (g *GitService) AddRemote(name, url string) error      { return gitops.AddRemote(g.repoDir, name, url) }
+func (g *GitService) RemoveRemote(name string) error        { return gitops.RemoveRemote(g.repoDir, name) }
+func (g *GitService) RenameRemote(oldName, newName string) error {
+	return gitops.RenameRemote(g.repoDir, oldName, newName)
+}
+
+// Clone clones url into dest and points the service at the new repo so the app
+// switches to it. Returns the cloned repo's path.
+func (g *GitService) Clone(url, dest string) (string, error) {
+	path, err := gitops.Clone(url, dest)
+	if err != nil {
+		return "", err
+	}
+	g.repoDir = path
+	return path, nil
 }
 
 func (g *GitService) Reset(rev, mode string) error {

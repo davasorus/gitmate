@@ -18,6 +18,14 @@ import * as ghapi$0 from "../internal/ghapi/models.js";
 // @ts-ignore: Unused imports
 import * as gitops$0 from "../internal/gitops/models.js";
 
+export function AddLabels($number: number, labels: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(2840114755, $number, labels);
+}
+
+export function AddRemote(name: string, url: string): $CancellablePromise<void> {
+    return $Call.ByID(2602220066, name, url);
+}
+
 export function Blame(path: string): $CancellablePromise<gitops$0.BlameLine[] | null> {
     return $Call.ByID(2208585044, path);
 }
@@ -38,6 +46,18 @@ export function CherryPickContinue(): $CancellablePromise<void> {
     return $Call.ByID(709290592);
 }
 
+/**
+ * Clone clones url into dest and points the service at the new repo so the app
+ * switches to it. Returns the cloned repo's path.
+ */
+export function Clone(url: string, dest: string): $CancellablePromise<string> {
+    return $Call.ByID(3320935538, url, dest);
+}
+
+export function CommentPR($number: number, body: string): $CancellablePromise<string> {
+    return $Call.ByID(1745206744, $number, body);
+}
+
 export function Commit(message: string): $CancellablePromise<string> {
     return $Call.ByID(471482348, message);
 }
@@ -50,8 +70,16 @@ export function CreateIssue(title: string, body: string): $CancellablePromise<st
     return $Call.ByID(4181657864, title, body);
 }
 
+export function CreateLabel(name: string, color: string, description: string): $CancellablePromise<void> {
+    return $Call.ByID(1900097333, name, color, description);
+}
+
 export function CreatePR(title: string, body: string, head: string, base: string): $CancellablePromise<string> {
     return $Call.ByID(1421252495, title, body, head, base);
+}
+
+export function CreateRelease(tag: string, name: string, body: string, draft: boolean, prerelease: boolean): $CancellablePromise<ghapi$0.Release> {
+    return $Call.ByID(166699366, tag, name, body, draft, prerelease);
 }
 
 export function CreateTag(name: string, message: string): $CancellablePromise<void> {
@@ -66,8 +94,20 @@ export function DefaultPRTitle(branch: string): $CancellablePromise<string> {
     return $Call.ByID(2798687038, branch);
 }
 
+export function DeleteAsset(assetID: number): $CancellablePromise<void> {
+    return $Call.ByID(726459054, assetID);
+}
+
 export function DeleteBranch(name: string, force: boolean): $CancellablePromise<void> {
     return $Call.ByID(1821812546, name, force);
+}
+
+export function DeleteLabel(name: string): $CancellablePromise<void> {
+    return $Call.ByID(1785281120, name);
+}
+
+export function DeleteRelease(id: number): $CancellablePromise<void> {
+    return $Call.ByID(1545519419, id);
 }
 
 export function DeleteRemoteTag(name: string): $CancellablePromise<void> {
@@ -86,12 +126,35 @@ export function DiscardPath(path: string): $CancellablePromise<void> {
     return $Call.ByID(2677726826, path);
 }
 
+/**
+ * DownloadAsset returns the asset's contents base64-encoded so the frontend can
+ * trigger a browser download.
+ */
+export function DownloadAsset(assetID: number): $CancellablePromise<string> {
+    return $Call.ByID(820770519, assetID);
+}
+
+export function EditLabel(name: string, newName: string, color: string, description: string): $CancellablePromise<void> {
+    return $Call.ByID(440390313, name, newName, color, description);
+}
+
+export function EditRelease(id: number, name: string, body: string, draft: boolean, prerelease: boolean): $CancellablePromise<ghapi$0.Release> {
+    return $Call.ByID(3597022626, id, name, body, draft, prerelease);
+}
+
 export function Fetch(): $CancellablePromise<void> {
     return $Call.ByID(3105763379);
 }
 
 export function FetchTags(): $CancellablePromise<void> {
     return $Call.ByID(2222523430);
+}
+
+/**
+ * GenerateReleaseNotes returns [name, body] so it binds cleanly to TS.
+ */
+export function GenerateReleaseNotes(tag: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(513076016, tag);
 }
 
 /**
@@ -103,6 +166,38 @@ export function GetRepoDir(): $CancellablePromise<string> {
 
 export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | null> {
     return $Call.ByID(1294470425, state);
+}
+
+export function ListAssets(releaseID: number): $CancellablePromise<ghapi$0.Asset[] | null> {
+    return $Call.ByID(1953238676, releaseID);
+}
+
+export function ListIssueComments($number: number): $CancellablePromise<ghapi$0.IssueComment[] | null> {
+    return $Call.ByID(4209960726, $number);
+}
+
+export function ListLabels(): $CancellablePromise<ghapi$0.Label[] | null> {
+    return $Call.ByID(2781467806);
+}
+
+export function ListReleases(): $CancellablePromise<ghapi$0.Release[] | null> {
+    return $Call.ByID(1457386739);
+}
+
+export function ListRemotes(): $CancellablePromise<gitops$0.Remote[] | null> {
+    return $Call.ByID(2290322204);
+}
+
+export function ListRequestedReviewers($number: number): $CancellablePromise<ghapi$0.Reviewer[] | null> {
+    return $Call.ByID(1061340549, $number);
+}
+
+export function ListReviewComments($number: number): $CancellablePromise<ghapi$0.ExistingComment[] | null> {
+    return $Call.ByID(1633293631, $number);
+}
+
+export function ListReviews($number: number): $CancellablePromise<ghapi$0.Review[] | null> {
+    return $Call.ByID(3728537402, $number);
 }
 
 export function ListTags(): $CancellablePromise<gitops$0.Tag[] | null> {
@@ -139,6 +234,10 @@ export function MergePR($number: number, method: string): $CancellablePromise<st
 
 export function PRChecks($number: number): $CancellablePromise<ghapi$0.CheckRun[] | null> {
     return $Call.ByID(3470830078, $number);
+}
+
+export function PRDiff($number: number): $CancellablePromise<gitops$0.FileDiff[] | null> {
+    return $Call.ByID(3658489820, $number);
 }
 
 export function PRTemplate(): $CancellablePromise<string> {
@@ -188,8 +287,32 @@ export function Reflog(limit: number): $CancellablePromise<gitops$0.ReflogEntry[
     return $Call.ByID(1601046040, limit);
 }
 
+export function RemoveLabel($number: number, label: string): $CancellablePromise<void> {
+    return $Call.ByID(540707925, $number, label);
+}
+
+export function RemoveRemote(name: string): $CancellablePromise<void> {
+    return $Call.ByID(2331660635, name);
+}
+
+export function RemoveReviewer($number: number, login: string): $CancellablePromise<void> {
+    return $Call.ByID(320614290, $number, login);
+}
+
 export function RenameBranch(oldName: string, newName: string): $CancellablePromise<void> {
     return $Call.ByID(1363441787, oldName, newName);
+}
+
+export function RenameRemote(oldName: string, newName: string): $CancellablePromise<void> {
+    return $Call.ByID(424528649, oldName, newName);
+}
+
+export function ReplyToReviewComment($number: number, commentID: number, body: string): $CancellablePromise<void> {
+    return $Call.ByID(2839797543, $number, commentID, body);
+}
+
+export function RequestReviewers($number: number, logins: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(4134688474, $number, logins);
 }
 
 export function Reset(rev: string, mode: string): $CancellablePromise<void> {
@@ -218,6 +341,14 @@ export function RevertContinue(): $CancellablePromise<void> {
 
 export function SequencerInProgress(): $CancellablePromise<[boolean, boolean]> {
     return $Call.ByID(365654410);
+}
+
+export function SetIssueState($number: number, state: string): $CancellablePromise<void> {
+    return $Call.ByID(3236175167, $number, state);
+}
+
+export function SetPRState($number: number, state: string): $CancellablePromise<void> {
+    return $Call.ByID(972438818, $number, state);
 }
 
 /**
@@ -267,6 +398,10 @@ export function Status(): $CancellablePromise<gitops$0.Status | null> {
     return $Call.ByID(1385891039);
 }
 
+export function SubmitReview($number: number, event: string, body: string, comments: ghapi$0.ReviewComment[] | null): $CancellablePromise<void> {
+    return $Call.ByID(3295771057, $number, event, body, comments);
+}
+
 export function Switch(branch: string): $CancellablePromise<void> {
     return $Call.ByID(1272999137, branch);
 }
@@ -277,4 +412,12 @@ export function SwitchNew(branch: string): $CancellablePromise<void> {
 
 export function UnstagePath(path: string): $CancellablePromise<void> {
     return $Call.ByID(3753426035, path);
+}
+
+/**
+ * UploadAsset takes the file name and its base64-encoded contents (from the
+ * frontend file input) and attaches it to the release.
+ */
+export function UploadAsset(releaseID: number, name: string, dataB64: string): $CancellablePromise<ghapi$0.Asset> {
+    return $Call.ByID(996616100, releaseID, name, dataB64);
 }

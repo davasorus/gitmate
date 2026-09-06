@@ -17,6 +17,7 @@ export type {
     Hunk,
     Line,
     ReflogEntry,
+    Remote,
     Stash,
     Status,
     Tag

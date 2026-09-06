@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/davasorus/gitmate/internal/gitops"
 	"github.com/google/go-github/v66/github"
 )
 
@@ -15,6 +16,7 @@ type PR struct {
 	State  string
 	When   time.Time
 	Draft  bool
+	Labels []string
 }
 
 // Issue is a trimmed issue view.
@@ -24,12 +26,14 @@ type Issue struct {
 	Author string
 	State  string
 	When   time.Time
+	Labels []string
 }
 
-// ListPRs returns open pull requests for owner/repo.
+// ListPRs returns pull requests for owner/repo in the given state
+// ("open", "closed", or "all").
 func (c *Client) ListPRs(ctx context.Context, owner, repo, state string) ([]PR, error) {
 	opts := &github.PullRequestListOptions{
-		State:       state, // "open", "closed", or "all"
+		State:       state,
 		ListOptions: github.ListOptions{PerPage: 30},
 	}
 	raw, _, err := c.gh.PullRequests.List(ctx, owner, repo, opts)
@@ -45,6 +49,7 @@ func (c *Client) ListPRs(ctx context.Context, owner, repo, state string) ([]PR, 
 			State:  p.GetState(),
 			When:   p.GetCreatedAt().Time,
 			Draft:  p.GetDraft(),
+			Labels: labelNames(p.Labels),
 		})
 	}
 	return prs, nil
@@ -72,7 +77,26 @@ func (c *Client) ListIssues(ctx context.Context, owner, repo, state string) ([]I
 			Author: i.GetUser().GetLogin(),
 			State:  i.GetState(),
 			When:   i.GetCreatedAt().Time,
+			Labels: labelNames(i.Labels),
 		})
 	}
 	return issues, nil
+}
+
+func labelNames(ls []*github.Label) []string {
+	names := make([]string, 0, len(ls))
+	for _, l := range ls {
+		names = append(names, l.GetName())
+	}
+	return names
+}
+
+// PRDiff fetches the PR's unified diff and parses it into the same
+// []gitops.FileDiff that DiffView already renders.
+func (c *Client) PRDiff(ctx context.Context, owner, repo string, number int) ([]gitops.FileDiff, error) {
+	raw, _, err := c.gh.PullRequests.GetRaw(ctx, owner, repo, number, github.RawOptions{Type: github.Diff})
+	if err != nil {
+		return nil, err
+	}
+	return gitops.ParseUnifiedDiff(raw), nil
 }

@@ -179,6 +179,14 @@ export interface ReflogEntry {
 }
 
 /**
+ * Remote is a named remote and its fetch URL.
+ */
+export interface Remote {
+    "Name": string;
+    "URL": string;
+}
+
+/**
  * Stash is one entry from `git stash list`.
  */
 export interface Stash {
