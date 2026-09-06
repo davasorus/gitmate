@@ -29,6 +29,37 @@ export interface CheckRun {
 }
 
 /**
+ * DispatchInput describes one workflow_dispatch input the workflow defines.
+ */
+export interface DispatchInput {
+    "Name": string;
+    "Description": string;
+    "Required": boolean;
+    "Default": string;
+
+    /**
+     * string, boolean, choice, number, environment
+     */
+    "Type": string;
+
+    /**
+     * for type=choice
+     */
+    "Options": string[] | null;
+}
+
+/**
+ * DispatchableWorkflow is a workflow that has a workflow_dispatch trigger, with
+ * its declared inputs (parsed from the workflow YAML).
+ */
+export interface DispatchableWorkflow {
+    "ID": number;
+    "Name": string;
+    "Path": string;
+    "Inputs": DispatchInput[] | null;
+}
+
+/**
  * ExistingComment is a review comment already posted on the PR, anchored to a
  * file + line. ReplyToID (0 if top-level) links a reply to its parent thread.
  */
@@ -60,6 +91,39 @@ export interface IssueComment {
     "ID": number;
     "Author": string;
     "Body": string;
+}
+
+/**
+ * Job is a job within a run; Steps are its steps.
+ */
+export interface Job {
+    "ID": number;
+    "Name": string;
+    "Status": string;
+    "Conclusion": string;
+    "Steps": Step[] | null;
+}
+
+/**
+ * JobLog is a job's captured log, split (best-effort) into per-step sections.
+ */
+export interface JobLog {
+    "JobName": string;
+    "Steps": StepLog[] | null;
+
+    /**
+     * full log; shown when per-step split isn't reliable
+     */
+    "Raw": string;
+}
+
+/**
+ * JobNode is a job in the workflow's dependency graph: its name and the jobs it
+ * needs (must complete first). Parsed from the workflow YAML.
+ */
+export interface JobNode {
+    "Name": string;
+    "Needs": string[] | null;
 }
 
 /**
@@ -175,4 +239,50 @@ export interface ReviewComment {
  */
 export interface Reviewer {
     "Login": string;
+}
+
+export interface Step {
+    "Name": string;
+    "Status": string;
+    "Conclusion": string;
+    "Number": number;
+}
+
+export interface StepLog {
+    "Name": string;
+    "Text": string;
+}
+
+/**
+ * WorkflowRun is one execution of a workflow.
+ */
+export interface WorkflowRun {
+    "ID": number;
+    "Name": string;
+    "WorkflowID": number;
+
+    /**
+     * for grouping (falls back to Name)
+     */
+    "WorkflowName": string;
+
+    /**
+     * queued, in_progress, completed
+     */
+    "Status": string;
+
+    /**
+     * success, failure, cancelled, "" while running
+     */
+    "Conclusion": string;
+    "Branch": string;
+    "Event": string;
+    "Number": number;
+    "CreatedAt": string;
+
+    /**
+     * human-readable run duration ("1m23s"), "" if not finished/started
+     */
+    "Duration": string;
+    "URL": string;
 }

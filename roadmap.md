@@ -283,24 +283,28 @@ don't rip-and-replace). Decision rule:
 - [ ] audit each ghapi call against the rule; migrate the ones where GraphQL genuinely wins
 - [ ] mixed REST+GraphQL is expected and fine (GitHub explicitly supports it; node IDs bridge them)
 
-### 3.5 / Phase C — GitHub Actions (first-class)  [ ]
+### 3.5 / Phase C — GitHub Actions (first-class)  [x]   ← DONE (C-1 data+polling, C-1.5 grouping, C-2 controls, C-3 logs+color, C-4 flowchart)
 Actions as a first-class citizen: watch, control, view. Live feel via SMART POLLING
 (only the active run, only while viewing, back off when idle/done) — the standard
 approach for desktop git tools (VS Code/GitHub Desktop poll too). Both CLI + GUI.
 Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → (4) flowchart.
 
-- [ ] data: list workflows + runs; open run → jobs → steps with status (queued/running/passed/failed)
-- [ ] smart polling for live status (targeted, backs off — not a firehose)
+- [x] data: ListWorkflows/ListRuns/GetRun/ListRunJobs (engine); ListRuns/RunJobs/GetRun (service); CLI `actions runs|view`; GUI Actions view — runs list + jobs/steps tree, status color-coded
+- [x] smart polling: fixed 5s timer, ONLY the open+active run, stops on completion/unmount, timer-driven not render-driven (applied the Phase A infinite-fetch lesson)
       ⚠️ LESSON (Phase A close/reopen): a useEffect→useCallback loop with unstable deps
       caused an infinite fetch that tripped GitHub's SECONDARY RATE LIMIT in <1s. Any
       auto-fetch MUST use a fixed controlled cadence (timer), never tied to render cycles.
       Effect deps = only the thing that should trigger a refetch.
-- [ ] controls: cancel run; trigger workflow_dispatch (with inputs); re-run
-- [ ] logs: download + display per-step logs AFTER completion
+- [x] controls: cancel run; re-run (all/failed-only); trigger workflow_dispatch with DYNAMIC inputs (parse workflow YAML → render a field per declared input) — engine/service/CLI/GUI
+- [x] logs: download + display per-step logs AFTER completion — JobLogs (per-job, on-demand); best-effort per-step split via ##[group] markers, whole-job Raw fallback; CLI `actions logs <jobID>`; GUI Logs toggle per completed job; colored log output (LogView): GitHub ##[error]/##[warning]/##[notice] markers + general failure-word heuristic, universal (any language/action), markers+timestamps stripped
       (public API has no live per-step log streaming — accepted limit)
-- [ ] view 1: run-tree (indented jobs/steps list) — the data foundation
-- [ ] view 2: flowchart (job boxes + `needs:` dependency arrows) — layered on the same data, toggle
-- [ ] token needs `workflow` scope for dispatch/cancel
+- [x] view 1: run-tree (indented jobs/steps list) — DONE
+- [x] **C-1.5 organize the run list** DONE (was under-scoped in C-1; a flat 30-run list is
+  noise for a multi-workflow repo). Scope: group runs BY WORKFLOW; filter by STATUS
+  (all/success/failure/in-progress); show richer per-run detail (trigger/event, branch,
+  duration, run #). Engine adds WorkflowName + timing to the run; frontend groups + filters.
+- [x] view 2: flowchart DONE — RunJobGraph parses jobs+needs from workflow YAML; RunFlow renders depth-column DAG with SVG dependency arrows, boxes colored by live job status; Tree/Flowchart toggle in the run panel
+- [~] token needs `workflow` scope for dispatch/cancel — cancel/rerun/dispatch will 403 without it; regenerate token with workflow scope
 
 ### 3.6 — Webhooks  [DECLINED]
 Considered for live updates; declined. Webhooks require GitHub to POST to a public URL,
@@ -446,6 +450,13 @@ comments. STE *style* is human-followed, not machine-validated.
 - Update this doc's checkboxes as things land.
 
 ### UX feedback (added post-Tier-2.2)
+- [ ] **Branch listing shows LOCAL branches only** — GetBranches lists refs/heads only, so
+  branches that exist on the remote (e.g. `dev` created on origin) are invisible in the
+  Branches tab, the PR base dropdown, AND the History branch selector. Fix at the engine:
+  GetBranches should also surface remote-tracking branches (refs/remotes) marked
+  local/remote/both, with a checkout action to create a local tracking branch. Prereq: a
+  fetch must have run to populate origin/* refs (pairs with the fetch --prune auto-refresh
+  item). Blocks the two-trunk dev workflow — fix early (branch-management pass).
 - [ ] **Auto-refresh (kill the manual Reload button for normal use).** Two parts:
   (1) reload local state on window focus, so returning to the app after terminal/
   browser work reflects reality without a manual Reload; (2) periodic background
@@ -454,6 +465,12 @@ comments. STE *style* is human-followed, not machine-validated.
   cheap+local, fetch is network). After this, Reload becomes a rarely-needed manual
   override, not the primary refresh mechanism. Supersedes the earlier bare
   "reload on window focus" note.
+  (3) **Prune stale remote-tracking branches:** the periodic/focus fetch must use
+  `fetch --prune` so branches deleted on origin (origin/foo) stop showing locally.
+  Currently plain fetch leaves stale origin/* refs — deleted-on-remote branches
+  linger in the branch list until a manual prune. Folding --prune into the
+  auto-refresh fetch fixes this for free. (Reported: deleted remote branches not
+  reflected locally.)
 - [ ] Branch-row actions: five equal-weight buttons (Switch/Merge/Rebase/Rename/Delete)
   feel cluttered, BUT the Integrate-menu redesign attempted mid-Tier-2 was worse
   (hidden click-to-switch, over-engineered dropdowns) and was reverted. Revisit in the
