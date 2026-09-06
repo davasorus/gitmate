@@ -223,7 +223,7 @@ below, not interleaved with features.
 ### 3.2 Clone  [x]
 - [x] engine: Clone(url, dest); CLI `gitmate clone <url> [dir]`; GUI Clone card (points app at clone)
 
-### 3.3 / Phase A — Richer GitHub (REST)  [~]   ← 3 of 4 done; PR reviews remain
+### 3.3 / Phase A — Richer GitHub (REST)  [x]   ← DONE, merged to live
 Scope decision: this is the MAIN git/GitHub tool, so features are built COMPLETE, not
 minimal — half-features just send you back to the web UI. Full scope below. All via
 go-github; none require GraphQL. Order: close/reopen → labels → releases → PR reviews.
@@ -247,21 +247,31 @@ Both CLI + GUI for everything.
         handler-level guards flash a clear error if any path fires; all upload failures surface
         as toasts (no silent no-op).
       - CLI: `gitmate release list|create|delete|notes` + `release assets list|upload|download|delete`
-- [ ] **PR reviews — full:** whole-PR review (approve / request-changes / comment);
-      line-level review comments (diff-line targeting + threads); requested reviewers.
-      NOTE: line-level review UI is the heaviest single piece in the project (bigger than
-      conflict resolution) — will be its own multi-part build when reached, kept last.
-- [ ] (same API family, in scope) assignees, milestones, edit/delete comments, lock conversations
+- [x] **PR reviews — full:** DONE (merged to live)
+      - whole-PR review: approve / request-changes / comment; list reviews; request/remove reviewers
+      - PR diff shown in the review panel (reuses DiffView via PRDiff → ParseUnifiedDiff)
+      - line-level review comments: click a diff line → pending comment; batched into one
+        CreateReview submit with the verdict (ReviewDiff component; DiffView left read-only)
+      - existing conversation: review-comment threads shown inline at their lines + reply;
+        general PR comment stream + add-comment
+      - CLI: `gitmate pr review|reviews|reviewers`
+      - DEFERRED to Phase B: resolve/unresolve threads (GraphQL-only) — now built in B
+- [ ] (same API family, NOT yet built — future) assignees, milestones, edit/delete comments, lock conversations
 
-### 3.4 / Phase B — GraphQL (full client layer)  [ ]
+### 3.4 / Phase B — GraphQL (full client layer)  [~]   ← engine+service DONE; PR-detail GUI wiring remains
 Scope: build a REAL GraphQL client as a peer to the REST client (not a one-off query),
 because it unlocks capability, not just efficiency:
   - GraphQL-only features exist (e.g. Projects V2 has NO REST equivalent)
   - 1 nested query replaces ~11 REST calls for aggregated reads
   - separate rate-limit budget from REST (more total headroom)
-- [ ] add GraphQL client (shurcooL/githubv4) alongside go-github in internal/ghapi
-- [ ] first use: PR detail view — one query for reviews + review-comments + checks + labels + assignees
-- [ ] depends on Phase A: the REST write-actions should exist before the rich read view shows them
+- [x] add GraphQL client (shurcooL/githubv4) alongside go-github in internal/ghapi — done: gql field on Client, same oauth2 token
+- [x] engine+service: PRDetailGraphQL — ONE query returns reviews + review threads (with IDs +
+      resolve state) + checks + labels + assignees; ResolveThread/UnresolveThread mutations
+      (GraphQL-ONLY — no REST equivalent). Service: PRDetail / ResolveThread / UnresolveThread.
+- [ ] GUI wiring (REMAINING): review panel READS via the single PRDetail query (replacing the
+      several REST *read* calls); diff stays REST (PRDiff — GraphQL has no patch); writes stay
+      REST (migrating those is 3.7, not now); resolve/unresolve buttons on threads.
+- [x] depends on Phase A: REST write-actions exist (Phase A merged) ✓
 - [ ] leaves the door open for GraphQL-only features later (Projects V2, etc.)
 
 ### 3.7 / Later — REST→GraphQL migration pass (Phase 4 or late Phase 3)  [ ]

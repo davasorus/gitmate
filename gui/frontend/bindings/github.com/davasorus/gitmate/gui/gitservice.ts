@@ -236,6 +236,10 @@ export function PRChecks($number: number): $CancellablePromise<ghapi$0.CheckRun[
     return $Call.ByID(3470830078, $number);
 }
 
+export function PRDetail($number: number): $CancellablePromise<ghapi$0.PRDetail | null> {
+    return $Call.ByID(3903033078, $number);
+}
+
 export function PRDiff($number: number): $CancellablePromise<gitops$0.FileDiff[] | null> {
     return $Call.ByID(3658489820, $number);
 }
@@ -327,6 +331,10 @@ export function ResolveTheirs(path: string): $CancellablePromise<void> {
     return $Call.ByID(1737476826, path);
 }
 
+export function ResolveThread(threadID: string): $CancellablePromise<void> {
+    return $Call.ByID(149470811, threadID);
+}
+
 export function Revert(rev: string): $CancellablePromise<void> {
     return $Call.ByID(2468644051, rev);
 }
@@ -408,6 +416,10 @@ export function Switch(branch: string): $CancellablePromise<void> {
 
 export function SwitchNew(branch: string): $CancellablePromise<void> {
     return $Call.ByID(637393581, branch);
+}
+
+export function UnresolveThread(threadID: string): $CancellablePromise<void> {
+    return $Call.ByID(3879277182, threadID);
 }
 
 export function UnstagePath(path: string): $CancellablePromise<void> {

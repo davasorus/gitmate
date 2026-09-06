@@ -85,6 +85,53 @@ export interface PR {
 }
 
 /**
+ * PRDetail is the aggregated PR view fetched in ONE GraphQL query — the whole
+ * point of the GraphQL path: reviews + review threads + checks + labels +
+ * assignees together, instead of many REST round-trips.
+ */
+export interface PRDetail {
+    "Number": number;
+    "Title": string;
+    "State": string;
+    "Body": string;
+    "Author": string;
+    "Labels": string[] | null;
+    "Assignees": string[] | null;
+    "Reviews": PRDetailReview[] | null;
+    "Threads": PRDetailThread[] | null;
+    "Checks": PRDetailCheck[] | null;
+}
+
+export interface PRDetailCheck {
+    "Name": string;
+    "Status": string;
+    "Conclusion": string;
+}
+
+export interface PRDetailReview {
+    "Author": string;
+    "State": string;
+    "Body": string;
+}
+
+/**
+ * PRDetailThread is a review-comment thread with its resolve state and GraphQL
+ * node ID (needed for the resolve/unresolve mutations — REST has no equivalent).
+ */
+export interface PRDetailThread {
+    "ID": string;
+    "Path": string;
+    "Line": number;
+    "IsResolved": boolean;
+    "Comments": PRDetailThreadComment[] | null;
+}
+
+export interface PRDetailThreadComment {
+    "Author": string;
+    "Body": string;
+}
+
+/**
  * Release is a trimmed GitHub release view.
  */
 export interface Release {
