@@ -1,5 +1,5 @@
 name: Setup Go
-description: Checkout the repo and set up Go with module/build caching.
+description: Set up Go with module/build caching. Run actions/checkout BEFORE this.
 inputs:
   go-version:
     description: Go version to install
@@ -8,7 +8,6 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v4
     - uses: actions/setup-go@v5
       with:
         go-version: ${{ inputs.go-version }}
