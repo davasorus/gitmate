@@ -3,7 +3,7 @@ package ghapi
 import (
 	"context"
 
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v75/github"
 )
 
 // CheckRun is a trimmed view of one CI check on a commit.

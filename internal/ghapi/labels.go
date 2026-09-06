@@ -3,7 +3,7 @@ package ghapi
 import (
 	"context"
 
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v75/github"
 )
 
 // Label is a repo label definition: name, hex color (no leading #), description.

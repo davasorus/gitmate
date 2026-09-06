@@ -3,7 +3,7 @@ package ghapi
 import (
 	"context"
 
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v75/github"
 )
 
 // CreatePR opens a pull request from head into base. head is a branch name

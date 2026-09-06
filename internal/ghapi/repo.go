@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v75/github"
 )
 
 // ParseRepo extracts owner/repo from a git remote URL in either form:
