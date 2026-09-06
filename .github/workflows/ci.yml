@@ -54,7 +54,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -146,7 +146,7 @@ jobs:
       # Cache the compiled wails3 binary so it isn't rebuilt from source every run.
       - name: Cache wails3
         id: cache-wails
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/go/bin/wails3
           key: wails3-${{ runner.os }}-v3.0.0-beta.16
