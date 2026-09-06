@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v88/github"
 	"gopkg.in/yaml.v3"
 )
 
@@ -199,7 +199,7 @@ type DispatchableWorkflow struct {
 // TriggerDispatch fires a workflow_dispatch event on the given workflow file
 // (e.g. "release.yml") for a ref (branch/tag), with input values.
 func (c *Client) TriggerDispatch(ctx context.Context, owner, repo, workflowFile, ref string, inputs map[string]interface{}) error {
-	_, err := c.gh.Actions.CreateWorkflowDispatchEventByFileName(ctx, owner, repo, workflowFile,
+	_, _, err := c.gh.Actions.CreateWorkflowDispatchEventByFileName(ctx, owner, repo, workflowFile,
 		github.CreateWorkflowDispatchEventRequest{Ref: ref, Inputs: inputs})
 	return err
 }

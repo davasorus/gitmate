@@ -3,7 +3,7 @@ package ghapi
 import (
 	"context"
 
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v88/github"
 )
 
 // CreatePR opens a pull request from head into base. head is a branch name
@@ -11,10 +11,10 @@ import (
 // Returns the new PR number and its HTML URL.
 func (c *Client) CreatePR(ctx context.Context, owner, repo, title, body, head, base string) (int, string, error) {
 	pr, _, err := c.gh.PullRequests.Create(ctx, owner, repo, &github.NewPullRequest{
-		Title: github.String(title),
-		Body:  github.String(body),
-		Head:  github.String(head),
-		Base:  github.String(base),
+		Title: github.Ptr(title),
+		Body:  github.Ptr(body),
+		Head:  github.Ptr(head),
+		Base:  github.Ptr(base),
 	})
 	if err != nil {
 		return 0, "", err
@@ -25,8 +25,8 @@ func (c *Client) CreatePR(ctx context.Context, owner, repo, title, body, head, b
 // CreateIssue opens an issue. Returns the new issue number and its HTML URL.
 func (c *Client) CreateIssue(ctx context.Context, owner, repo, title, body string) (int, string, error) {
 	issue, _, err := c.gh.Issues.Create(ctx, owner, repo, &github.IssueRequest{
-		Title: github.String(title),
-		Body:  github.String(body),
+		Title: github.Ptr(title),
+		Body:  github.Ptr(body),
 	})
 	if err != nil {
 		return 0, "", err
@@ -37,7 +37,7 @@ func (c *Client) CreateIssue(ctx context.Context, owner, repo, title, body strin
 // SetIssueState closes or reopens an issue. state is "closed" or "open".
 func (c *Client) SetIssueState(ctx context.Context, owner, repo string, number int, state string) error {
 	_, _, err := c.gh.Issues.Edit(ctx, owner, repo, number, &github.IssueRequest{
-		State: github.String(state),
+		State: github.Ptr(state),
 	})
 	return err
 }
@@ -45,7 +45,7 @@ func (c *Client) SetIssueState(ctx context.Context, owner, repo string, number i
 // SetPRState closes or reopens a pull request. state is "closed" or "open".
 func (c *Client) SetPRState(ctx context.Context, owner, repo string, number int, state string) error {
 	_, _, err := c.gh.PullRequests.Edit(ctx, owner, repo, number, &github.PullRequest{
-		State: github.String(state),
+		State: github.Ptr(state),
 	})
 	return err
 }

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/google/go-github/v66/github"
+	"github.com/google/go-github/v88/github"
 )
 
 // Release is a trimmed GitHub release view.
@@ -31,38 +31,20 @@ type Asset struct {
 
 // ListReleases returns the repo's releases, newest first.
 func (c *Client) ListReleases(ctx context.Context, owner, repo string) ([]Release, error) {
-	// One raw GET of the releases list, decoding only the fields we need — this
-	// captures "immutable" (which go-github v66 has no typed field for) without
-	// an extra call per release.
-	req, err := c.gh.NewRequest("GET", "repos/"+owner+"/"+repo+"/releases?per_page=30", nil)
-	if err != nil {
-		return nil, err
-	}
-	var raw []struct {
-		ID         int64  `json:"id"`
-		TagName    string `json:"tag_name"`
-		Name       string `json:"name"`
-		Body       string `json:"body"`
-		Draft      bool   `json:"draft"`
-		Prerelease bool   `json:"prerelease"`
-		Immutable  bool   `json:"immutable"`
-		HTMLURL    string `json:"html_url"`
-	}
-	if _, err := c.gh.Do(ctx, req, &raw); err != nil {
-		return nil, err
-	}
-	out := make([]Release, 0, len(raw))
-	for _, r := range raw {
-		out = append(out, Release{
-			ID:         r.ID,
-			TagName:    r.TagName,
-			Name:       r.Name,
-			Body:       r.Body,
-			Draft:      r.Draft,
-			Prerelease: r.Prerelease,
-			Immutable:  r.Immutable,
-			URL:        r.HTMLURL,
-		})
+	var out []Release
+	opts := &github.ListOptions{PerPage: 30}
+	for {
+		raw, resp, err := c.gh.Repositories.ListReleases(ctx, owner, repo, opts)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range raw {
+			out = append(out, toRelease(r))
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
 	}
 	return out, nil
 }
@@ -70,11 +52,11 @@ func (c *Client) ListReleases(ctx context.Context, owner, repo string) ([]Releas
 // CreateRelease creates a release on the given tag.
 func (c *Client) CreateRelease(ctx context.Context, owner, repo, tag, name, body string, draft, prerelease bool) (Release, error) {
 	r, _, err := c.gh.Repositories.CreateRelease(ctx, owner, repo, &github.RepositoryRelease{
-		TagName:    github.String(tag),
-		Name:       github.String(name),
-		Body:       github.String(body),
-		Draft:      github.Bool(draft),
-		Prerelease: github.Bool(prerelease),
+		TagName:    github.Ptr(tag),
+		Name:       github.Ptr(name),
+		Body:       github.Ptr(body),
+		Draft:      github.Ptr(draft),
+		Prerelease: github.Ptr(prerelease),
 	})
 	if err != nil {
 		return Release{}, err
@@ -85,10 +67,10 @@ func (c *Client) CreateRelease(ctx context.Context, owner, repo, tag, name, body
 // EditRelease updates an existing release by ID.
 func (c *Client) EditRelease(ctx context.Context, owner, repo string, id int64, name, body string, draft, prerelease bool) (Release, error) {
 	r, _, err := c.gh.Repositories.EditRelease(ctx, owner, repo, id, &github.RepositoryRelease{
-		Name:       github.String(name),
-		Body:       github.String(body),
-		Draft:      github.Bool(draft),
-		Prerelease: github.Bool(prerelease),
+		Name:       github.Ptr(name),
+		Body:       github.Ptr(body),
+		Draft:      github.Ptr(draft),
+		Prerelease: github.Ptr(prerelease),
 	})
 	if err != nil {
 		return Release{}, err
@@ -185,6 +167,7 @@ func toRelease(r *github.RepositoryRelease) Release {
 		Body:       r.GetBody(),
 		Draft:      r.GetDraft(),
 		Prerelease: r.GetPrerelease(),
+		Immutable:  r.GetImmutable(),
 		URL:        r.GetHTMLURL(),
 	}
 }
