@@ -10,6 +10,7 @@ export type {
     Issue,
     IssueComment,
     Job,
+    JobLog,
     Label,
     PR,
     PRDetail,
@@ -22,5 +23,6 @@ export type {
     ReviewComment,
     Reviewer,
     Step,
+    StepLog,
     WorkflowRun
 } from "./models.js";

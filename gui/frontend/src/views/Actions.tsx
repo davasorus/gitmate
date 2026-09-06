@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useGit, cls } from "../context";
-import type { WorkflowRun, Job, DispatchableWorkflow } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type { WorkflowRun, Job, DispatchableWorkflow, JobLog } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StatusFilter = "all" | "success" | "failure" | "in_progress";
 
@@ -32,6 +32,8 @@ export function Actions() {
   const [runRef, setRunRef] = useState("live");
   const [runInputs, setRunInputs] = useState<Record<string, string>>({});
   const pollRef = useRef<number | null>(null);
+  const [openLog, setOpenLog] = useState<number | null>(null); // jobID
+  const [jobLog, setJobLog] = useState<JobLog | null>(null);
 
   const loadRuns = async () => {
     setBusy("runs-load");
@@ -69,6 +71,13 @@ export function Actions() {
 
   // dispatch: for a dispatchable workflow. No inputs → run immediately (the Run
   // button IS the run). Has inputs → reveal an inline form in that group, then run.
+  const toggleLogs = async (jobID: number) => {
+    if (openLog === jobID) { setOpenLog(null); setJobLog(null); return; }
+    setBusy(`logs-${jobID}`);
+    try { setJobLog(await service.JobLogs(jobID)); setOpenLog(jobID); }
+    catch (e) { flash("err", String(e)); } finally { setBusy(""); }
+  };
+
   const dispatchableFor = (workflowID: number) => dispatchable.find((d) => d.ID === workflowID);
   const startRun = (wf: DispatchableWorkflow) => {
     if (!wf.Inputs || wf.Inputs.length === 0) { doRunWorkflow(wf, "live", {}); return; }
@@ -199,7 +208,22 @@ export function Actions() {
                             <span className={statusColor(j.Status, j.Conclusion)}>●</span>
                             <span className="font-medium">{j.Name}</span>
                             <span className={`text-[10px] ${statusColor(j.Status, j.Conclusion)}`}>{statusLabel(j.Status, j.Conclusion)}</span>
+                            {j.Status === "completed" && (
+                              <button onClick={() => toggleLogs(j.ID)} disabled={!!busy} className="ml-auto rounded border border-border px-1.5 py-0 text-[10px] hover:bg-muted disabled:opacity-40">
+                                {busy === `logs-${j.ID}` ? "…" : (openLog === j.ID ? "Hide logs" : "Logs")}
+                              </button>
+                            )}
                           </div>
+                          {openLog === j.ID && jobLog && (
+                            <div className="my-1 ml-4 max-h-80 overflow-auto rounded border border-border bg-black/40 p-2 font-mono text-[10px] leading-4">
+                              {(jobLog.Steps ?? []).length ? (jobLog.Steps ?? []).map((sl, sli) => (
+                                <details key={sli} className="mb-1">
+                                  <summary className="cursor-pointer text-[var(--color-ahead)]">{sl.Name}</summary>
+                                  <pre className="whitespace-pre-wrap text-muted-foreground">{sl.Text}</pre>
+                                </details>
+                              )) : <pre className="whitespace-pre-wrap text-muted-foreground">{jobLog.Raw}</pre>}
+                            </div>
+                          )}
                           <div className="ml-4">
                             {(j.Steps ?? []).map((st, si) => (
                               <div key={si} className="flex items-center gap-2 text-[11px]">

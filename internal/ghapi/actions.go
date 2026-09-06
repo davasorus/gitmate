@@ -2,6 +2,9 @@ package ghapi
 
 import (
 	"context"
+	"io"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/google/go-github/v66/github"
@@ -261,8 +264,7 @@ func parseDispatchInputs(yml string) (inputs []DispatchInput, hasDispatch bool) 
 		if key.Value != "workflow_dispatch" {
 			continue
 		}
-		hasDispatch = true
-		// find inputs: within workflow_dispatch
+		// found the workflow_dispatch trigger; find its inputs
 		if val.Kind != yaml.MappingNode {
 			return nil, true
 		}
@@ -305,4 +307,71 @@ func parseDispatchInputs(yml string) (inputs []DispatchInput, hasDispatch bool) 
 		return inputs, true
 	}
 	return inputs, hasDispatch
+}
+
+// JobLog is a job's captured log, split (best-effort) into per-step sections.
+type JobLog struct {
+	JobName string
+	Steps   []StepLog
+	Raw     string // full log; shown when per-step split isn't reliable
+}
+
+type StepLog struct {
+	Name string
+	Text string
+}
+
+// JobLogs downloads a single job's log (completed runs only) and returns it,
+// best-effort split per step using GitHub's "##[group]" markers. On any parse
+// uncertainty the Raw whole-job log is always available as a fallback.
+func (c *Client) JobLogs(ctx context.Context, owner, repo string, jobID int64) (JobLog, error) {
+	u, _, err := c.gh.Actions.GetWorkflowJobLogs(ctx, owner, repo, jobID, 3)
+	if err != nil {
+		return JobLog{}, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return JobLog{}, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return JobLog{}, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return JobLog{}, err
+	}
+	raw := string(data)
+	return JobLog{Steps: splitStepLogs(raw), Raw: raw}, nil
+}
+
+// splitStepLogs splits a job log into steps using the "##[group]" / "##[endgroup]"
+// markers GitHub emits around each step. Falls back to a single section if none.
+func splitStepLogs(raw string) []StepLog {
+	lines := strings.Split(raw, "\n")
+	var steps []StepLog
+	var cur *StepLog
+	for _, ln := range lines {
+		// timestamps prefix each line: "2026-...Z ##[group]Run actions/checkout"
+		marker := ln
+		if i := strings.Index(ln, "##[group]"); i >= 0 {
+			name := strings.TrimSpace(ln[i+len("##[group]"):])
+			if cur != nil {
+				steps = append(steps, *cur)
+			}
+			cur = &StepLog{Name: name}
+			continue
+		}
+		if strings.Contains(marker, "##[endgroup]") {
+			continue
+		}
+		if cur != nil {
+			cur.Text += ln + "\n"
+		}
+	}
+	if cur != nil {
+		steps = append(steps, *cur)
+	}
+	return steps
 }

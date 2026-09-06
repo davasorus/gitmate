@@ -176,6 +176,10 @@ export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | nul
     return $Call.ByID(1294470425, state);
 }
 
+export function JobLogs(jobID: number): $CancellablePromise<ghapi$0.JobLog> {
+    return $Call.ByID(3461752551, jobID);
+}
+
 export function ListAssets(releaseID: number): $CancellablePromise<ghapi$0.Asset[] | null> {
     return $Call.ByID(1953238676, releaseID);
 }

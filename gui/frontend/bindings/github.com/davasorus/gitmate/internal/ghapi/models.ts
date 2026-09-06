@@ -105,6 +105,19 @@ export interface Job {
 }
 
 /**
+ * JobLog is a job's captured log, split (best-effort) into per-step sections.
+ */
+export interface JobLog {
+    "JobName": string;
+    "Steps": StepLog[] | null;
+
+    /**
+     * full log; shown when per-step split isn't reliable
+     */
+    "Raw": string;
+}
+
+/**
  * Label is a repo label definition: name, hex color (no leading #), description.
  */
 export interface Label {
@@ -224,6 +237,11 @@ export interface Step {
     "Status": string;
     "Conclusion": string;
     "Number": number;
+}
+
+export interface StepLog {
+    "Name": string;
+    "Text": string;
 }
 
 /**

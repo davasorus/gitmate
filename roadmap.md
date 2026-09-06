@@ -283,7 +283,7 @@ don't rip-and-replace). Decision rule:
 - [ ] audit each ghapi call against the rule; migrate the ones where GraphQL genuinely wins
 - [ ] mixed REST+GraphQL is expected and fine (GitHub explicitly supports it; node IDs bridge them)
 
-### 3.5 / Phase C — GitHub Actions (first-class)  [~]   ← C-1/C-1.5/C-2 done; C-3 (logs) + C-4 (flowchart) remain
+### 3.5 / Phase C — GitHub Actions (first-class)  [~]   ← C-1/C-1.5/C-2/C-3 done; C-4 (flowchart) remains
 Actions as a first-class citizen: watch, control, view. Live feel via SMART POLLING
 (only the active run, only while viewing, back off when idle/done) — the standard
 approach for desktop git tools (VS Code/GitHub Desktop poll too). Both CLI + GUI.
@@ -296,7 +296,7 @@ Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → 
       auto-fetch MUST use a fixed controlled cadence (timer), never tied to render cycles.
       Effect deps = only the thing that should trigger a refetch.
 - [x] controls: cancel run; re-run (all/failed-only); trigger workflow_dispatch with DYNAMIC inputs (parse workflow YAML → render a field per declared input) — engine/service/CLI/GUI
-- [ ] logs: download + display per-step logs AFTER completion
+- [x] logs: download + display per-step logs AFTER completion — JobLogs (per-job, on-demand); best-effort per-step split via ##[group] markers, whole-job Raw fallback; CLI `actions logs <jobID>`; GUI Logs toggle per completed job
       (public API has no live per-step log streaming — accepted limit)
 - [x] view 1: run-tree (indented jobs/steps list) — DONE
 - [x] **C-1.5 organize the run list** DONE (was under-scoped in C-1; a flat 30-run list is

@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	actionsCmd.AddCommand(runsListCmd, runViewCmd, runCancelCmd, runRerunCmd, dispatchCmd)
+	actionsCmd.AddCommand(runsListCmd, runViewCmd, runCancelCmd, runRerunCmd, dispatchCmd, jobLogsCmd)
 	rootCmd.AddCommand(actionsCmd)
 }
 
@@ -174,4 +174,32 @@ var dispatchCmd = &cobra.Command{
 func init() {
 	runRerunCmd.Flags().BoolVar(&rerunFailedOnly, "failed", false, "re-run only failed jobs")
 	dispatchCmd.Flags().StringVar(&dispatchRef, "ref", "", "git ref to run on (default: live)")
+}
+
+var jobLogsCmd = &cobra.Command{
+	Use:   "logs <jobID>",
+	Short: "Show a job's logs (completed runs)",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		id, err := parseRunID(args[0])
+		if err != nil {
+			return err
+		}
+		client, ctx, owner, repo, err := ghClient()
+		if err != nil {
+			return err
+		}
+		log, err := client.JobLogs(ctx, owner, repo, id)
+		if err != nil {
+			return err
+		}
+		if len(log.Steps) > 0 {
+			for _, st := range log.Steps {
+				fmt.Printf("##[ %s ]\n%s\n", st.Name, st.Text)
+			}
+		} else {
+			fmt.Println(log.Raw)
+		}
+		return nil
+	},
 }

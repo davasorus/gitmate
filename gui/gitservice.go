@@ -642,6 +642,19 @@ func (g *GitService) RerunFailed(runID int64) error {
 	return client.RerunFailed(ctx, owner, repo, runID)
 }
 
+func (g *GitService) JobLogs(jobID int64) (ghapi.JobLog, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return ghapi.JobLog{}, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return ghapi.JobLog{}, err
+	}
+	return client.JobLogs(ctx, owner, repo, jobID)
+}
+
 func (g *GitService) ListDispatchableWorkflows() ([]ghapi.DispatchableWorkflow, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
