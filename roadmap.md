@@ -283,7 +283,7 @@ don't rip-and-replace). Decision rule:
 - [ ] audit each ghapi call against the rule; migrate the ones where GraphQL genuinely wins
 - [ ] mixed REST+GraphQL is expected and fine (GitHub explicitly supports it; node IDs bridge them)
 
-### 3.5 / Phase C — GitHub Actions (first-class)  [~]   ← C-1 done (data+run-tree+polling); C-2/3/4 remain
+### 3.5 / Phase C — GitHub Actions (first-class)  [~]   ← C-1/C-1.5/C-2 done; C-3 (logs) + C-4 (flowchart) remain
 Actions as a first-class citizen: watch, control, view. Live feel via SMART POLLING
 (only the active run, only while viewing, back off when idle/done) — the standard
 approach for desktop git tools (VS Code/GitHub Desktop poll too). Both CLI + GUI.
@@ -295,7 +295,7 @@ Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → 
       caused an infinite fetch that tripped GitHub's SECONDARY RATE LIMIT in <1s. Any
       auto-fetch MUST use a fixed controlled cadence (timer), never tied to render cycles.
       Effect deps = only the thing that should trigger a refetch.
-- [ ] controls: cancel run; trigger workflow_dispatch (with inputs); re-run
+- [x] controls: cancel run; re-run (all/failed-only); trigger workflow_dispatch with DYNAMIC inputs (parse workflow YAML → render a field per declared input) — engine/service/CLI/GUI
 - [ ] logs: download + display per-step logs AFTER completion
       (public API has no live per-step log streaming — accepted limit)
 - [x] view 1: run-tree (indented jobs/steps list) — DONE
@@ -304,7 +304,7 @@ Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → 
   (all/success/failure/in-progress); show richer per-run detail (trigger/event, branch,
   duration, run #). Engine adds WorkflowName + timing to the run; frontend groups + filters.
 - [ ] view 2: flowchart (job boxes + `needs:` dependency arrows) — layered on the same data, toggle
-- [ ] token needs `workflow` scope for dispatch/cancel
+- [~] token needs `workflow` scope for dispatch/cancel — cancel/rerun/dispatch will 403 without it; regenerate token with workflow scope
 
 ### 3.6 — Webhooks  [DECLINED]
 Considered for live updates; declined. Webhooks require GitHub to POST to a public URL,
@@ -450,6 +450,13 @@ comments. STE *style* is human-followed, not machine-validated.
 - Update this doc's checkboxes as things land.
 
 ### UX feedback (added post-Tier-2.2)
+- [ ] **Branch listing shows LOCAL branches only** — GetBranches lists refs/heads only, so
+  branches that exist on the remote (e.g. `dev` created on origin) are invisible in the
+  Branches tab, the PR base dropdown, AND the History branch selector. Fix at the engine:
+  GetBranches should also surface remote-tracking branches (refs/remotes) marked
+  local/remote/both, with a checkout action to create a local tracking branch. Prereq: a
+  fetch must have run to populate origin/* refs (pairs with the fetch --prune auto-refresh
+  item). Blocks the two-trunk dev workflow — fix early (branch-management pass).
 - [ ] **Auto-refresh (kill the manual Reload button for normal use).** Two parts:
   (1) reload local state on window focus, so returning to the app after terminal/
   browser work reflects reality without a manual Reload; (2) periodic background

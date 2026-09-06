@@ -603,6 +603,77 @@ func (g *GitService) GetRun(runID int64) (ghapi.WorkflowRun, error) {
 	return client.GetRun(ctx, owner, repo, runID)
 }
 
+func (g *GitService) CancelRun(runID int64) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.CancelRun(ctx, owner, repo, runID)
+}
+
+func (g *GitService) RerunRun(runID int64) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.RerunRun(ctx, owner, repo, runID)
+}
+
+func (g *GitService) RerunFailed(runID int64) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.RerunFailed(ctx, owner, repo, runID)
+}
+
+func (g *GitService) ListDispatchableWorkflows() ([]ghapi.DispatchableWorkflow, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListDispatchableWorkflows(ctx, owner, repo)
+}
+
+// TriggerDispatch fires a workflow_dispatch. inputs is a JSON-ish string map from
+// the frontend; values pass through as strings (GitHub accepts string inputs).
+func (g *GitService) TriggerDispatch(workflowFile, ref string, inputs map[string]string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	m := make(map[string]interface{}, len(inputs))
+	for k, v := range inputs {
+		m[k] = v
+	}
+	return client.TriggerDispatch(ctx, owner, repo, workflowFile, ref, m)
+}
+
 func (g *GitService) ResolveThread(threadID string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)

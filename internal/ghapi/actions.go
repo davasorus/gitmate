@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v66/github"
+	"gopkg.in/yaml.v3"
 )
 
 // Workflow is a repo workflow definition.
@@ -153,4 +154,155 @@ func fmtInt(n int) string {
 		n /= 10
 	}
 	return string(b[i:])
+}
+
+// CancelRun cancels an in-progress workflow run.
+func (c *Client) CancelRun(ctx context.Context, owner, repo string, runID int64) error {
+	_, err := c.gh.Actions.CancelWorkflowRunByID(ctx, owner, repo, runID)
+	return err
+}
+
+// RerunRun re-runs all jobs of a completed run.
+func (c *Client) RerunRun(ctx context.Context, owner, repo string, runID int64) error {
+	_, err := c.gh.Actions.RerunWorkflowByID(ctx, owner, repo, runID)
+	return err
+}
+
+// RerunFailed re-runs only the failed jobs of a completed run.
+func (c *Client) RerunFailed(ctx context.Context, owner, repo string, runID int64) error {
+	_, err := c.gh.Actions.RerunFailedJobsByID(ctx, owner, repo, runID)
+	return err
+}
+
+// DispatchInput describes one workflow_dispatch input the workflow defines.
+type DispatchInput struct {
+	Name        string
+	Description string
+	Required    bool
+	Default     string
+	Type        string   // string, boolean, choice, number, environment
+	Options     []string // for type=choice
+}
+
+// DispatchableWorkflow is a workflow that has a workflow_dispatch trigger, with
+// its declared inputs (parsed from the workflow YAML).
+type DispatchableWorkflow struct {
+	ID     int64
+	Name   string
+	Path   string
+	Inputs []DispatchInput
+}
+
+// TriggerDispatch fires a workflow_dispatch event on the given workflow file
+// (e.g. "release.yml") for a ref (branch/tag), with input values.
+func (c *Client) TriggerDispatch(ctx context.Context, owner, repo, workflowFile, ref string, inputs map[string]interface{}) error {
+	_, err := c.gh.Actions.CreateWorkflowDispatchEventByFileName(ctx, owner, repo, workflowFile,
+		github.CreateWorkflowDispatchEventRequest{Ref: ref, Inputs: inputs})
+	return err
+}
+
+// ListDispatchableWorkflows returns workflows that declare a workflow_dispatch
+// trigger, with their inputs parsed from the workflow YAML. This drives a dynamic
+// dispatch form (render a field per declared input).
+func (c *Client) ListDispatchableWorkflows(ctx context.Context, owner, repo string) ([]DispatchableWorkflow, error) {
+	wf, _, err := c.gh.Actions.ListWorkflows(ctx, owner, repo, &github.ListOptions{PerPage: 100})
+	if err != nil {
+		return nil, err
+	}
+	var out []DispatchableWorkflow
+	for _, w := range wf.Workflows {
+		content, _, _, cerr := c.gh.Repositories.GetContents(ctx, owner, repo, w.GetPath(), nil)
+		if cerr != nil || content == nil {
+			continue
+		}
+		raw, derr := content.GetContent()
+		if derr != nil {
+			continue
+		}
+		inputs, hasDispatch := parseDispatchInputs(raw)
+		if !hasDispatch {
+			continue
+		}
+		out = append(out, DispatchableWorkflow{ID: w.GetID(), Name: w.GetName(), Path: w.GetPath(), Inputs: inputs})
+	}
+	return out, nil
+}
+
+// parseDispatchInputs reads a workflow YAML and, if it has an on.workflow_dispatch
+// trigger, returns its declared inputs. hasDispatch is false if the workflow has
+// no workflow_dispatch trigger at all.
+func parseDispatchInputs(yml string) (inputs []DispatchInput, hasDispatch bool) {
+	var doc struct {
+		// "on" is a YAML keyword-ish; capture it as a generic node.
+		On yaml.Node `yaml:"on"`
+	}
+	if err := yaml.Unmarshal([]byte(yml), &doc); err != nil {
+		return nil, false
+	}
+	// on: can be a string ("push"), a list, or a map. We want the map form with
+	// a workflow_dispatch key that may carry inputs.
+	if doc.On.Kind != yaml.MappingNode {
+		// could still be "on: workflow_dispatch" (scalar) or a sequence containing it
+		if doc.On.Kind == yaml.ScalarNode && doc.On.Value == "workflow_dispatch" {
+			return nil, true
+		}
+		if doc.On.Kind == yaml.SequenceNode {
+			for _, n := range doc.On.Content {
+				if n.Value == "workflow_dispatch" {
+					return nil, true
+				}
+			}
+		}
+		return nil, false
+	}
+	for i := 0; i+1 < len(doc.On.Content); i += 2 {
+		key := doc.On.Content[i]
+		val := doc.On.Content[i+1]
+		if key.Value != "workflow_dispatch" {
+			continue
+		}
+		hasDispatch = true
+		// find inputs: within workflow_dispatch
+		if val.Kind != yaml.MappingNode {
+			return nil, true
+		}
+		for j := 0; j+1 < len(val.Content); j += 2 {
+			if val.Content[j].Value != "inputs" {
+				continue
+			}
+			inNode := val.Content[j+1]
+			if inNode.Kind != yaml.MappingNode {
+				break
+			}
+			for k := 0; k+1 < len(inNode.Content); k += 2 {
+				name := inNode.Content[k].Value
+				spec := inNode.Content[k+1]
+				di := DispatchInput{Name: name, Type: "string"}
+				if spec.Kind == yaml.MappingNode {
+					for m := 0; m+1 < len(spec.Content); m += 2 {
+						sk := spec.Content[m].Value
+						sv := spec.Content[m+1]
+						switch sk {
+						case "description":
+							di.Description = sv.Value
+						case "required":
+							di.Required = sv.Value == "true"
+						case "default":
+							di.Default = sv.Value
+						case "type":
+							di.Type = sv.Value
+						case "options":
+							for _, o := range sv.Content {
+								di.Options = append(di.Options, o.Value)
+							}
+						}
+					}
+				}
+				inputs = append(inputs, di)
+			}
+			break
+		}
+		return inputs, true
+	}
+	return inputs, hasDispatch
 }

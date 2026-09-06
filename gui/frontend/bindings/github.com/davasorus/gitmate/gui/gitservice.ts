@@ -34,6 +34,10 @@ export function Branches(): $CancellablePromise<gitops$0.Branch[] | null> {
     return $Call.ByID(3913623929);
 }
 
+export function CancelRun(runID: number): $CancellablePromise<void> {
+    return $Call.ByID(1044576492, runID);
+}
+
 export function CherryPick(rev: string): $CancellablePromise<void> {
     return $Call.ByID(4264862881, rev);
 }
@@ -174,6 +178,10 @@ export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | nul
 
 export function ListAssets(releaseID: number): $CancellablePromise<ghapi$0.Asset[] | null> {
     return $Call.ByID(1953238676, releaseID);
+}
+
+export function ListDispatchableWorkflows(): $CancellablePromise<ghapi$0.DispatchableWorkflow[] | null> {
+    return $Call.ByID(1071859323);
 }
 
 export function ListIssueComments($number: number): $CancellablePromise<ghapi$0.IssueComment[] | null> {
@@ -327,6 +335,14 @@ export function RequestReviewers($number: number, logins: string[] | null): $Can
     return $Call.ByID(4134688474, $number, logins);
 }
 
+export function RerunFailed(runID: number): $CancellablePromise<void> {
+    return $Call.ByID(3190066500, runID);
+}
+
+export function RerunRun(runID: number): $CancellablePromise<void> {
+    return $Call.ByID(651277306, runID);
+}
+
 export function Reset(rev: string, mode: string): $CancellablePromise<void> {
     return $Call.ByID(478003792, rev, mode);
 }
@@ -428,6 +444,14 @@ export function Switch(branch: string): $CancellablePromise<void> {
 
 export function SwitchNew(branch: string): $CancellablePromise<void> {
     return $Call.ByID(637393581, branch);
+}
+
+/**
+ * TriggerDispatch fires a workflow_dispatch. inputs is a JSON-ish string map from
+ * the frontend; values pass through as strings (GitHub accepts string inputs).
+ */
+export function TriggerDispatch(workflowFile: string, ref: string, inputs: { [_ in string]?: string } | null): $CancellablePromise<void> {
+    return $Call.ByID(3276770057, workflowFile, ref, inputs);
 }
 
 export function UnresolveThread(threadID: string): $CancellablePromise<void> {

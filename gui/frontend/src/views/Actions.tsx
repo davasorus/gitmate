@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useGit, cls } from "../context";
-import type { WorkflowRun, Job } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type { WorkflowRun, Job, DispatchableWorkflow } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StatusFilter = "all" | "success" | "failure" | "in_progress";
 
@@ -13,7 +13,6 @@ function statusColor(status: string, conclusion: string): string {
 }
 const statusLabel = (status: string, conclusion: string) => conclusion || status || "—";
 const isActive = (r: WorkflowRun) => r.Status === "in_progress" || r.Status === "queued";
-
 function matchesFilter(r: WorkflowRun, f: StatusFilter): boolean {
   if (f === "all") return true;
   if (f === "in_progress") return isActive(r);
@@ -21,12 +20,17 @@ function matchesFilter(r: WorkflowRun, f: StatusFilter): boolean {
 }
 
 export function Actions() {
-  const { busy, setBusy, flash, service } = useGit();
+  const { busy, setBusy, flash, service, run } = useGit();
   const [runs, setRuns] = useState<WorkflowRun[]>([]);
   const [openRun, setOpenRun] = useState<number | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [dispatchable, setDispatchable] = useState<DispatchableWorkflow[]>([]);
+  // per-workflow run form (only shown for dispatchable workflows that declare inputs)
+  const [runForm, setRunForm] = useState<number | null>(null); // WorkflowID
+  const [runRef, setRunRef] = useState("live");
+  const [runInputs, setRunInputs] = useState<Record<string, string>>({});
   const pollRef = useRef<number | null>(null);
 
   const loadRuns = async () => {
@@ -37,8 +41,10 @@ export function Actions() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try { const r = (await service.ListRuns(50)) ?? []; if (!cancelled) setRuns(r); }
-      catch (e) { if (!cancelled) flash("err", String(e)); }
+      try {
+        const r = (await service.ListRuns(50)) ?? []; if (!cancelled) setRuns(r);
+        const wfs = (await service.ListDispatchableWorkflows()) ?? []; if (!cancelled) setDispatchable(wfs);
+      } catch (e) { if (!cancelled) flash("err", String(e)); }
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -53,8 +59,33 @@ export function Actions() {
     setOpenRun(r.ID); loadJobs(r.ID);
   };
 
-  // SMART POLLING (unchanged from C-1): fixed 5s timer, only the open+active run,
-  // stops on completion/unmount, timer-driven not render-driven.
+  const doCancel = (r: WorkflowRun) => run(`cancel-${r.ID}`, async () => {
+    await service.CancelRun(r.ID); await loadRuns(); return `cancelled run #${r.Number}`;
+  }, "cancelled");
+  const doRerun = (r: WorkflowRun, failedOnly: boolean) => run(`rerun-${r.ID}`, async () => {
+    if (failedOnly) { await service.RerunFailed(r.ID); } else { await service.RerunRun(r.ID); }
+    await loadRuns(); return `re-running #${r.Number}`;
+  }, "re-run started");
+
+  // dispatch: for a dispatchable workflow. No inputs → run immediately (the Run
+  // button IS the run). Has inputs → reveal an inline form in that group, then run.
+  const dispatchableFor = (workflowID: number) => dispatchable.find((d) => d.ID === workflowID);
+  const startRun = (wf: DispatchableWorkflow) => {
+    if (!wf.Inputs || wf.Inputs.length === 0) { doRunWorkflow(wf, "live", {}); return; }
+    if (runForm === wf.ID) { setRunForm(null); return; } // toggle the form closed
+    setRunForm(wf.ID); setRunRef("live"); setRunInputs({});
+  };
+  const doRunWorkflow = (wf: DispatchableWorkflow, ref: string, inputs: Record<string, string>) => {
+    const file = wf.Path.split("/").pop() || wf.Path;
+    run(`dispatch-${wf.ID}`, async () => {
+      await service.TriggerDispatch(file, ref.trim() || "live", inputs);
+      setRunForm(null);
+      await loadRuns();
+      return `dispatched ${wf.Name}`;
+    }, `dispatched ${wf.Name}`);
+  };
+
+  // SMART POLLING: fixed 5s timer, only the open+active run, stops on completion/unmount.
   useEffect(() => {
     if (openRun === null) return;
     const o = runs.find((r) => r.ID === openRun);
@@ -72,12 +103,11 @@ export function Actions() {
     return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
   }, [openRun, runs, service]);
 
-  // group filtered runs by workflow (WorkflowID key, WorkflowName label)
   const filtered = (runs ?? []).filter((r) => matchesFilter(r, filter));
-  const groups = new Map<string, { name: string; runs: WorkflowRun[] }>();
+  const groups = new Map<string, { id: number; name: string; runs: WorkflowRun[] }>();
   for (const r of filtered) {
     const key = String(r.WorkflowID || r.WorkflowName || "other");
-    if (!groups.has(key)) groups.set(key, { name: r.WorkflowName || r.Name || "workflow", runs: [] });
+    if (!groups.has(key)) groups.set(key, { id: r.WorkflowID, name: r.WorkflowName || r.Name || "workflow", runs: [] });
     groups.get(key)!.runs.push(r);
   }
 
@@ -102,15 +132,54 @@ export function Actions() {
         Array.from(groups.entries()).map(([key, g]) => {
           const isCollapsed = collapsed[key];
           const anyActive = g.runs.some(isActive);
+          const wf = dispatchableFor(g.id);
           return (
             <div key={key} className="rounded-lg border border-border">
-              <button onClick={() => setCollapsed((c) => ({ ...c, [key]: !c[key] }))}
-                      className="flex w-full items-center gap-2 border-b border-border px-3 py-1.5 text-left text-sm font-semibold hover:bg-muted/60">
-                <span className="text-muted-foreground">{isCollapsed ? "▸" : "▾"}</span>
-                <span className="truncate">{g.name}</span>
-                {anyActive && <span className="text-[10px] text-[var(--color-behind)]">live</span>}
-                <span className="ml-auto text-xs font-normal text-muted-foreground">{g.runs.length}</span>
-              </button>
+              <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm font-semibold">
+                <button onClick={() => setCollapsed((c) => ({ ...c, [key]: !c[key] }))} className="flex flex-1 items-center gap-2 text-left hover:opacity-80">
+                  <span className="text-muted-foreground">{isCollapsed ? "▸" : "▾"}</span>
+                  <span className="truncate">{g.name}</span>
+                  {anyActive && <span className="text-[10px] text-[var(--color-behind)]">live</span>}
+                  <span className="ml-auto text-xs font-normal text-muted-foreground">{g.runs.length}</span>
+                </button>
+                {wf && (
+                  <button onClick={() => startRun(wf)} disabled={!!busy}
+                          className={cls.btnSm} title="run this workflow (workflow_dispatch)">
+                    {busy === `dispatch-${wf.ID}` ? "…" : "Run"}
+                  </button>
+                )}
+              </div>
+
+              {/* inline dispatch form — only when this workflow has inputs and Run was clicked */}
+              {wf && runForm === wf.ID && (
+                <div className="space-y-2 border-b border-border bg-background px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">ref</span>
+                    <input value={runRef} onChange={(e) => setRunRef(e.target.value)} placeholder="branch or tag" className={`${cls.input} flex-1 text-xs`} />
+                  </div>
+                  {(wf.Inputs ?? []).map((inp) => (
+                    <div key={inp.Name} className="space-y-1">
+                      <label className="text-xs">{inp.Name}{inp.Required && <span className="text-[var(--color-removed)]"> *</span>}{inp.Description ? <span className="text-muted-foreground"> — {inp.Description}</span> : null}</label>
+                      {inp.Type === "choice" ? (
+                        <select value={runInputs[inp.Name] ?? inp.Default} onChange={(e) => setRunInputs((m) => ({ ...m, [inp.Name]: e.target.value }))} className={`${cls.input} w-full text-xs`}>
+                          {(inp.Options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      ) : inp.Type === "boolean" ? (
+                        <select value={runInputs[inp.Name] ?? inp.Default ?? "false"} onChange={(e) => setRunInputs((m) => ({ ...m, [inp.Name]: e.target.value }))} className={`${cls.input} w-full text-xs`}>
+                          <option value="true">true</option><option value="false">false</option>
+                        </select>
+                      ) : (
+                        <input value={runInputs[inp.Name] ?? inp.Default} onChange={(e) => setRunInputs((m) => ({ ...m, [inp.Name]: e.target.value }))} className={`${cls.input} w-full text-xs`} />
+                      )}
+                    </div>
+                  ))}
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setRunForm(null)} disabled={!!busy} className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40">Cancel</button>
+                    <button onClick={() => doRunWorkflow(wf, runRef, runInputs)} disabled={!!busy} className={cls.btnSm}>{busy === `dispatch-${wf.ID}` ? "…" : "Run"}</button>
+                  </div>
+                </div>
+              )}
+
               {!isCollapsed && g.runs.map((r) => (
                 <div key={r.ID} className="border-b border-border last:border-0">
                   <button onClick={() => toggleRun(r)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-muted/60">
@@ -142,7 +211,15 @@ export function Actions() {
                           </div>
                         </div>
                       )) : <div className="text-xs italic text-muted-foreground">no jobs (or still starting)</div>}
-                      <a href={r.URL} target="_blank" rel="noreferrer" className="text-[10px] text-[var(--color-ahead)] underline">View on GitHub</a>
+                      <div className="flex items-center gap-1 pt-1">
+                        {isActive(r)
+                          ? <button onClick={() => doCancel(r)} disabled={!!busy} className={`${cls.btnSm} text-[var(--color-removed)]`}>{busy === `cancel-${r.ID}` ? "…" : "Cancel"}</button>
+                          : <>
+                              <button onClick={() => doRerun(r, false)} disabled={!!busy} className={cls.btnSm}>{busy === `rerun-${r.ID}` ? "…" : "Re-run"}</button>
+                              {r.Conclusion === "failure" && <button onClick={() => doRerun(r, true)} disabled={!!busy} className={cls.btnSm}>Re-run failed</button>}
+                            </>}
+                        <a href={r.URL} target="_blank" rel="noreferrer" className="ml-auto text-[10px] text-[var(--color-ahead)] underline">View on GitHub</a>
+                      </div>
                     </div>
                   )}
                 </div>

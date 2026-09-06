@@ -29,6 +29,37 @@ export interface CheckRun {
 }
 
 /**
+ * DispatchInput describes one workflow_dispatch input the workflow defines.
+ */
+export interface DispatchInput {
+    "Name": string;
+    "Description": string;
+    "Required": boolean;
+    "Default": string;
+
+    /**
+     * string, boolean, choice, number, environment
+     */
+    "Type": string;
+
+    /**
+     * for type=choice
+     */
+    "Options": string[] | null;
+}
+
+/**
+ * DispatchableWorkflow is a workflow that has a workflow_dispatch trigger, with
+ * its declared inputs (parsed from the workflow YAML).
+ */
+export interface DispatchableWorkflow {
+    "ID": number;
+    "Name": string;
+    "Path": string;
+    "Inputs": DispatchInput[] | null;
+}
+
+/**
  * ExistingComment is a review comment already posted on the PR, anchored to a
  * file + line. ReplyToID (0 if top-level) links a reply to its parent thread.
  */

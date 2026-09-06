@@ -4,6 +4,8 @@
 export type {
     Asset,
     CheckRun,
+    DispatchInput,
+    DispatchableWorkflow,
     ExistingComment,
     Issue,
     IssueComment,
