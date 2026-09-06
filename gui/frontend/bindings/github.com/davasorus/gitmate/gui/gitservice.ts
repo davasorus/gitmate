@@ -42,6 +42,14 @@ export function CherryPickContinue(): $CancellablePromise<void> {
     return $Call.ByID(709290592);
 }
 
+/**
+ * Clone clones url into dest and points the service at the new repo so the app
+ * switches to it. Returns the cloned repo's path.
+ */
+export function Clone(url: string, dest: string): $CancellablePromise<string> {
+    return $Call.ByID(3320935538, url, dest);
+}
+
 export function Commit(message: string): $CancellablePromise<string> {
     return $Call.ByID(471482348, message);
 }

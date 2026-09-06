@@ -286,6 +286,17 @@ func (g *GitService) RenameRemote(oldName, newName string) error {
 	return gitops.RenameRemote(g.repoDir, oldName, newName)
 }
 
+// Clone clones url into dest and points the service at the new repo so the app
+// switches to it. Returns the cloned repo's path.
+func (g *GitService) Clone(url, dest string) (string, error) {
+	path, err := gitops.Clone(url, dest)
+	if err != nil {
+		return "", err
+	}
+	g.repoDir = path
+	return path, nil
+}
+
 func (g *GitService) Reset(rev, mode string) error {
 	return gitops.Reset(g.repoDir, rev, gitops.ResetMode(mode))
 }

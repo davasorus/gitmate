@@ -10,6 +10,8 @@ export function Remotes() {
   const [url, setUrl] = useState("");
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<{ old: string; next: string } | null>(null);
+  const [cloneUrl, setCloneUrl] = useState("");
+  const [cloneDest, setCloneDest] = useState("");
 
   const load = async () => {
     setBusy("remotes-load");
@@ -34,9 +36,24 @@ export function Remotes() {
     return `renamed ${renaming.old}`;
   }, "remote renamed");
 
+  const doClone = () => run("clone", async () => {
+    const path = await service.Clone(cloneUrl.trim(), cloneDest.trim());
+    setCloneUrl(""); setCloneDest("");
+    return `cloned into ${path} — app now points at it`;
+  }, "cloned");
+
   return (
     <div className="space-y-4">
       <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Remotes</h2>
+
+      <div className="space-y-2 rounded-lg border border-border p-3">
+        <div className="text-xs text-muted-foreground">Clone a repository. Leave destination blank to use a folder named after the repo. On success the app switches to the clone.</div>
+        <div className="flex flex-wrap gap-2">
+          <input value={cloneUrl} onChange={(e) => setCloneUrl(e.target.value)} placeholder="repo URL (https://github.com/owner/repo.git)" className={`${cls.input} flex-1`} />
+          <input value={cloneDest} onChange={(e) => setCloneDest(e.target.value)} placeholder="destination folder (optional)" className={`${cls.input} w-64`} />
+          <button onClick={doClone} disabled={!!busy || !cloneUrl.trim()} className={cls.btn}>{busy === "clone" ? "…" : "Clone"}</button>
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-2 rounded-lg border border-border p-3">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="name (e.g. origin)" className={`${cls.input} w-40`} />

@@ -456,3 +456,24 @@ func TestConflictResolveOurs(t *testing.T) {
 		t.Fatalf("expected ours content after ResolveOurs, got %q", wt)
 	}
 }
+
+func TestClone(t *testing.T) {
+	// make a source repo with one commit
+	src := newTestRepo(t)
+	writeFile(t, src, "a.txt", "hello\n")
+	_ = Stage(src)
+	if _, err := CreateCommit(src, "init"); err != nil {
+		t.Fatal(err)
+	}
+
+	// clone it into a fresh dest under a temp dir
+	dest := t.TempDir() + string(os.PathSeparator) + "cloned"
+	got, err := Clone(src, dest)
+	if err != nil {
+		t.Fatalf("clone failed: %v", err)
+	}
+	// the cloned repo should have the committed file
+	if _, err := run(got, "cat-file", "-e", "HEAD:a.txt"); err != nil {
+		t.Fatalf("expected a.txt in clone: %v", err)
+	}
+}

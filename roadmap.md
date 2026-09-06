@@ -214,10 +214,10 @@ Correctly NOT gaps (already Tier 3): remote management (3.1), clone (3.2).
 - [x] engine: ListRemotes / RemoveRemote / RenameRemote (AddRemote existed)
 - [x] CLI: `gitmate remote list|add|remove|rename`; GUI: Remotes sidebar view (list w/ URLs, add, rename, remove w/ confirm)
 
-### 3.2 Clone  [ ]
-- [ ] engine: clone an existing repo
-- [ ] CLI: `gitmate clone <url>`
-- [ ] GUI: clone dialog
+### 3.2 Clone  [x]
+- [x] engine: Clone(url, dest) — runs in parent dir, returns repo path
+- [x] CLI: `gitmate clone <url> [dir]`
+- [x] GUI: Clone card in Remotes view (URL + optional dest); points app at the clone on success
 
 ### 3.3 Richer GitHub (REST)  [~]  (partial: issues list + improved PR create shipped)
 - [ ] CI does not build/typecheck the GUI (only cmd/ + internal/). This is why
