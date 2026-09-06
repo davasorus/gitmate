@@ -1,9 +1,11 @@
 name: Release
 
-# Two entry points into ONE pipeline:
-#   - push to live  → semantic-release DECIDES the version + notes
-#   - push of a v* tag (manual, e.g. from gitmate) → version = the tag
-# Both converge on: approve → build (CLI + GUI) → publish ONE immutable release.
+# ONE pipeline, gated. Nothing is created (no tag, no release, no binaries) until
+# a human reviews the proposed version + notes and APPROVES.
+#
+# Flow:  propose (compute version + notes, show them, create NOTHING)
+#        → gate (environment: release — you read the notes, approve/deny)
+#        → build (CLI + GUI) → publish (ONE immutable release)  [only after approval]
 on:
   push:
     branches: [live]
@@ -17,98 +19,100 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ---- Stage 1: decide the version + generate grouped notes ----
-  decide:
+  # ---- PROPOSE: compute version + notes, display them, create nothing ----
+  propose:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.out.outputs.version }}
-      release: ${{ steps.out.outputs.release }} # "true" if there's something to release
+      new_release_published: ${{ steps.semrel.outputs.new_release_published }}
+      version: ${{ steps.semrel.outputs.new_release_version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ssh-key: ${{ secrets.RELEASE_SSH_KEY }}
-          persist-credentials: true
 
-      - uses: actions/setup-node@v4
+      # semantic-release in DRY-RUN. This action exposes the computed version and
+      # the full rendered release notes as OUTPUTS (reliable — no file writing).
+      - name: Compute version + notes (dry run, creates nothing)
+        id: semrel
+        uses: cycjimmy/semantic-release-action@v4
         with:
-          node-version: "20"
-
-      - name: Install tooling
-        run: |
-          npm install -g semantic-release @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/exec conventional-changelog-conventionalcommits
-          npm install -g conventional-changelog-cli
-
-      # TAG path: version is the tag; generate grouped notes from previous-tag..this-tag.
-      - name: Notes from tag
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          VER="${GITHUB_REF_NAME#v}"
-          echo "$VER" > .release-version
-          # grouped notes for just this tag's range, conventionalcommits preset
-          npx conventional-changelog -p conventionalcommits -r 2 --skip-unstable > .release-notes.md || true
-          echo "release=true" >> "$GITHUB_OUTPUT"
-          echo "version=$VER" >> "$GITHUB_OUTPUT"
-        id: tagnotes
-
-      # LIVE path: semantic-release decides version + writes notes via exec (dry-run).
-      - name: Decide via semantic-release
-        if: github.ref == 'refs/heads/live'
+          dry_run: true
+          semantic_version: 24
+          extra_plugins: |
+            @semantic-release/commit-analyzer
+            @semantic-release/release-notes-generator
+            conventional-changelog-conventionalcommits
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npx semantic-release --dry-run || true
-          if [ -f .release-version ]; then
-            echo "release=true" >> "$GITHUB_OUTPUT"
-            echo "version=$(cat .release-version)" >> "$GITHUB_OUTPUT"
-          else
-            echo "release=false" >> "$GITHUB_OUTPUT"
-          fi
-        id: semrel
 
-      - name: Collect outputs
-        id: out
+      # Write the PROPOSAL as markdown to the run summary — THIS is what you review.
+      - name: Show release proposal
+        if: steps.semrel.outputs.new_release_published == 'true'
         run: |
-          if [ -f .release-version ]; then
-            echo "version=$(cat .release-version)" >> "$GITHUB_OUTPUT"
-            echo "release=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "release=false" >> "$GITHUB_OUTPUT"
-          fi
+          {
+            echo "# 🚀 Release proposal"
+            echo ""
+            echo "**Proposed version:** \`v${{ steps.semrel.outputs.new_release_version }}\`"
+            echo ""
+            echo "## Release notes (what will be published)"
+            echo ""
+            cat <<'NOTES'
+          ${{ steps.semrel.outputs.new_release_notes }}
+          NOTES
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload version + notes
-        if: steps.out.outputs.release == 'true'
+      - name: Nothing to release
+        if: steps.semrel.outputs.new_release_published != 'true'
+        run: echo "No release-worthy commits since the last tag — nothing to propose." >> "$GITHUB_STEP_SUMMARY"
+
+      # Persist version + notes for the later stages (after approval).
+      - name: Save proposal
+        if: steps.semrel.outputs.new_release_published == 'true'
+        run: |
+          echo "${{ steps.semrel.outputs.new_release_version }}" > release-version.txt
+          cat <<'NOTES' > release-notes.md
+          ${{ steps.semrel.outputs.new_release_notes }}
+          NOTES
+      - name: Upload proposal
+        if: steps.semrel.outputs.new_release_published == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: release-meta
           path: |
-            .release-version
-            .release-notes.md
+            release-version.txt
+            release-notes.md
+          if-no-files-found: error
 
-  # ---- Stage 2 (gate) + Stage 3: build CLI + GUI, then publish ONCE ----
+  # ---- GATE: you review the proposal above, then approve. Nothing built yet. ----
+  gate:
+    needs: propose
+    if: needs.propose.outputs.new_release_published == 'true'
+    runs-on: ubuntu-latest
+    environment: release # required reviewer here → pauses for your approval
+    steps:
+      - run: echo "Approved. Proceeding to build + publish v${{ needs.propose.outputs.version }}."
+
+  # ---- BUILD (only after approval) ----
   build-cli:
-    needs: decide
-    if: needs.decide.outputs.release == 'true'
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - uses: actions/setup-go@v5
         with: { go-version: "1.25", cache: true }
-      - name: Build CLI (all platforms) via GoReleaser build-only
-        uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
           args: build --clean --snapshot
-      - name: Upload CLI artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: cli-artifacts
           path: dist/**/gitmate*
+          if-no-files-found: warn
 
   build-gui:
-    needs: decide
-    if: needs.decide.outputs.release == 'true'
+    needs: gate
     strategy:
       fail-fast: false
       matrix:
@@ -131,19 +135,16 @@ jobs:
       - name: Build GUI
         run: wails3 build
         working-directory: gui
-      - name: Upload GUI artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: gui-${{ matrix.os }}
           path: gui/bin/*
+          if-no-files-found: warn
 
-  # ---- Publish: ONE immutable release with tag + notes + ALL assets ----
+  # ---- PUBLISH: ONE immutable release, tag + notes + all assets, at once ----
   publish:
-    needs: [decide, build-cli, build-gui]
-    if: needs.decide.outputs.release == 'true'
+    needs: [propose, build-cli, build-gui]
     runs-on: ubuntu-latest
-    # gated approval before publish — required reviewer on this environment
-    environment: release
     steps:
       - uses: actions/checkout@v4
         with:
@@ -155,24 +156,16 @@ jobs:
       - name: Assemble assets
         run: |
           mkdir -p out
-          find artifacts -type f \( -name 'gitmate*' -o -name '*.exe' -o -name 'gitmate-gui*' \) -exec cp {} out/ \; || true
-          ls -la out
-      - name: Tag (if not already a tag push)
-        if: github.ref == 'refs/heads/live'
-        run: |
-          VER="v$(cat artifacts/release-meta/.release-version)"
-          git tag "$VER"
-          git push origin "$VER"   # via SSH deploy key → bypasses ruleset
+          find artifacts -type f \( -name 'gitmate*' -o -name '*.exe' \) -exec cp {} out/ \; || true
+          ls -la out || true
       - name: Create the single immutable release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/live" ]; then
-            VER="v$(cat artifacts/release-meta/.release-version)"
-          else
-            VER="${GITHUB_REF_NAME}"
-          fi
+          VER="v$(cat artifacts/release-meta/release-version.txt)"
+          git tag "$VER"
+          git push origin "$VER"
           gh release create "$VER" \
             --title "$VER" \
-            --notes-file artifacts/release-meta/.release-notes.md \
-            out/*
+            --notes-file artifacts/release-meta/release-notes.md \
+            out/* || gh release create "$VER" --title "$VER" --notes-file artifacts/release-meta/release-notes.md
