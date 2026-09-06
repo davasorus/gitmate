@@ -512,6 +512,58 @@ func (g *GitService) PRDiff(number int) ([]gitops.FileDiff, error) {
 	return client.PRDiff(ctx, owner, repo, number)
 }
 
+func (g *GitService) ListReviewComments(number int) ([]ghapi.ExistingComment, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListReviewComments(ctx, owner, repo, number)
+}
+
+func (g *GitService) ListIssueComments(number int) ([]ghapi.IssueComment, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListIssueComments(ctx, owner, repo, number)
+}
+
+func (g *GitService) ReplyToReviewComment(number int, commentID int64, body string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.ReplyToReviewComment(ctx, owner, repo, number, commentID, body)
+}
+
+func (g *GitService) CommentPR(number int, body string) (string, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return "", err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return "", err
+	}
+	return client.CommentPR(ctx, owner, repo, number, body)
+}
+
 func (g *GitService) SubmitReview(number int, event, body string, comments []ghapi.ReviewComment) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)

@@ -29,6 +29,19 @@ export interface CheckRun {
 }
 
 /**
+ * ExistingComment is a review comment already posted on the PR, anchored to a
+ * file + line. ReplyToID (0 if top-level) links a reply to its parent thread.
+ */
+export interface ExistingComment {
+    "ID": number;
+    "Path": string;
+    "Line": number;
+    "Author": string;
+    "Body": string;
+    "InReplyTo": number;
+}
+
+/**
  * Issue is a trimmed issue view.
  */
 export interface Issue {
@@ -38,6 +51,15 @@ export interface Issue {
     "State": string;
     "When": string;
     "Labels": string[] | null;
+}
+
+/**
+ * IssueComment is a general (not line-anchored) PR comment from the issue stream.
+ */
+export interface IssueComment {
+    "ID": number;
+    "Author": string;
+    "Body": string;
 }
 
 /**

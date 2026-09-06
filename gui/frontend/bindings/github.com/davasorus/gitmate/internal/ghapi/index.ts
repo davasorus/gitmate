@@ -4,7 +4,9 @@
 export type {
     Asset,
     CheckRun,
+    ExistingComment,
     Issue,
+    IssueComment,
     Label,
     PR,
     Release,

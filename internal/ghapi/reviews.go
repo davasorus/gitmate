@@ -101,3 +101,74 @@ func (c *Client) RemoveReviewer(ctx context.Context, owner, repo string, number 
 		github.ReviewersRequest{Reviewers: []string{login}})
 	return err
 }
+
+// ExistingComment is a review comment already posted on the PR, anchored to a
+// file + line. ReplyToID (0 if top-level) links a reply to its parent thread.
+type ExistingComment struct {
+	ID        int64
+	Path      string
+	Line      int
+	Author    string
+	Body      string
+	InReplyTo int64
+}
+
+// IssueComment is a general (not line-anchored) PR comment from the issue stream.
+type IssueComment struct {
+	ID     int64
+	Author string
+	Body   string
+}
+
+// ListReviewComments returns the line-anchored review comments on a PR.
+func (c *Client) ListReviewComments(ctx context.Context, owner, repo string, number int) ([]ExistingComment, error) {
+	var out []ExistingComment
+	opts := &github.PullRequestListCommentsOptions{ListOptions: github.ListOptions{PerPage: 100}}
+	for {
+		raw, resp, err := c.gh.PullRequests.ListComments(ctx, owner, repo, number, opts)
+		if err != nil {
+			return nil, err
+		}
+		for _, cm := range raw {
+			out = append(out, ExistingComment{
+				ID:        cm.GetID(),
+				Path:      cm.GetPath(),
+				Line:      cm.GetLine(),
+				Author:    cm.GetUser().GetLogin(),
+				Body:      cm.GetBody(),
+				InReplyTo: cm.GetInReplyTo(),
+			})
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return out, nil
+}
+
+// ListIssueComments returns the general (non-line) comment stream on a PR.
+func (c *Client) ListIssueComments(ctx context.Context, owner, repo string, number int) ([]IssueComment, error) {
+	var out []IssueComment
+	opts := &github.IssueListCommentsOptions{ListOptions: github.ListOptions{PerPage: 100}}
+	for {
+		raw, resp, err := c.gh.Issues.ListComments(ctx, owner, repo, number, opts)
+		if err != nil {
+			return nil, err
+		}
+		for _, cm := range raw {
+			out = append(out, IssueComment{ID: cm.GetID(), Author: cm.GetUser().GetLogin(), Body: cm.GetBody()})
+		}
+		if resp.NextPage == 0 {
+			break
+		}
+		opts.Page = resp.NextPage
+	}
+	return out, nil
+}
+
+// ReplyToReviewComment posts a reply to an existing review comment thread.
+func (c *Client) ReplyToReviewComment(ctx context.Context, owner, repo string, number int, commentID int64, body string) error {
+	_, _, err := c.gh.PullRequests.CreateCommentInReplyTo(ctx, owner, repo, number, body, commentID)
+	return err
+}

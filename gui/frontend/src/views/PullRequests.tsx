@@ -4,6 +4,7 @@ import { CheckBadge } from "../components/CheckBadge";
 import { ReviewDiff, type PendingComment } from "../components/ReviewDiff";
 import type { PR, CheckRun, Review, Reviewer } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 import type { FileDiff } from "../../bindings/github.com/davasorus/gitmate/internal/gitops";
+import type { ExistingComment, IssueComment } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StateFilter = "open" | "closed" | "all";
 
@@ -68,6 +69,9 @@ export function PullRequests() {
   const [openReview, setOpenReview] = useState<number | null>(null);
   const [prDiff, setPrDiff] = useState<FileDiff[]>([]);
   const [pending, setPending] = useState<PendingComment[]>([]);
+  const [existing, setExisting] = useState<ExistingComment[]>([]);
+  const [issueComments, setIssueComments] = useState<IssueComment[]>([]);
+  const [generalComment, setGeneralComment] = useState("");
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
   const [reviewBody, setReviewBody] = useState("");
@@ -79,13 +83,30 @@ export function PullRequests() {
       setReviews((await service.ListReviews(n)) ?? []);
       setReviewers((await service.ListRequestedReviewers(n)) ?? []);
       setPrDiff((await service.PRDiff(n)) ?? []);
+      setExisting((await service.ListReviewComments(n)) ?? []);
+      setIssueComments((await service.ListIssueComments(n)) ?? []);
       setPending([]);
       setOpenReview(n);
     } catch (e) { flash("err", String(e)); } finally { setBusy(""); }
   };
   const toggleReview = (n: number) => {
-    if (openReview === n) { setOpenReview(null); setReviews([]); setReviewers([]); setReviewBody(""); setPrDiff([]); setPending([]); return; }
+    if (openReview === n) { setOpenReview(null); setReviews([]); setReviewers([]); setReviewBody(""); setPrDiff([]); setPending([]); setExisting([]); setIssueComments([]); return; }
     loadReview(n);
+  };
+  const replyToComment = (n: number, commentID: number, body: string) =>
+    run(`reply-${commentID}`, async () => {
+      await service.ReplyToReviewComment(n, commentID, body);
+      await loadReview(n);
+      return "reply posted";
+    }, "reply posted");
+  const postGeneralComment = (n: number) => {
+    if (!generalComment.trim()) return;
+    run(`gcomment-${n}`, async () => {
+      await service.CommentPR(n, generalComment.trim());
+      setGeneralComment("");
+      await loadReview(n);
+      return "comment posted";
+    }, "comment posted");
   };
   const submitReview = (n: number, event: "APPROVE" | "REQUEST_CHANGES" | "COMMENT") => {
     if (event !== "APPROVE" && !reviewBody.trim()) { flash("err", "A comment is required for request-changes and comment."); return; }
@@ -181,9 +202,10 @@ export function PullRequests() {
               <div className="mt-2 space-y-2 rounded-md border border-border bg-background p-2">
                 <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Changed files</div>
                 <div className="max-h-96 overflow-auto rounded border border-border">
-                  <ReviewDiff files={prDiff ?? []} pending={pending}
+                  <ReviewDiff files={prDiff ?? []} pending={pending} existing={existing}
                     onAdd={(c) => setPending((ps) => [...ps.filter((x) => !(x.path === c.path && x.line === c.line)), c])}
-                    onRemove={(path, line) => setPending((ps) => ps.filter((x) => !(x.path === path && x.line === line)))} />
+                    onRemove={(path, line) => setPending((ps) => ps.filter((x) => !(x.path === path && x.line === line)))}
+                    onReply={(id, body) => replyToComment(p.Number, id, body)} />
                 </div>
                 <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reviews</div>
                 {(reviews ?? []).length ? (reviews ?? []).map((rv) => (
@@ -196,6 +218,17 @@ export function PullRequests() {
                     {rv.Body && <span className="truncate text-muted-foreground">{rv.Body}</span>}
                   </div>
                 )) : <div className="text-xs italic text-muted-foreground">no reviews yet</div>}
+
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Conversation</div>
+                {(issueComments ?? []).length ? (issueComments ?? []).map((ic) => (
+                  <div key={ic.ID} className="text-xs"><span className="font-medium">{ic.Author}</span>: <span className="text-muted-foreground">{ic.Body}</span></div>
+                )) : <div className="text-xs italic text-muted-foreground">no conversation yet</div>}
+                <div className="flex gap-1">
+                  <input value={generalComment} onChange={(e) => setGeneralComment(e.target.value)}
+                         onKeyDown={(e) => { if (e.key === "Enter") postGeneralComment(p.Number); }}
+                         placeholder="add a comment" className={`${cls.input} h-7 flex-1 text-xs`} />
+                  <button onClick={() => postGeneralComment(p.Number)} disabled={!!busy} className={cls.btnSm}>Comment</button>
+                </div>
 
                 <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Requested reviewers</div>
                 <div className="flex flex-wrap items-center gap-1">

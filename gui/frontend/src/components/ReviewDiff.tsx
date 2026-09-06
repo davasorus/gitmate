@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { FileDiff } from "../../bindings/github.com/davasorus/gitmate/internal/gitops";
+import type { ExistingComment } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 // A pending line comment, keyed by file path + new-file line number.
 export type PendingComment = { path: string; line: number; body: string };
@@ -10,14 +11,21 @@ export type PendingComment = { path: string; line: number; body: string };
 export function ReviewDiff({
   files,
   pending,
+  existing,
   onAdd,
   onRemove,
+  onReply,
 }: {
   files: FileDiff[];
   pending: PendingComment[];
+  existing: ExistingComment[];
   onAdd: (c: PendingComment) => void;
   onRemove: (path: string, line: number) => void;
+  onReply: (commentID: number, body: string) => void;
 }) {
+  const [replyTo, setReplyTo] = useState<{ id: number; body: string } | null>(null);
+  const existingAt = (path: string, line: number) =>
+    (existing ?? []).filter((c) => c.Path === path && c.Line === line);
   const [draft, setDraft] = useState<{ path: string; line: number; body: string } | null>(null);
 
   if (!files || files.length === 0) {
@@ -64,6 +72,26 @@ export function ReviewDiff({
                                 title="comment on this line">＋</button>
                             )}
                           </div>
+                          {/* existing review-comment thread(s) anchored to this line */}
+                          {canComment && existingAt(path, ln.NewNum).map((ec) => (
+                            <div key={ec.ID} className="ml-24 mr-2 my-1 rounded border border-border bg-muted/30 px-2 py-1 text-xs">
+                              <div><span className="font-medium">{ec.Author}</span></div>
+                              <div className="whitespace-pre-wrap">{ec.Body}</div>
+                              {replyTo && replyTo.id === ec.ID ? (
+                                <div className="mt-1 space-y-1">
+                                  <textarea autoFocus value={replyTo.body} onChange={(e) => setReplyTo({ id: ec.ID, body: e.target.value })}
+                                            placeholder="reply…" className="h-14 w-full resize-y rounded border border-border bg-transparent p-1 text-xs" />
+                                  <div className="flex gap-1">
+                                    <button onClick={() => { if (replyTo.body.trim()) onReply(ec.ID, replyTo.body.trim()); setReplyTo(null); }}
+                                            className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-muted">Reply</button>
+                                    <button onClick={() => setReplyTo(null)} className="rounded border border-border px-2 py-0.5 text-[10px] hover:bg-muted">Cancel</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button onClick={() => setReplyTo({ id: ec.ID, body: "" })} className="mt-1 text-[10px] text-[var(--color-ahead)] hover:underline">reply</button>
+                              )}
+                            </div>
+                          ))}
                           {/* pending comment shown under its line */}
                           {existing && (
                             <div className="ml-24 mr-2 my-1 rounded border border-[var(--color-ahead)]/40 bg-[var(--color-ahead)]/5 px-2 py-1 text-xs">

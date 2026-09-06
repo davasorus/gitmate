@@ -54,6 +54,10 @@ export function Clone(url: string, dest: string): $CancellablePromise<string> {
     return $Call.ByID(3320935538, url, dest);
 }
 
+export function CommentPR($number: number, body: string): $CancellablePromise<string> {
+    return $Call.ByID(1745206744, $number, body);
+}
+
 export function Commit(message: string): $CancellablePromise<string> {
     return $Call.ByID(471482348, message);
 }
@@ -168,6 +172,10 @@ export function ListAssets(releaseID: number): $CancellablePromise<ghapi$0.Asset
     return $Call.ByID(1953238676, releaseID);
 }
 
+export function ListIssueComments($number: number): $CancellablePromise<ghapi$0.IssueComment[] | null> {
+    return $Call.ByID(4209960726, $number);
+}
+
 export function ListLabels(): $CancellablePromise<ghapi$0.Label[] | null> {
     return $Call.ByID(2781467806);
 }
@@ -182,6 +190,10 @@ export function ListRemotes(): $CancellablePromise<gitops$0.Remote[] | null> {
 
 export function ListRequestedReviewers($number: number): $CancellablePromise<ghapi$0.Reviewer[] | null> {
     return $Call.ByID(1061340549, $number);
+}
+
+export function ListReviewComments($number: number): $CancellablePromise<ghapi$0.ExistingComment[] | null> {
+    return $Call.ByID(1633293631, $number);
 }
 
 export function ListReviews($number: number): $CancellablePromise<ghapi$0.Review[] | null> {
@@ -293,6 +305,10 @@ export function RenameBranch(oldName: string, newName: string): $CancellableProm
 
 export function RenameRemote(oldName: string, newName: string): $CancellablePromise<void> {
     return $Call.ByID(424528649, oldName, newName);
+}
+
+export function ReplyToReviewComment($number: number, commentID: number, body: string): $CancellablePromise<void> {
+    return $Call.ByID(2839797543, $number, commentID, body);
 }
 
 export function RequestReviewers($number: number, logins: string[] | null): $CancellablePromise<void> {
