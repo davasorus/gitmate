@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useGit, cls } from "../context";
+import { LogView } from "../components/LogView";
 import type { WorkflowRun, Job, DispatchableWorkflow, JobLog } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StatusFilter = "all" | "success" | "failure" | "in_progress";
@@ -219,9 +220,9 @@ export function Actions() {
                               {(jobLog.Steps ?? []).length ? (jobLog.Steps ?? []).map((sl, sli) => (
                                 <details key={sli} className="mb-1">
                                   <summary className="cursor-pointer text-[var(--color-ahead)]">{sl.Name}</summary>
-                                  <pre className="whitespace-pre-wrap text-muted-foreground">{sl.Text}</pre>
+                                  <LogView text={sl.Text} />
                                 </details>
-                              )) : <pre className="whitespace-pre-wrap text-muted-foreground">{jobLog.Raw}</pre>}
+                              )) : <LogView text={jobLog.Raw} />}
                             </div>
                           )}
                           <div className="ml-4">
