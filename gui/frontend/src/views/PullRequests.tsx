@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useGit, cls } from "../context";
 import { CheckBadge } from "../components/CheckBadge";
 import type { PR, CheckRun } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
@@ -18,13 +18,26 @@ export function PullRequests() {
   const [filter, setFilter] = useState<StateFilter>("open");
   const [prs, setPrs] = useState<PR[]>([]);
 
-  const loadPRs = useCallback(async (state: StateFilter) => {
+  const reload = async () => {
     setBusy("prs-load");
-    try { setPrs((await service.PRs(state)) ?? []); }
+    try { setPrs((await service.PRs(filter)) ?? []); }
     catch (e) { flash("err", String(e)); } finally { setBusy(""); }
-  }, [service, flash, setBusy]);
+  };
 
-  useEffect(() => { loadPRs(filter); }, [filter, loadPRs]);
+  // fetch on mount and whenever the filter changes — NOT on every render
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setBusy("prs-load");
+      try {
+        const list = (await service.PRs(filter)) ?? [];
+        if (!cancelled) setPrs(list);
+      } catch (e) { if (!cancelled) flash("err", String(e)); }
+      finally { if (!cancelled) setBusy(""); }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
 
   // prefill head with current branch + body with template, once
   useEffect(() => {
@@ -43,12 +56,12 @@ export function PullRequests() {
     if (!title) title = (await service.DefaultPRTitle(prHead)) || prHead;
     const url = await service.CreatePR(title, prBody, prHead, prBase);
     setPrResult(url); setPrTitle("");
-    await loadPRs(filter);
+    await reload();
     return url;
   }, "PR opened");
-  const doMerge = (n: number) => run(`merge-${n}`, async () => { const sha = await service.MergePR(n, "merge"); await loadPRs(filter); return `merged #${n} (${sha.slice(0, 7)})`; }, `merged #${n}`);
-  const doClose = (n: number) => run(`pr-close-${n}`, async () => { await service.SetPRState(n, "closed"); await loadPRs(filter); return `closed #${n}`; }, `closed #${n}`);
-  const doReopen = (n: number) => run(`pr-reopen-${n}`, async () => { await service.SetPRState(n, "open"); await loadPRs(filter); return `reopened #${n}`; }, `reopened #${n}`);
+  const doMerge = (n: number) => run(`merge-${n}`, async () => { const sha = await service.MergePR(n, "merge"); await reload(); return `merged #${n} (${sha.slice(0, 7)})`; }, `merged #${n}`);
+  const doClose = (n: number) => run(`pr-close-${n}`, async () => { await service.SetPRState(n, "closed"); await reload(); return `closed #${n}`; }, `closed #${n}`);
+  const doReopen = (n: number) => run(`pr-reopen-${n}`, async () => { await service.SetPRState(n, "open"); await reload(); return `reopened #${n}`; }, `reopened #${n}`);
 
   const loadChecks = async (n: number) => {
     setBusy(`checks-${n}`);

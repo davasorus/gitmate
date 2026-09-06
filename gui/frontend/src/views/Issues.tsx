@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useGit, cls } from "../context";
 import type { Issue } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
@@ -12,22 +12,35 @@ export function Issues() {
   const [filter, setFilter] = useState<StateFilter>("open");
   const [issues, setIssues] = useState<Issue[]>([]);
 
-  const loadIssues = useCallback(async (state: StateFilter) => {
+  const reload = async () => {
     setBusy("issues-load");
-    try { setIssues((await service.Issues(state)) ?? []); }
+    try { setIssues((await service.Issues(filter)) ?? []); }
     catch (e) { flash("err", String(e)); } finally { setBusy(""); }
-  }, [service, flash, setBusy]);
+  };
 
-  useEffect(() => { loadIssues(filter); }, [filter, loadIssues]);
+  // fetch on mount and whenever the filter changes — NOT on every render
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setBusy("issues-load");
+      try {
+        const list = (await service.Issues(filter)) ?? [];
+        if (!cancelled) setIssues(list);
+      } catch (e) { if (!cancelled) flash("err", String(e)); }
+      finally { if (!cancelled) setBusy(""); }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
 
   const doIssue = () => run("issue", async () => {
     const url = await service.CreateIssue(title.trim(), body);
     setTitle(""); setBody("");
-    await loadIssues(filter);
+    await reload();
     return url;
   }, "issue opened");
-  const doClose = (n: number) => run(`issue-close-${n}`, async () => { await service.SetIssueState(n, "closed"); await loadIssues(filter); return `closed #${n}`; }, `closed #${n}`);
-  const doReopen = (n: number) => run(`issue-reopen-${n}`, async () => { await service.SetIssueState(n, "open"); await loadIssues(filter); return `reopened #${n}`; }, `reopened #${n}`);
+  const doClose = (n: number) => run(`issue-close-${n}`, async () => { await service.SetIssueState(n, "closed"); await reload(); return `closed #${n}`; }, `closed #${n}`);
+  const doReopen = (n: number) => run(`issue-reopen-${n}`, async () => { await service.SetIssueState(n, "open"); await reload(); return `reopened #${n}`; }, `reopened #${n}`);
 
   return (
     <div className="space-y-4">
