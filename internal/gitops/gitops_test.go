@@ -577,3 +577,38 @@ func TestStatusDetachedHead(t *testing.T) {
 		t.Fatalf("expected detached HEAD, got %+v", st)
 	}
 }
+
+func TestCodeName(t *testing.T) {
+	cases := map[byte]string{
+		'.': "", 'M': "modified", 'A': "added", 'D': "deleted",
+		'R': "renamed", 'C': "copied", 'U': "unmerged",
+	}
+	for c, want := range cases {
+		if got := codeName(c); got != want {
+			t.Errorf("codeName(%q) = %q, want %q", c, got, want)
+		}
+	}
+	// default branch: unknown code returns the char as string
+	if got := codeName('X'); got != "X" {
+		t.Errorf("codeName('X') = %q, want X", got)
+	}
+}
+
+func TestUnstageAndDeleteBranchErrors(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "x\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "init")
+
+	// unstage a specific path (covers the path-arg branch)
+	writeFile(t, dir, "b.txt", "new\n")
+	_ = Stage(dir)
+	if err := Unstage(dir, "b.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	// deleting a non-existent branch should error (covers the error branch)
+	if err := DeleteBranch(dir, "does-not-exist", false); err == nil {
+		t.Fatal("expected error deleting non-existent branch")
+	}
+}
