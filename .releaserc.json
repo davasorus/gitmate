@@ -1,0 +1,29 @@
+{
+  "branches": ["live"],
+  "plugins": [
+    ["@semantic-release/commit-analyzer", {
+      "preset": "conventionalcommits"
+    }],
+    ["@semantic-release/release-notes-generator", {
+      "preset": "conventionalcommits",
+      "presetConfig": {
+        "types": [
+          { "type": "feat", "section": "Features" },
+          { "type": "fix", "section": "Fixes" },
+          { "type": "perf", "section": "Performance" },
+          { "type": "refactor", "section": "Refactoring" },
+          { "type": "docs", "section": "Documentation" },
+          { "type": "build", "section": "Build & CI" },
+          { "type": "ci", "section": "Build & CI" },
+          { "type": "chore", "hidden": true },
+          { "type": "test", "hidden": true },
+          { "type": "style", "hidden": true }
+        ]
+      }
+    }],
+    ["@semantic-release/github", {
+      "successComment": false,
+      "failComment": false
+    }]
+  ]
+}
