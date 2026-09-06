@@ -111,6 +111,7 @@ jobs:
         shell: bash
         run: |
           go test -coverprofile=coverage.out -covermode=count ./internal/...
+          go tool cover -func=coverage.out   # TEMP: per-function coverage to diagnose Linux vs local gap
           total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
           echo "----- total coverage: ${total}% (min ${COVERAGE_MIN}%) -----"
           if awk "BEGIN{exit !($total < $COVERAGE_MIN)}"; then
