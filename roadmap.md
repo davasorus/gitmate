@@ -315,21 +315,21 @@ ever gains a server component for another reason.
 
 ---
 
-## TIER 3 / Phase D — hygiene & release engineering  [ ]
+## TIER 3 / Phase D — hygiene & release engineering  [x]   ← DONE
 
-1. [ ] **GUI in releases** — release currently ships only the CLI. Build the Wails desktop
-   app per-platform (`wails3 build`) and attach as release assets alongside the CLI.
-   Scope: platforms TBD (at least Windows, the dev target).
+1. [x] **GUI in releases** — DONE: release.yml now has a `gui` matrix job (windows/macos/ubuntu)
+   that installs Wails, builds the desktop app (`wails3 build`), and attaches binaries to the
+   release via softprops/action-gh-release, alongside the GoReleaser CLI job. (Linux installs GTK/WebKit deps.)
 2. [x] **Signing** — DECIDED: do NOT sign (free cert routes all need token/pipeline friction).
    Ship SHA256 checksums (GoReleaser already generates them) + document "unsigned, Run anyway,
    verify checksums, or build from source." (Doc part lands in Phase F.) Optional later:
    SignPath Foundation free OSS signing if the SmartScreen warning ever matters.
-3. [ ] **Bindings → generate-in-CI** — stop committing gui/frontend/bindings/ (wails3 dev
-   rewrites them → git noise). Re-ignore them; have CI run `wails3 generate bindings` before
-   the frontend build. Removes the drift and the committed generated code.
-4. [ ] **.gitattributes** — normalize line endings to kill the CRLF churn (core.autocrlf
+3. [x] **Bindings → generate-in-CI** — DONE: /gui/frontend/bindings/ re-ignored; ci.yml frontend
+   job installs Wails + runs `wails3 generate bindings` before npm ci/tsc/vite. No more committed
+   generated code or drift. (Must `git rm -r --cached gui/frontend/bindings` once to untrack.)
+4. [x] **.gitattributes** — DONE — normalize line endings to kill the CRLF churn (core.autocrlf
    caused whole-tree phantom diffs). Commit a .gitattributes with text=auto + eol rules.
-5. [ ] **Bump go-github** — v66 predates the typed `Immutable` release field (added Sept
+5. [x] **Bump go-github** — DONE (v66→v88; WithAuthToken option API; typed GetImmutable) — v66 predates the typed `Immutable` release field (added Sept
    2025); we currently read it from raw JSON. Bump for the native field + a year of fixes.
 
 ---
