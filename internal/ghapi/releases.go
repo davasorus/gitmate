@@ -52,11 +52,11 @@ func (c *Client) ListReleases(ctx context.Context, owner, repo string) ([]Releas
 // CreateRelease creates a release on the given tag.
 func (c *Client) CreateRelease(ctx context.Context, owner, repo, tag, name, body string, draft, prerelease bool) (Release, error) {
 	r, _, err := c.gh.Repositories.CreateRelease(ctx, owner, repo, &github.RepositoryRelease{
-		TagName:    github.String(tag),
-		Name:       github.String(name),
-		Body:       github.String(body),
-		Draft:      github.Bool(draft),
-		Prerelease: github.Bool(prerelease),
+		TagName:    github.Ptr(tag),
+		Name:       github.Ptr(name),
+		Body:       github.Ptr(body),
+		Draft:      github.Ptr(draft),
+		Prerelease: github.Ptr(prerelease),
 	})
 	if err != nil {
 		return Release{}, err
@@ -67,10 +67,10 @@ func (c *Client) CreateRelease(ctx context.Context, owner, repo, tag, name, body
 // EditRelease updates an existing release by ID.
 func (c *Client) EditRelease(ctx context.Context, owner, repo string, id int64, name, body string, draft, prerelease bool) (Release, error) {
 	r, _, err := c.gh.Repositories.EditRelease(ctx, owner, repo, id, &github.RepositoryRelease{
-		Name:       github.String(name),
-		Body:       github.String(body),
-		Draft:      github.Bool(draft),
-		Prerelease: github.Bool(prerelease),
+		Name:       github.Ptr(name),
+		Body:       github.Ptr(body),
+		Draft:      github.Ptr(draft),
+		Prerelease: github.Ptr(prerelease),
 	})
 	if err != nil {
 		return Release{}, err

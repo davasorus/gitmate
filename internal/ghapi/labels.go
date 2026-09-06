@@ -36,9 +36,9 @@ func (c *Client) ListLabels(ctx context.Context, owner, repo string) ([]Label, e
 // CreateLabel creates a new label definition (color = 6-hex, no #).
 func (c *Client) CreateLabel(ctx context.Context, owner, repo, name, color, description string) error {
 	_, _, err := c.gh.Issues.CreateLabel(ctx, owner, repo, &github.Label{
-		Name:        github.String(name),
-		Color:       github.String(color),
-		Description: github.String(description),
+		Name:        github.Ptr(name),
+		Color:       github.Ptr(color),
+		Description: github.Ptr(description),
 	})
 	return err
 }
@@ -46,9 +46,9 @@ func (c *Client) CreateLabel(ctx context.Context, owner, repo, name, color, desc
 // EditLabel updates an existing label. newName can equal name to keep it.
 func (c *Client) EditLabel(ctx context.Context, owner, repo, name, newName, color, description string) error {
 	_, _, err := c.gh.Issues.EditLabel(ctx, owner, repo, name, &github.Label{
-		Name:        github.String(newName),
-		Color:       github.String(color),
-		Description: github.String(description),
+		Name:        github.Ptr(newName),
+		Color:       github.Ptr(color),
+		Description: github.Ptr(description),
 	})
 	return err
 }

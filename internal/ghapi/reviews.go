@@ -58,16 +58,16 @@ func (c *Client) ListReviews(ctx context.Context, owner, repo string, number int
 // by GitHub for REQUEST_CHANGES and COMMENT.
 func (c *Client) SubmitReview(ctx context.Context, owner, repo string, number int, event, body string, comments []ReviewComment) error {
 	req := &github.PullRequestReviewRequest{
-		Event: github.String(event),
-		Body:  github.String(body),
+		Event: github.Ptr(event),
+		Body:  github.Ptr(body),
 	}
 	for _, cm := range comments {
 		line := cm.Line
 		req.Comments = append(req.Comments, &github.DraftReviewComment{
-			Path: github.String(cm.Path),
-			Line: github.Int(line),
-			Body: github.String(cm.Body),
-			Side: github.String("RIGHT"),
+			Path: github.Ptr(cm.Path),
+			Line: github.Ptr(line),
+			Body: github.Ptr(cm.Body),
+			Side: github.Ptr("RIGHT"),
 		})
 	}
 	_, _, err := c.gh.PullRequests.CreateReview(ctx, owner, repo, number, req)

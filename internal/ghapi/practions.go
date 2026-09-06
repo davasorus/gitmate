@@ -31,7 +31,7 @@ func (c *Client) MergePR(ctx context.Context, owner, repo string, number int, me
 // CommentPR posts a comment on a PR or issue (they share the comment endpoint).
 func (c *Client) CommentPR(ctx context.Context, owner, repo string, number int, body string) (string, error) {
 	comment, _, err := c.gh.Issues.CreateComment(ctx, owner, repo, number, &github.IssueComment{
-		Body: github.String(body),
+		Body: github.Ptr(body),
 	})
 	if err != nil {
 		return "", err
