@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/davasorus/gitmate/internal/gitops"
 	"github.com/google/go-github/v66/github"
 )
 
@@ -88,4 +89,14 @@ func labelNames(ls []*github.Label) []string {
 		names = append(names, l.GetName())
 	}
 	return names
+}
+
+// PRDiff fetches the PR's unified diff and parses it into the same
+// []gitops.FileDiff that DiffView already renders.
+func (c *Client) PRDiff(ctx context.Context, owner, repo string, number int) ([]gitops.FileDiff, error) {
+	raw, _, err := c.gh.PullRequests.GetRaw(ctx, owner, repo, number, github.RawOptions{Type: github.Diff})
+	if err != nil {
+		return nil, err
+	}
+	return gitops.ParseUnifiedDiff(raw), nil
 }

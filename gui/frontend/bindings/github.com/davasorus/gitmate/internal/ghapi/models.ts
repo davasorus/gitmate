@@ -37,6 +37,7 @@ export interface Issue {
     "Author": string;
     "State": string;
     "When": string;
+    "Labels": string[] | null;
 }
 
 /**
@@ -58,6 +59,7 @@ export interface PR {
     "State": string;
     "When": string;
     "Draft": boolean;
+    "Labels": string[] | null;
 }
 
 /**
@@ -70,5 +72,27 @@ export interface Release {
     "Body": string;
     "Draft": boolean;
     "Prerelease": boolean;
+    "Immutable": boolean;
     "URL": string;
+}
+
+/**
+ * Review is a trimmed PR review (a whole-PR verdict).
+ */
+export interface Review {
+    "ID": number;
+    "Author": string;
+
+    /**
+     * APPROVED, CHANGES_REQUESTED, COMMENTED, DISMISSED, PENDING
+     */
+    "State": string;
+    "Body": string;
+}
+
+/**
+ * Reviewer is a requested (not-yet-submitted) reviewer on a PR.
+ */
+export interface Reviewer {
+    "Login": string;
 }

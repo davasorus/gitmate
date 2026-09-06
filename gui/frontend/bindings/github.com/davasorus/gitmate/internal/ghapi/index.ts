@@ -7,5 +7,7 @@ export type {
     Issue,
     Label,
     PR,
-    Release
+    Release,
+    Review,
+    Reviewer
 } from "./models.js";

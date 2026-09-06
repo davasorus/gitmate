@@ -35,6 +35,6 @@ func Show(dir, rev string) (*CommitDetail, error) {
 	if err != nil {
 		return nil, err
 	}
-	d.Files = parseUnifiedDiff(patch)
+	d.Files = ParseUnifiedDiff(patch)
 	return d, nil
 }

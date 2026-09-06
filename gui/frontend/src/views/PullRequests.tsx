@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { useGit, cls } from "../context";
 import { CheckBadge } from "../components/CheckBadge";
-import type { PR, CheckRun } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import { DiffView } from "../components/DiffView";
+import type { PR, CheckRun, Review, Reviewer } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type { FileDiff } from "../../bindings/github.com/davasorus/gitmate/internal/gitops";
 
 type StateFilter = "open" | "closed" | "all";
 
@@ -63,6 +65,50 @@ export function PullRequests() {
   const doClose = (n: number) => run(`pr-close-${n}`, async () => { await service.SetPRState(n, "closed"); await reload(); return `closed #${n}`; }, `closed #${n}`);
   const doReopen = (n: number) => run(`pr-reopen-${n}`, async () => { await service.SetPRState(n, "open"); await reload(); return `reopened #${n}`; }, `reopened #${n}`);
   const [labelInput, setLabelInput] = useState<Record<number, string>>({});
+  const [openReview, setOpenReview] = useState<number | null>(null);
+  const [prDiff, setPrDiff] = useState<FileDiff[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewers, setReviewers] = useState<Reviewer[]>([]);
+  const [reviewBody, setReviewBody] = useState("");
+  const [reviewerInput, setReviewerInput] = useState("");
+
+  const loadReview = async (n: number) => {
+    setBusy(`review-load-${n}`);
+    try {
+      setReviews((await service.ListReviews(n)) ?? []);
+      setReviewers((await service.ListRequestedReviewers(n)) ?? []);
+      setPrDiff((await service.PRDiff(n)) ?? []);
+      setOpenReview(n);
+    } catch (e) { flash("err", String(e)); } finally { setBusy(""); }
+  };
+  const toggleReview = (n: number) => {
+    if (openReview === n) { setOpenReview(null); setReviews([]); setReviewers([]); setReviewBody(""); setPrDiff([]); return; }
+    loadReview(n);
+  };
+  const submitReview = (n: number, event: "APPROVE" | "REQUEST_CHANGES" | "COMMENT") => {
+    if (event !== "APPROVE" && !reviewBody.trim()) { flash("err", "A comment is required for request-changes and comment."); return; }
+    run(`review-${n}`, async () => {
+      await service.SubmitReview(n, event, reviewBody);
+      setReviewBody("");
+      await loadReview(n);
+      return `review submitted on #${n}`;
+    }, `review submitted on #${n}`);
+  };
+  const addReviewer = (n: number) => {
+    const login = reviewerInput.trim();
+    if (!login) return;
+    run(`reviewer-add-${n}`, async () => {
+      await service.RequestReviewers(n, [login]);
+      setReviewerInput("");
+      await loadReview(n);
+      return `requested ${login}`;
+    }, `requested ${login}`);
+  };
+  const removeReviewer = (n: number, login: string) => run(`reviewer-rm-${n}-${login}`, async () => {
+    await service.RemoveReviewer(n, login);
+    await loadReview(n);
+    return `removed ${login}`;
+  }, `removed ${login}`);
   const doAddLabel = (n: number, label: string) => run(`lbl-add-${n}`, async () => { await service.AddLabels(n, [label]); setLabelInput((m) => ({ ...m, [n]: "" })); await reload(); return `labeled #${n}`; }, `labeled #${n}`);
   const doRemoveLabel = (n: number, label: string) => run(`lbl-rm-${n}-${label}`, async () => { await service.RemoveLabel(n, label); await reload(); return `unlabeled #${n}`; }, `unlabeled #${n}`);
 
@@ -116,6 +162,7 @@ export function PullRequests() {
               <span className="truncate">{p.Title}</span>
               <span className="text-xs text-muted-foreground">@{p.Author}</span>
               <span className="ml-auto flex gap-1">
+                <button onClick={() => toggleReview(p.Number)} disabled={!!busy} className={cls.btnSm}>{busy === `review-load-${p.Number}` ? "…" : "Review"}</button>
                 <button onClick={() => loadChecks(p.Number)} disabled={!!busy} className={cls.btnSm}>{busy === `checks-${p.Number}` ? "…" : "Checks"}</button>
                 <button onClick={() => doMerge(p.Number)} disabled={!!busy} className={cls.btnSm}>{busy === `merge-${p.Number}` ? "…" : "Merge"}</button>
                 <button onClick={() => doClose(p.Number)} disabled={!!busy} className={`${cls.btnSm} text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10`}>{busy === `pr-close-${p.Number}` ? "…" : "Close"}</button>
@@ -125,6 +172,45 @@ export function PullRequests() {
             {checks[p.Number] && (
               <div className="mt-1 space-y-0.5 pl-6">
                 {checks[p.Number].length ? checks[p.Number].map((r, i) => <CheckBadge key={i} run={r} />) : <div className="text-xs italic text-muted-foreground">no checks reported</div>}
+              </div>
+            )}
+            {openReview === p.Number && (
+              <div className="mt-2 space-y-2 rounded-md border border-border bg-background p-2">
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Changed files</div>
+                <div className="max-h-96 overflow-auto rounded border border-border"><DiffView files={prDiff ?? []} /></div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reviews</div>
+                {(reviews ?? []).length ? (reviews ?? []).map((rv) => (
+                  <div key={rv.ID} className="flex items-baseline gap-2 text-xs">
+                    <span className="font-medium">{rv.Author}</span>
+                    <span className={
+                      rv.State === "APPROVED" ? "text-[var(--color-added)]"
+                      : rv.State === "CHANGES_REQUESTED" ? "text-[var(--color-removed)]"
+                      : "text-muted-foreground"}>{rv.State}</span>
+                    {rv.Body && <span className="truncate text-muted-foreground">{rv.Body}</span>}
+                  </div>
+                )) : <div className="text-xs italic text-muted-foreground">no reviews yet</div>}
+
+                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Requested reviewers</div>
+                <div className="flex flex-wrap items-center gap-1">
+                  {(reviewers ?? []).map((rr) => (
+                    <button key={rr.Login} onClick={() => removeReviewer(p.Number, rr.Login)} disabled={!!busy}
+                            className="rounded-full border border-border px-2 py-0.5 text-[10px] hover:bg-[var(--color-removed)]/10" title="click to remove">
+                      {rr.Login} ✕
+                    </button>
+                  ))}
+                  <input value={reviewerInput} onChange={(e) => setReviewerInput(e.target.value)}
+                         onKeyDown={(e) => { if (e.key === "Enter") addReviewer(p.Number); }}
+                         placeholder="+ reviewer" className={`${cls.input} h-6 w-28 px-2 py-0 text-[10px]`} />
+                </div>
+
+                <textarea value={reviewBody} onChange={(e) => setReviewBody(e.target.value)}
+                          placeholder="review comment (required for request-changes / comment)"
+                          className={`${cls.input} h-20 w-full resize-y text-xs`} />
+                <div className="flex gap-1">
+                  <button onClick={() => submitReview(p.Number, "APPROVE")} disabled={!!busy} className={`${cls.btnSm} text-[var(--color-added)]`}>{busy === `review-${p.Number}` ? "…" : "Approve"}</button>
+                  <button onClick={() => submitReview(p.Number, "REQUEST_CHANGES")} disabled={!!busy} className={`${cls.btnSm} text-[var(--color-removed)]`}>Request changes</button>
+                  <button onClick={() => submitReview(p.Number, "COMMENT")} disabled={!!busy} className={cls.btnSm}>Comment</button>
+                </div>
               </div>
             )}
             <div className="mt-1 flex flex-wrap items-center gap-1">

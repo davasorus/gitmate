@@ -486,6 +486,84 @@ func (g *GitService) PRChecks(number int) ([]ghapi.CheckRun, error) {
 	return client.PRChecks(ctx, owner, repo, number)
 }
 
+func (g *GitService) ListReviews(number int) ([]ghapi.Review, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListReviews(ctx, owner, repo, number)
+}
+
+func (g *GitService) PRDiff(number int) ([]gitops.FileDiff, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.PRDiff(ctx, owner, repo, number)
+}
+
+func (g *GitService) SubmitReview(number int, event, body string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.SubmitReview(ctx, owner, repo, number, event, body)
+}
+
+func (g *GitService) ListRequestedReviewers(number int) ([]ghapi.Reviewer, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListRequestedReviewers(ctx, owner, repo, number)
+}
+
+func (g *GitService) RequestReviewers(number int, logins []string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.RequestReviewers(ctx, owner, repo, number, logins)
+}
+
+func (g *GitService) RemoveReviewer(number int, login string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.RemoveReviewer(ctx, owner, repo, number, login)
+}
+
 func (g *GitService) StashSave(message string, includeUntracked bool) error {
 	return gitops.StashSave(g.repoDir, message, includeUntracked)
 }

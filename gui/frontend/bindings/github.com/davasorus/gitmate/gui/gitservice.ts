@@ -180,6 +180,14 @@ export function ListRemotes(): $CancellablePromise<gitops$0.Remote[] | null> {
     return $Call.ByID(2290322204);
 }
 
+export function ListRequestedReviewers($number: number): $CancellablePromise<ghapi$0.Reviewer[] | null> {
+    return $Call.ByID(1061340549, $number);
+}
+
+export function ListReviews($number: number): $CancellablePromise<ghapi$0.Review[] | null> {
+    return $Call.ByID(3728537402, $number);
+}
+
 export function ListTags(): $CancellablePromise<gitops$0.Tag[] | null> {
     return $Call.ByID(933116764);
 }
@@ -214,6 +222,10 @@ export function MergePR($number: number, method: string): $CancellablePromise<st
 
 export function PRChecks($number: number): $CancellablePromise<ghapi$0.CheckRun[] | null> {
     return $Call.ByID(3470830078, $number);
+}
+
+export function PRDiff($number: number): $CancellablePromise<gitops$0.FileDiff[] | null> {
+    return $Call.ByID(3658489820, $number);
 }
 
 export function PRTemplate(): $CancellablePromise<string> {
@@ -271,12 +283,20 @@ export function RemoveRemote(name: string): $CancellablePromise<void> {
     return $Call.ByID(2331660635, name);
 }
 
+export function RemoveReviewer($number: number, login: string): $CancellablePromise<void> {
+    return $Call.ByID(320614290, $number, login);
+}
+
 export function RenameBranch(oldName: string, newName: string): $CancellablePromise<void> {
     return $Call.ByID(1363441787, oldName, newName);
 }
 
 export function RenameRemote(oldName: string, newName: string): $CancellablePromise<void> {
     return $Call.ByID(424528649, oldName, newName);
+}
+
+export function RequestReviewers($number: number, logins: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(4134688474, $number, logins);
 }
 
 export function Reset(rev: string, mode: string): $CancellablePromise<void> {
@@ -360,6 +380,10 @@ export function StashSave(message: string, includeUntracked: boolean): $Cancella
 
 export function Status(): $CancellablePromise<gitops$0.Status | null> {
     return $Call.ByID(1385891039);
+}
+
+export function SubmitReview($number: number, event: string, body: string): $CancellablePromise<void> {
+    return $Call.ByID(3295771057, $number, event, body);
 }
 
 export function Switch(branch: string): $CancellablePromise<void> {
