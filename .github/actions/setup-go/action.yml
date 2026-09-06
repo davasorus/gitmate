@@ -1,0 +1,14 @@
+name: Setup Go
+description: Set up Go with module/build caching. Run actions/checkout BEFORE this.
+inputs:
+  go-version:
+    description: Go version to install
+    required: false
+    default: "1.25"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v5
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: true

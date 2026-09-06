@@ -477,3 +477,173 @@ func TestClone(t *testing.T) {
 		t.Fatalf("expected a.txt in clone: %v", err)
 	}
 }
+
+// newRemoteRepo makes a bare repo (acting as origin) + a working clone wired to
+// it, with one pushed commit on the current branch. Returns the working dir.
+func newRemoteRepo(t *testing.T) string {
+	t.Helper()
+	bare := t.TempDir()
+	if _, err := run(bare, "init", "--bare"); err != nil {
+		t.Fatal(err)
+	}
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "hello\n")
+	if err := Stage(dir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := CreateCommit(dir, "init"); err != nil {
+		t.Fatal(err)
+	}
+	if err := AddRemote(dir, "origin", bare); err != nil {
+		t.Fatal(err)
+	}
+	// push the ACTUAL current branch (newTestRepo's default may be master, not main)
+	br, err := CurrentBranch(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Push(dir, "origin", br, true); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func TestStatusVariedStates(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "keep.txt", "keep\n")
+	writeFile(t, dir, "del.txt", "gone\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "init")
+
+	// added (new staged file), deleted (removed staged), modified (changed)
+	writeFile(t, dir, "new.txt", "added\n")
+	writeFile(t, dir, "keep.txt", "changed\n")
+	if _, err := run(dir, "rm", "del.txt"); err != nil {
+		t.Fatal(err)
+	}
+	_ = Stage(dir)
+
+	st, err := GetStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st == nil {
+		t.Fatal("expected status")
+	}
+	// exercise the parse paths; expect staged file changes present
+	if len(st.Changes) == 0 {
+		t.Fatalf("expected file changes, got %+v", st)
+	}
+}
+
+func TestStatusUpstreamAheadBehind(t *testing.T) {
+	// working repo with an origin → gives branch.upstream + branch.ab header lines
+	dir := newRemoteRepo(t)
+	// make a local commit so we're ahead of origin
+	writeFile(t, dir, "ahead.txt", "x\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "ahead commit")
+
+	st, err := GetStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Upstream == "" {
+		t.Fatalf("expected an upstream to be parsed, got %+v", st)
+	}
+	if st.Ahead < 1 {
+		t.Fatalf("expected ahead>=1, got %d", st.Ahead)
+	}
+}
+
+func TestStatusDetachedHead(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "one\n")
+	_ = Stage(dir)
+	sha, _ := CreateCommit(dir, "one")
+	writeFile(t, dir, "a.txt", "two\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "two")
+
+	// detach HEAD at the first commit
+	if _, err := run(dir, "checkout", sha); err != nil {
+		t.Fatal(err)
+	}
+	st, err := GetStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.Detached {
+		t.Fatalf("expected detached HEAD, got %+v", st)
+	}
+}
+
+func TestCodeName(t *testing.T) {
+	cases := map[byte]string{
+		'.': "", 'M': "modified", 'A': "added", 'D': "deleted",
+		'R': "renamed", 'C': "copied", 'U': "unmerged",
+	}
+	for c, want := range cases {
+		if got := codeName(c); got != want {
+			t.Errorf("codeName(%q) = %q, want %q", c, got, want)
+		}
+	}
+	// default branch: unknown code returns the char as string
+	if got := codeName('X'); got != "X" {
+		t.Errorf("codeName('X') = %q, want X", got)
+	}
+}
+
+func TestUnstageAndDeleteBranchErrors(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "x\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "init")
+
+	// unstage a specific path (covers the path-arg branch)
+	writeFile(t, dir, "b.txt", "new\n")
+	_ = Stage(dir)
+	if err := Unstage(dir, "b.txt"); err != nil {
+		t.Fatal(err)
+	}
+
+	// deleting a non-existent branch should error (covers the error branch)
+	if err := DeleteBranch(dir, "does-not-exist", false); err == nil {
+		t.Fatal("expected error deleting non-existent branch")
+	}
+}
+
+func TestStatusRenameAndConflict(t *testing.T) {
+	// rename → porcelain case '2'
+	dir := newTestRepo(t)
+	writeFile(t, dir, "orig.txt", "content\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "init")
+	if _, err := run(dir, "mv", "orig.txt", "renamed.txt"); err != nil {
+		t.Fatal(err)
+	}
+	_ = Stage(dir)
+	st, err := GetStatus(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(st.Changes) == 0 {
+		t.Fatalf("expected a rename change, got %+v", st)
+	}
+
+	// conflict → porcelain case 'u'
+	cdir := makeConflict(t) // leaves a.txt unmerged
+	cst, err := GetStatus(cdir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sawConflict := false
+	for _, ch := range cst.Changes {
+		if ch.Staged == "conflict" {
+			sawConflict = true
+		}
+	}
+	if !sawConflict {
+		t.Fatalf("expected a conflict change, got %+v", cst.Changes)
+	}
+}
