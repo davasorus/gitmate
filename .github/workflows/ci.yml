@@ -51,6 +51,12 @@ jobs:
           cache-dependency-path: gui/frontend/package-lock.json
 
       # bindings are generated (not committed), so produce them before the build.
+      # Wails' Go package needs GTK4/WebKit to compile (even for binding generation).
+      - name: Linux GUI deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+
       - name: Install Wails v3
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
 
