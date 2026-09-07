@@ -32,6 +32,7 @@ type Status struct {
 func run(dir string, args ...string) (string, error) {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
+	hideWindow(cmd)
 	out, err := cmd.Output()
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
@@ -48,6 +49,7 @@ func runStdin(dir, input string, args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
 	cmd.Stdin = strings.NewReader(input)
+	hideWindow(cmd)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git %s: %s", strings.Join(args, " "), strings.TrimSpace(string(out)))

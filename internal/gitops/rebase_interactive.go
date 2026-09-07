@@ -126,6 +126,7 @@ func RunInteractiveRebase(dir, base string, steps []RebaseStep) error {
 
 	cmd := exec.Command("git", "rebase", "-i", "--autostash", base)
 	cmd.Dir = dir
+	hideWindow(cmd)
 	env := os.Environ()
 	env = append(env, "GIT_SEQUENCE_EDITOR="+seqEd)
 
