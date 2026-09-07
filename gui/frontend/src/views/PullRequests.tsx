@@ -401,17 +401,26 @@ export function PullRequests() {
                     </span>
                   )}
                   {p.ReviewDecision === "APPROVED" && (
-                    <span className="rounded-full px-1.5 py-0.5 text-[var(--color-ahead)]" title="approved">
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-[var(--color-ahead)]"
+                      title="approved"
+                    >
                       ✓ approved
                     </span>
                   )}
                   {p.ReviewDecision === "CHANGES_REQUESTED" && (
-                    <span className="rounded-full px-1.5 py-0.5 text-[var(--color-removed)]" title="changes requested">
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-[var(--color-removed)]"
+                      title="changes requested"
+                    >
                       ✗ changes
                     </span>
                   )}
                   {p.ReviewDecision === "REVIEW_REQUIRED" && (
-                    <span className="rounded-full px-1.5 py-0.5 text-muted-foreground" title="review required">
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-muted-foreground"
+                      title="review required"
+                    >
                       review needed
                     </span>
                   )}
@@ -582,14 +591,19 @@ export function PullRequests() {
                     <div className="text-xs italic text-muted-foreground">no conversation yet</div>
                   )}
                   <div className="flex gap-1">
-                    <input
+                    <textarea
                       value={generalComment}
                       onChange={(e) => setGeneralComment(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") postGeneralComment(p.Number);
+                        // Ctrl/Cmd+Enter posts; plain Enter adds a newline
+                        if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                          e.preventDefault();
+                          postGeneralComment(p.Number);
+                        }
                       }}
-                      placeholder="add a comment"
-                      className={`${cls.input} h-7 flex-1 text-xs`}
+                      placeholder="add a comment (⌘/Ctrl+Enter to post)"
+                      rows={2}
+                      className={`${cls.input} flex-1 resize-y text-xs`}
                     />
                     <button
                       onClick={() => postGeneralComment(p.Number)}

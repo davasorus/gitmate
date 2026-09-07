@@ -492,8 +492,37 @@ func parseJobGraph(yml string) []JobNode {
 // matrixLegs extracts matrix combinations from a job's `strategy:` node and
 // returns one label per combination (the parenthesized text GitHub appends to
 // the runtime job name, e.g. "ubuntu-latest, 1.25"). Returns nil if no matrix.
+// matrixCombo is an ordered set of axis key→value pairs (order preserved so the
+// generated label matches GitHub's "base (v1, v2, ...)" runtime job naming).
+type matrixCombo struct {
+	keys []string
+	vals map[string]string
+}
+
+func (c matrixCombo) clone() matrixCombo {
+	nc := matrixCombo{keys: append([]string(nil), c.keys...), vals: map[string]string{}}
+	for k, v := range c.vals {
+		nc.vals[k] = v
+	}
+	return nc
+}
+
+// label renders the parenthesized text GitHub appends to a matrix job's name,
+// e.g. "ubuntu-latest, 1.25" — axis values in declaration order.
+func (c matrixCombo) label() string {
+	parts := make([]string, 0, len(c.keys))
+	for _, k := range c.keys {
+		parts = append(parts, c.vals[k])
+	}
+	return strings.Join(parts, ", ")
+}
+
+// matrixLegs computes the matrix combinations for a job's strategy, faithfully
+// applying GitHub's rules: cartesian product of axes, minus `exclude` matches,
+// plus `include` (which extends a matching combo or appends a new one). Returns
+// one label per resulting runtime job, or nil if there's no matrix.
 func matrixLegs(strategy *yaml.Node) []string {
-	if strategy.Kind != yaml.MappingNode {
+	if strategy == nil || strategy.Kind != yaml.MappingNode {
 		return nil
 	}
 	var matrix *yaml.Node
@@ -505,44 +534,148 @@ func matrixLegs(strategy *yaml.Node) []string {
 	if matrix == nil || matrix.Kind != yaml.MappingNode {
 		return nil
 	}
-	// collect each matrix axis's values, in declaration order, skipping
-	// include/exclude (best-effort: GitHub's real expansion is more complex).
-	type axis struct{ values []string }
+
+	// 1) gather axes (in declaration order) + include/exclude entries
+	type axis struct {
+		key    string
+		values []string
+	}
 	var axes []axis
+	var includes, excludes []map[string]string
 	for i := 0; i+1 < len(matrix.Content); i += 2 {
 		key := matrix.Content[i].Value
 		val := matrix.Content[i+1]
-		if key == "include" || key == "exclude" {
-			continue
-		}
-		if val.Kind != yaml.SequenceNode {
-			continue
-		}
-		a := axis{}
-		for _, v := range val.Content {
-			a.values = append(a.values, v.Value)
-		}
-		if len(a.values) > 0 {
-			axes = append(axes, a)
-		}
-	}
-	if len(axes) == 0 {
-		return nil
-	}
-	// cartesian product of axes → "v1, v2, ..." labels
-	combos := []string{""}
-	for _, a := range axes {
-		var next []string
-		for _, prefix := range combos {
-			for _, v := range a.values {
-				if prefix == "" {
-					next = append(next, v)
-				} else {
-					next = append(next, prefix+", "+v)
+		switch key {
+		case "include":
+			includes = mapEntriesFromSeq(val)
+		case "exclude":
+			excludes = mapEntriesFromSeq(val)
+		default:
+			if val.Kind == yaml.SequenceNode {
+				a := axis{key: key}
+				for _, v := range val.Content {
+					a.values = append(a.values, v.Value)
 				}
+				if len(a.values) > 0 {
+					axes = append(axes, a)
+				}
+			}
+		}
+	}
+
+	// 2) cartesian product of the axes → base combos
+	combos := []matrixCombo{{vals: map[string]string{}}}
+	for _, a := range axes {
+		var next []matrixCombo
+		for _, c := range combos {
+			for _, v := range a.values {
+				nc := c.clone()
+				nc.keys = append(nc.keys, a.key)
+				nc.vals[a.key] = v
+				next = append(next, nc)
 			}
 		}
 		combos = next
 	}
-	return combos
+
+	// 3) apply exclude: drop combos that match ALL key/values of any exclude entry
+	if len(excludes) > 0 {
+		var kept []matrixCombo
+		for _, c := range combos {
+			excluded := false
+			for _, ex := range excludes {
+				match := true
+				for k, v := range ex {
+					if c.vals[k] != v {
+						match = false
+						break
+					}
+				}
+				if match && len(ex) > 0 {
+					excluded = true
+					break
+				}
+			}
+			if !excluded {
+				kept = append(kept, c)
+			}
+		}
+		combos = kept
+	}
+
+	// 4) apply include: for each include entry, if its keys that overlap existing
+	// axes match some combo(s), extend those with the new keys; otherwise append
+	// it as a standalone combo. (Simplified from GitHub's exact algorithm, but
+	// covers the common cases: adding a field to a combo, or adding a new combo.)
+	for _, inc := range includes {
+		if len(inc) == 0 {
+			continue
+		}
+		extendedAny := false
+		for ci := range combos {
+			c := &combos[ci]
+			// does this include entry's overlapping keys match this combo?
+			overlaps := false
+			match := true
+			for k, v := range inc {
+				if _, isAxis := c.vals[k]; isAxis {
+					overlaps = true
+					if c.vals[k] != v {
+						match = false
+						break
+					}
+				}
+			}
+			if overlaps && match {
+				extendedAny = true
+				for k, v := range inc {
+					if _, exists := c.vals[k]; !exists {
+						c.keys = append(c.keys, k)
+						c.vals[k] = v
+					}
+				}
+			}
+		}
+		if !extendedAny {
+			nc := matrixCombo{vals: map[string]string{}}
+			for k, v := range inc {
+				nc.keys = append(nc.keys, k)
+				nc.vals[k] = v
+			}
+			combos = append(combos, nc)
+		}
+	}
+
+	if len(combos) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(combos))
+	for _, c := range combos {
+		if lbl := c.label(); lbl != "" {
+			out = append(out, lbl)
+		}
+	}
+	return out
+}
+
+// mapEntriesFromSeq reads a YAML sequence of mappings (include:/exclude:) into
+// a slice of key→value maps.
+func mapEntriesFromSeq(seq *yaml.Node) []map[string]string {
+	if seq == nil || seq.Kind != yaml.SequenceNode {
+		return nil
+	}
+	var out []map[string]string
+	for _, item := range seq.Content {
+		if item.Kind != yaml.MappingNode {
+			continue
+		}
+		m := map[string]string{}
+		for i := 0; i+1 < len(item.Content); i += 2 {
+			m[item.Content[i].Value] = item.Content[i+1].Value
+		}
+		if len(m) > 0 {
+			out = append(out, m)
+		}
+	}
+	return out
 }

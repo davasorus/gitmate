@@ -102,11 +102,12 @@ export function Tags() {
             {busy === "tag-create" ? "…" : "Create tag"}
           </button>
         </div>
-        <input
+        <textarea
           value={msg}
           onChange={(e) => setMsg(e.target.value)}
-          placeholder="annotation message (optional)"
-          className={`${cls.input} w-full`}
+          placeholder="annotation message (optional) — first line is the subject"
+          rows={2}
+          className={`${cls.input} w-full resize-y`}
         />
       </div>
 

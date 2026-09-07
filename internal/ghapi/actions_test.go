@@ -259,3 +259,52 @@ func TestParseJobGraph_Matrix(t *testing.T) {
 		}
 	}
 }
+
+func TestParseJobGraph_MatrixExclude(t *testing.T) {
+	// 2x2 minus one excluded combo → 3 legs
+	yml := "jobs:\n" +
+		"  build:\n" +
+		"    strategy:\n" +
+		"      matrix:\n" +
+		"        os: [ubuntu-latest, windows-latest]\n" +
+		"        go: [\"1.24\", \"1.25\"]\n" +
+		"        exclude:\n" +
+		"          - os: windows-latest\n" +
+		"            go: \"1.24\"\n"
+	nodes := parseJobGraph(yml)
+	names := map[string]bool{}
+	for _, n := range nodes {
+		names[n.Name] = true
+	}
+	if len(nodes) != 3 {
+		t.Fatalf("expected 3 legs after exclude, got %d: %v", len(nodes), names)
+	}
+	if names["build (windows-latest, 1.24)"] {
+		t.Errorf("excluded combo should not be present: %v", names)
+	}
+	if !names["build (ubuntu-latest, 1.24)"] || !names["build (windows-latest, 1.25)"] {
+		t.Errorf("expected combos missing: %v", names)
+	}
+}
+
+func TestParseJobGraph_MatrixInclude(t *testing.T) {
+	// one axis + an include that adds a standalone combo → 2 + 1 = 3
+	yml := "jobs:\n" +
+		"  build:\n" +
+		"    strategy:\n" +
+		"      matrix:\n" +
+		"        os: [ubuntu-latest, windows-latest]\n" +
+		"        include:\n" +
+		"          - os: macos-latest\n"
+	nodes := parseJobGraph(yml)
+	names := map[string]bool{}
+	for _, n := range nodes {
+		names[n.Name] = true
+	}
+	if !names["build (macos-latest)"] {
+		t.Fatalf("include-added combo missing: %v", names)
+	}
+	if len(nodes) != 3 {
+		t.Fatalf("expected 3 legs (2 axis + 1 include), got %d: %v", len(nodes), names)
+	}
+}
