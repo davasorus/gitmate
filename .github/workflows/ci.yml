@@ -130,7 +130,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.13.2
-          args: ./cmd/... ./internal/... ./gui/...
+          args: ./cmd/... ./internal/...
 
   frontend:
     needs: changes
@@ -188,3 +188,12 @@ jobs:
       - name: Build (creates dist/ for the Go embed)
         run: npx vite build --mode production
         working-directory: gui/frontend
+
+      # Lint the Go GUI package HERE (not in the go job): gui/main.go embeds
+      # frontend/dist via //go:embed, which only exists after the vite build above.
+      # Linting it here means the embed resolves naturally — no placeholder tricks.
+      - name: golangci-lint (gui)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.13.2
+          args: ./gui/...
