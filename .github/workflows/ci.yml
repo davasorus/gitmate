@@ -111,7 +111,6 @@ jobs:
         shell: bash
         run: |
           go test -coverprofile=coverage.out -covermode=count ./internal/...
-          go tool cover -func=coverage.out   # TEMP: per-function coverage to diagnose Linux vs local gap
           total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
           echo "----- total coverage: ${total}% (min ${COVERAGE_MIN}%) -----"
           if awk "BEGIN{exit !($total < $COVERAGE_MIN)}"; then
@@ -189,3 +188,12 @@ jobs:
       - name: Build (creates dist/ for the Go embed)
         run: npx vite build --mode production
         working-directory: gui/frontend
+
+      # Lint the Go GUI package HERE (not in the go job): gui/main.go embeds
+      # frontend/dist via //go:embed, which only exists after the vite build above.
+      # Linting it here means the embed resolves naturally — no placeholder tricks.
+      - name: golangci-lint (gui)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.13.2
+          args: ./gui/...

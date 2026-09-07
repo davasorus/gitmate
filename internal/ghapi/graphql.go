@@ -22,6 +22,7 @@ type PRDetail struct {
 	Checks    []PRDetailCheck
 }
 
+// PRDetailReview is a review on a PR (author + state + body) from the aggregated GraphQL query.
 type PRDetailReview struct {
 	Author string
 	State  string
@@ -38,11 +39,13 @@ type PRDetailThread struct {
 	Comments   []PRDetailThreadComment
 }
 
+// PRDetailThreadComment is one comment within a review thread.
 type PRDetailThreadComment struct {
 	Author string
 	Body   string
 }
 
+// PRDetailCheck is a CI check on a PR's head commit (name + status + conclusion).
 type PRDetailCheck struct {
 	Name       string
 	Status     string

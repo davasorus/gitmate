@@ -146,7 +146,7 @@ Correctly NOT gaps (already Tier 3): remote management (3.1), clone (3.2).
 ### 1.6 Fetch / pull  [x]
 - [x] engine: fetch
 - [x] engine: pull (--rebase and merge modes)
-- [ ] surface conflicts as a distinct state (feeds Tier 2 conflict UI) — errors surface as toast; structured conflict state is Tier 2.2
+- [x] conflicts surfaced as a distinct state (Conflicts view: ReadConflict/resolve/mark/commit-merge)
 - [x] CLI: `gitmate fetch`, `gitmate pull [--rebase]`
 - [x] GUI: fetch/pull buttons in status bar; ahead/behind refreshes on reload
 
@@ -349,12 +349,12 @@ a TWO-TRUNK model (`live` = production, `dev` = development) that everything els
 configures around. Covers CI quality, CD/release maturity, and process/governance.
 
 ### E-0 — Two-trunk foundation (do FIRST)  [x] DONE (dev-Branch live; branch protection = settings)
-- [ ] create `dev` branch; make it the default PR target
-- [ ] flow: feat/* → PR → dev → (accumulate) → PR dev → live (release). Emergencies:
+- [x] dev-Branch created (default PR target)
+- [x] flow in use: feat/* → PR → dev-Branch → PR → live. Emergencies:
       hotfix → live, then back-merge live → dev to prevent drift.
-- [ ] branch protection on BOTH trunks (require green CI + PR review); no direct pushes
-- [ ] enforce: production commits only via live; development only via dev
-- [ ] Dependabot retargeted to `dev` (never straight to production trunk)
+- [~] branch protection on both trunks — SETTINGS (user): require green CI + PR review, no direct pushes
+- [~] enforce trunks — SETTINGS (user), via branch protection above
+- [x] Dependabot retargeted to dev-Branch
 
 ### E-1 — CI quality (after E-0)  [x] DONE
 - [x] triggers: CI on all pushes + PRs; gate skips push run when branch has open PR; dorny/paths-filter skips go/frontend by change area; concurrency dedupes
@@ -368,7 +368,7 @@ configures around. Covers CI quality, CD/release maturity, and process/governanc
 ### E-2 — CD / release pipeline (the capstone)  [x] DONE (settings pending: release env + tag ruleset)
 - [x] GUI in releases via MATRIX wails3 build (release.yml, from Phase D)
 - [x] releases cut from live: semantic-release.yml triggers on push to live only
-- [ ] TWO release paths:
+- [x] TWO release paths (both built + working):
       (a) [~] manual tag path exists (release.yml on v*); YOU must add the TAG PROTECTION RULESET on v* in Settings
       (b) [x] automated: semantic-release on live → auto-version + notes grouped by type (.releaserc.json)
 - [~] gated approval: semantic-release.yml uses environment 'release' — YOU must add a required reviewer to that env in Settings
@@ -379,7 +379,7 @@ configures around. Covers CI quality, CD/release maturity, and process/governanc
 - [x] Dependabot auto-merge on green patch/minor: .github/workflows/dependabot-automerge.yml
 - [x] PR template (.github/pull_request_template.md) + CODEOWNERS (.github/CODEOWNERS — @davasorus owns .github + .releaserc)
 
-## TIER 3 / Phase F — documentation sweep  [ ]  (LAST — after A–E settle)
+## TIER 3 / Phase F — documentation sweep  [x] DONE
 Document the FINISHED system, not the moving one (that is why F is last). Written as if a
 reviewer will read it (public repo), even though the real audience is future-me. Living, not
 one-time.
@@ -395,26 +395,26 @@ ENFORCEMENT (machine): only that documentation EXISTS. CI fails if exported code
 comments. STE *style* is human-followed, not machine-validated.
 
 ### Front 1 — GitHub / repo docs
-- [ ] README (what it is, features, screenshots, install/build, usage) — the front door
-- [ ] CONTRIBUTING (build, two-trunk flow, commit conventions, local CI)
-- [ ] install/release docs incl. the Phase-D unsigned-binary note (Run anyway / verify checksums / build from source)
-- [ ] LICENSE (confirm one exists — public repo)
-- [ ] issue/PR templates, CODEOWNERS (overlaps E-3 governance)
+- [x] README — features, install (incl. unsigned-binary note), usage, architecture. (screenshots: optional, add later)
+- [x] CONTRIBUTING.md — build, two-trunk flow, conventional commits, local CI commands, release process
+- [x] install/release notes in README (run-anyway / verify checksums / build from source) + release process in CONTRIBUTING
+- [x] LICENSE — MIT
+- [x] PR template + CODEOWNERS (from E-3)
 
 ### Front 2 — Code docs (everything, enforced-to-exist)
-- [ ] godoc comment on EVERY exported Go symbol (internal/gitops, internal/ghapi, gui service)
-- [ ] frontend documented (components/props, context, shared-engine→service→views architecture)
-- [ ] ARCHITECTURE.md (extract the fixed decisions: shared engine, os/exec strategy, two frontends)
-- [ ] CI ENFORCES existence: linter rule requiring comments on exported symbols (e.g. revive /
+- [x] godoc on every exported symbol (gitops, ghapi, gui service) — 100%, verified by revive
+- [x] frontend documented — gui/frontend/README.md (service→context→views, components, bindings)
+- [x] ARCHITECTURE.md — shared engine, os/exec, REST+GraphQL, service layer, CI/CD, testing
+- [x] CI enforces exported-symbol comments via revive (.golangci.yml), scoped to cmd/internal/gui — verified catching gaps. (was: linter rule e.g. revive /
       golangci-lint exported-comment rule) — undocumented exports FAIL CI
 
 ### Front 3 — Process docs
-- [ ] build/dev setup (wails3 dev, GITHUB_TOKEN, generate-bindings, gotchas: Windows path casing, working-dir)
-- [ ] release process (E-2 two-path model: manual tag vs semantic-release; how to cut a release)
-- [ ] CI/CD explainer (what the workflows do, the two-trunk model)
+- [x] build/dev setup documented in CONTRIBUTING (wails3, GITHUB_TOKEN, bindings; Windows path casing noted)
+- [x] release process documented (CONTRIBUTING: two-path gated pipeline)
+- [x] CI/CD explained in CONTRIBUTING + ARCHITECTURE (two-trunk, gated release)
 
 ### Living
-- [ ] docs stay current: CI existence-check + PR expectation that docs update with code
+- [x] docs-stay-current: revive existence-check in CI; PR template reminds to update docs
 
 ---
 
@@ -496,7 +496,7 @@ comments. STE *style* is human-followed, not machine-validated.
   manual Reload or a GUI action forces reload(). Reload on window-focus covers the
   common terminal↔GUI bounce cheaply (a filesystem watcher on .git is the heavier,
   fuller fix). Surfaced when a CLI-concluded merge left the banner stale.
-- [ ] **GUI should set repoDir to the real repo root.** repoDir defaults to "." and the
+- [x] **repoDir pinned to repo root DONE** (gitops.RepoRoot). WAS: defaults to "." and the
   Wails process runs from gui/, so git commands work only because git walks *up* to
   find the repo. Path-relative filesystem commands (e.g. conflict resolve's
   `checkout --ours -- <path>`) broke because the pathspec resolved against gui/, not
@@ -506,5 +506,5 @@ comments. STE *style* is human-followed, not machine-validated.
   (CommitMerge = git commit --no-edit); banner auto-clears via reload after commit. WAS: banner should auto-clear when a merge concludes, and the
   Conflicts view should offer a "Commit merge" button once conflicts hit zero (right now
   it says "commit in Changes to finish" but nothing pulls you there).
-- [ ] Windows path casing (README.MD vs README.md) is a recurring gotcha — git pathspecs
+- [x] Windows path casing noted in CONTRIBUTING. (was docs-only) — git pathspecs
   are case-sensitive even on case-insensitive filesystems. Not code-fixable; note for docs.

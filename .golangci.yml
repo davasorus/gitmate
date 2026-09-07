@@ -7,3 +7,12 @@ linters:
     - errcheck
     - ineffassign
     - unused
+    - revive
+  settings:
+    revive:
+      rules:
+        # require doc comments on exported symbols (keeps godoc coverage from rotting)
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - disableStutteringCheck # allow "Client" methods etc. without name-stutter nags

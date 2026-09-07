@@ -180,12 +180,18 @@ export interface PRDetail {
     "Checks": PRDetailCheck[] | null;
 }
 
+/**
+ * PRDetailCheck is a CI check on a PR's head commit (name + status + conclusion).
+ */
 export interface PRDetailCheck {
     "Name": string;
     "Status": string;
     "Conclusion": string;
 }
 
+/**
+ * PRDetailReview is a review on a PR (author + state + body) from the aggregated GraphQL query.
+ */
 export interface PRDetailReview {
     "Author": string;
     "State": string;
@@ -204,6 +210,9 @@ export interface PRDetailThread {
     "Comments": PRDetailThreadComment[] | null;
 }
 
+/**
+ * PRDetailThreadComment is one comment within a review thread.
+ */
 export interface PRDetailThreadComment {
     "Author": string;
     "Body": string;
@@ -278,6 +287,9 @@ export interface Reviewer {
     "Login": string;
 }
 
+/**
+ * Step is a single step within an Actions job (name + status/conclusion).
+ */
 export interface Step {
     "Name": string;
     "Status": string;
@@ -285,6 +297,9 @@ export interface Step {
     "Number": number;
 }
 
+/**
+ * StepLog is the parsed log output for one step of a job (name + its log lines).
+ */
 export interface StepLog {
     "Name": string;
     "Text": string;
