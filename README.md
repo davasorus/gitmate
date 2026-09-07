@@ -1,7 +1,7 @@
 # gitmate
 
-A git operations client available as both a
-command-line tool and a desktop GUI, sharing one Go engine underneath.
+A git operations client available as both a command-line tool and a desktop GUI,
+sharing one Go engine underneath.
 
 gitmate is a *git-operations* client (branches, commits, merges, PRs, releases, CI), not a
 code editor. It wraps `git` and the GitHub API behind a single engine that both front-ends call,
@@ -115,4 +115,4 @@ for the development workflow.
 
 ## License
 
-See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
