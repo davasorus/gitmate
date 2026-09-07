@@ -26,7 +26,7 @@ jobs:
       new_release_published: ${{ steps.semrel.outputs.new_release_published }}
       version: ${{ steps.semrel.outputs.new_release_version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -75,7 +75,7 @@ jobs:
           NOTES
       - name: Upload proposal
         if: steps.semrel.outputs.new_release_published == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-meta
           path: |
@@ -97,17 +97,21 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       - uses: ./.github/actions/setup-go
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
-          args: build --clean --snapshot
-      - uses: actions/upload-artifact@v4
+          args: release --clean --snapshot --skip=publish
+      # archives are uniquely named per platform (…_linux_amd64.tar.gz etc.)
+      - uses: actions/upload-artifact@v7
         with:
           name: cli-artifacts
-          path: dist/**/gitmate*
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*checksums*
           if-no-files-found: warn
 
   build-gui:
@@ -118,11 +122,11 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: "1.25"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
       - name: Linux GUI deps
@@ -138,7 +142,7 @@ jobs:
       - name: Build GUI
         run: wails3 build
         working-directory: gui
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: gui-${{ matrix.os }}
           path: gui/bin/*
@@ -149,16 +153,29 @@ jobs:
     needs: [propose, build-cli, build-gui]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with: { path: artifacts }
       - name: Assemble assets
         run: |
           mkdir -p out
-          find artifacts -type f \( -name 'gitmate*' -o -name '*.exe' \) -exec cp {} out/ \; || true
+          # CLI archives: already uniquely named per platform — copy straight in.
+          find artifacts/cli-artifacts -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name '*checksums*' \) -exec cp {} out/ \; || true
+          # GUI: one binary per OS, same base name → rename per-OS to avoid collisions.
+          for d in artifacts/gui-*; do
+            [ -d "$d" ] || continue
+            osname="$(basename "$d" | sed 's/^gui-//')"       # e.g. ubuntu-latest
+            f="$(find "$d" -type f | head -1)"
+            [ -n "$f" ] || continue
+            ext="${f##*.}"
+            case "$f" in
+              *.exe) cp "$f" "out/gitmate-gui-${osname}.exe" ;;
+              *)     cp "$f" "out/gitmate-gui-${osname}" ;;
+            esac
+          done
           ls -la out || true
       - name: Create the single immutable release
         env:
