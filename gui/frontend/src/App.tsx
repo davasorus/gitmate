@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useGit, cls, View } from "./context";
 import { Changes } from "./views/Changes";
 import { History } from "./views/History";
@@ -12,6 +13,24 @@ import { Remotes } from "./views/Remotes";
 import { Labels } from "./views/Labels";
 import { Releases } from "./views/Releases";
 import { Actions } from "./views/Actions";
+
+// Tier-1 jumps live in the top bar; everything else is under "More".
+const TIER1: { id: View; label: string }[] = [
+  { id: "changes", label: "Changes" },
+  { id: "prs", label: "Pull Requests" },
+  { id: "branches", label: "Branches" },
+  { id: "actions", label: "Actions" },
+];
+const MORE: { id: View; label: string }[] = [
+  { id: "history", label: "History" },
+  { id: "issues", label: "Issues" },
+  { id: "releases", label: "Releases" },
+  { id: "labels", label: "Labels" },
+  { id: "stashes", label: "Stashes" },
+  { id: "tags", label: "Tags" },
+  { id: "reflog", label: "Reflog" },
+  { id: "remotes", label: "Remotes" },
+];
 
 export default function App() {
   const {
@@ -38,7 +57,11 @@ export default function App() {
     conflicts,
   } = useGit();
 
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [showDir, setShowDir] = useState(false);
+
   const changed = (status?.Changes?.length ?? 0) + (status?.Untracked?.length ?? 0);
+  const inProgress = mergeInProgress || rebaseInProgress || cherryPickInProgress || revertInProgress;
 
   const doPush = () => run("push", () => service.Push(true), "pushed");
   const doFetch = () => run("fetch", () => service.Fetch(), "fetched");
@@ -58,102 +81,179 @@ export default function App() {
   const doRebaseAbort = () => run("rebase-abort", () => service.RebaseAbort(), "rebase aborted");
   const doCherryContinue = () =>
     run("cp-continue", () => service.CherryPickContinue(), "cherry-pick continued");
-  const doCherryAbort = () =>
-    run("cp-abort", () => service.CherryPickAbort(), "cherry-pick aborted");
+  const doCherryAbort = () => run("cp-abort", () => service.CherryPickAbort(), "cherry-pick aborted");
   const doRevertContinue = () =>
     run("rv-continue", () => service.RevertContinue(), "revert continued");
   const doRevertAbort = () => run("rv-abort", () => service.RevertAbort(), "revert aborted");
 
-  const NavItem = ({ id, label, badge }: { id: View; label: string; badge?: number }) => (
-    <button
-      onClick={() => setView(id)}
-      className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-sm ${view === id ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}
-    >
-      <span>{label}</span>
-      {badge ? <span className="rounded bg-border px-1.5 text-xs">{badge}</span> : null}
-    </button>
-  );
+  const badgeFor = (id: View): number | undefined => {
+    switch (id) {
+      case "changes":
+        return changed || undefined;
+      case "prs":
+        return prs.length || undefined;
+      case "branches":
+        return branches.length || undefined;
+      case "issues":
+        return issues.length || undefined;
+      case "stashes":
+        return stashes.length || undefined;
+      case "tags":
+        return tags.length || undefined;
+      default:
+        return undefined;
+    }
+  };
+
+  const Jump = ({ id, label }: { id: View; label: string }) => {
+    const badge = badgeFor(id);
+    const active = view === id;
+    return (
+      <button
+        onClick={() => {
+          setView(id);
+          setMoreOpen(false);
+        }}
+        className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
+          active
+            ? "bg-[var(--color-accent-dim)] text-[var(--color-foreground)]"
+            : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+        }`}
+      >
+        {label}
+        {badge != null && (
+          <span className="font-mono text-[10.5px] text-[var(--color-faint)]">{badge}</span>
+        )}
+      </button>
+    );
+  };
 
   return (
-    <div className="flex h-screen font-mono text-foreground">
-      {/* SIDEBAR */}
-      <aside className="flex w-60 shrink-0 flex-col border-r border-border bg-[var(--color-sidebar)]">
-        <div className="border-b border-border p-3">
-          <div className="text-sm font-bold">gitmate</div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {status?.Detached ? "detached HEAD" : (status?.Branch ?? "…")}
-            {status?.Upstream && (
-              <span className="ml-1">
-                <span className="text-[var(--color-ahead)]">↑{status.Ahead}</span>{" "}
-                <span className="text-[var(--color-behind)]">↓{status.Behind}</span>
-              </span>
-            )}
-          </div>
-          <div className="mt-1 text-xs">
-            {changed ? (
-              <span className="text-[var(--color-modified)]">{changed} changed</span>
-            ) : (
-              <span className="text-muted-foreground">clean</span>
-            )}
-          </div>
+    <div className="flex h-screen flex-col text-[var(--color-foreground)]">
+      {/* ---------------- TOP BAR ---------------- */}
+      <header className="flex items-center gap-3.5 border-b border-border px-4 py-2.5">
+        <div className="grid h-[22px] w-[22px] place-items-center rounded-md bg-gradient-to-br from-[var(--color-accent)] to-[#5a6ad0] text-[12px] font-semibold text-white">
+          g
         </div>
-        <nav className="flex-1 overflow-y-auto py-1">
-          <NavItem id="changes" label="Changes" badge={changed} />
-          {(mergeInProgress || rebaseInProgress || cherryPickInProgress || revertInProgress) && (
-            <NavItem id="conflicts" label="Conflicts" badge={conflicts.length} />
-          )}
-          <NavItem id="history" label="History" />
-          <NavItem id="branches" label="Branches" badge={branches.length} />
-          <NavItem id="prs" label="Pull Requests" badge={prs.length} />
-          <NavItem id="issues" label="Issues" badge={issues.length} />
-          <NavItem id="labels" label="Labels" />
-          <NavItem id="stashes" label="Stashes" badge={stashes.length} />
-          <NavItem id="tags" label="Tags" badge={tags.length} />
-          <NavItem id="releases" label="Releases" />
-          <NavItem id="actions" label="Actions" />
-          <NavItem id="reflog" label="Reflog" />
-          <NavItem id="remotes" label="Remotes" />
-        </nav>
-        <div className="border-t border-border p-2">
-          <div className="mb-1 flex gap-1">
-            <input
-              value={dir}
-              onChange={(e) => setDir(e.target.value)}
-              placeholder="repo path (.)"
-              className={`${cls.input} w-full py-1 text-xs`}
-            />
-          </div>
-          <div className="flex gap-1">
-            <button onClick={reload} disabled={!!busy} className={`${cls.btnSm} flex-1`}>
-              Reload
-            </button>
-            {undoLabel && (
-              <button
-                onClick={doUndo}
-                disabled={!!busy}
-                className={`${cls.btnSm} flex-1 text-[var(--color-modified)]`}
-                title={`Undo: ${undoLabel}`}
-              >
-                {busy === "undo" ? "…" : "Undo"}
-              </button>
-            )}
-            <button onClick={doFetch} disabled={!!busy} className={`${cls.btnSm} flex-1`}>
-              {busy === "fetch" ? "…" : "Fetch"}
-            </button>
-            <button onClick={doPull} disabled={!!busy} className={`${cls.btnSm} flex-1`}>
-              {busy === "pull" ? "…" : "Pull"}
-            </button>
-            <button onClick={doPush} disabled={!!busy} className={`${cls.btnSm} flex-1`}>
-              {busy === "push" ? "…" : "Push"}
-            </button>
-          </div>
-        </div>
-      </aside>
+        <button
+          onClick={() => setShowDir((v) => !v)}
+          className="flex items-center gap-1.5 text-[13.5px] font-medium hover:opacity-80"
+          title="change repo"
+        >
+          <span className="text-[var(--color-accent)]">⑂</span>
+          {status?.Detached ? "detached HEAD" : (status?.Branch ?? "…")}
+        </button>
+        {status?.Upstream && (
+          <span className="font-mono text-[11.5px] text-[var(--color-faint)]">
+            <span className="text-[var(--color-added)]">↑{status.Ahead}</span> ↓{status.Behind}
+          </span>
+        )}
+        {showDir && (
+          <input
+            autoFocus
+            value={dir}
+            onChange={(e) => setDir(e.target.value)}
+            onBlur={() => setShowDir(false)}
+            placeholder="repo path (.)"
+            className={`${cls.input} w-64 py-1 text-xs`}
+          />
+        )}
 
-      {/* MAIN */}
-      <main className="flex-1 overflow-y-auto">
+        {/* jumps */}
+        <nav className="ml-2 flex items-center gap-0.5">
+          {TIER1.map((t) => (
+            <Jump key={t.id} {...t} />
+          ))}
+          {inProgress && <Jump id="conflicts" label="Conflicts" />}
+          <div className="relative">
+            <button
+              onClick={() => setMoreOpen((v) => !v)}
+              className={`rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
+                MORE.some((m) => m.id === view)
+                  ? "bg-[var(--color-accent-dim)] text-[var(--color-foreground)]"
+                  : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+              }`}
+            >
+              More…
+            </button>
+            {moreOpen && (
+              <div className="absolute left-0 top-full z-20 mt-1 w-44 rounded-lg border border-border bg-[var(--color-background)] p-1 shadow-xl">
+                {MORE.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => {
+                      setView(m.id);
+                      setMoreOpen(false);
+                    }}
+                    className={`flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-[13px] ${
+                      view === m.id
+                        ? "bg-[var(--color-accent-dim)] text-[var(--color-foreground)]"
+                        : "text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    }`}
+                  >
+                    {m.label}
+                    {badgeFor(m.id) != null && (
+                      <span className="font-mono text-[10.5px] text-[var(--color-faint)]">
+                        {badgeFor(m.id)}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </nav>
+
+        <div className="flex-1" />
+
+        {/* right: undo + sync */}
+        <div className="flex items-center gap-1.5">
+          {undoLabel && (
+            <button
+              onClick={doUndo}
+              disabled={!!busy}
+              title={`Undo: ${undoLabel}`}
+              className="rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-[var(--color-modified)] hover:bg-[var(--color-muted)] disabled:opacity-40"
+            >
+              {busy === "undo" ? "…" : "↩ Undo"}
+            </button>
+          )}
+          <button
+            onClick={reload}
+            disabled={!!busy}
+            className="rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40"
+          >
+            Reload
+          </button>
+          <button
+            onClick={doFetch}
+            disabled={!!busy}
+            className="rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40"
+          >
+            {busy === "fetch" ? "…" : "Fetch"}
+          </button>
+          <button
+            onClick={doPull}
+            disabled={!!busy}
+            className="rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40"
+          >
+            {busy === "pull" ? "…" : "Pull"}
+          </button>
+          <button
+            onClick={doPush}
+            disabled={!!busy}
+            className="rounded-lg bg-[var(--color-accent)] px-2.5 py-1.5 text-[12px] font-semibold text-white hover:opacity-90 disabled:opacity-40"
+          >
+            {busy === "push" ? "…" : `Push${status?.Ahead ? " ↑" + status.Ahead : ""}`}
+          </button>
+        </div>
+      </header>
+
+      {/* ---------------- MAIN ---------------- */}
+      <main className="min-h-0 flex-1 overflow-y-auto">
+        {/* in-progress banners */}
         {mergeInProgress && (
-          <div className="m-3 rounded-md border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
+          <div className="m-3 rounded-lg border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
             <button
               onClick={() => setView("conflicts")}
               className="font-semibold text-[var(--color-conflict)] hover:underline"
@@ -162,8 +262,8 @@ export default function App() {
             </button>
             {conflicts.length ? (
               <div className="mt-1 text-xs text-muted-foreground">
-                {conflicts.length} conflicted file(s): {conflicts.join(", ")}. Resolve (edit + stage
-                in Changes), then commit — or abort.
+                {conflicts.length} conflicted file(s): {conflicts.join(", ")}. Resolve, then commit —
+                or abort.
               </div>
             ) : (
               <div className="mt-1 text-xs text-muted-foreground">
@@ -176,51 +276,28 @@ export default function App() {
           </div>
         )}
         {rebaseInProgress && (
-          <div className="m-3 rounded-md border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
+          <div className="m-3 rounded-lg border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
             <button
               onClick={() => setView("conflicts")}
               className="font-semibold text-[var(--color-conflict)] hover:underline"
             >
               Rebase in progress — resolve conflicts →
             </button>
-            {conflicts.length ? (
-              <div className="mt-1 text-xs text-muted-foreground">
-                {conflicts.length} conflicted file(s): {conflicts.join(", ")}. Resolve (Take
-                ours/theirs), then Continue.
-              </div>
-            ) : (
-              <div className="mt-1 text-xs text-muted-foreground">
-                No conflicts — Continue to replay the next commit, or Abort.
-              </div>
-            )}
             <div className="mt-2 flex gap-2">
               <button onClick={doRebaseContinue} disabled={!!busy} className={cls.btnSm}>
                 {busy === "rebase-continue" ? "…" : "Continue"}
               </button>
               <button onClick={doRebaseAbort} disabled={!!busy} className={cls.btnSm}>
-                {busy === "rebase-abort" ? "…" : "Abort rebase"}
+                {busy === "rebase-abort" ? "…" : "Abort"}
               </button>
             </div>
           </div>
         )}
         {cherryPickInProgress && (
-          <div className="m-3 rounded-md border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
-            <button
-              onClick={() => setView("conflicts")}
-              className="font-semibold text-[var(--color-conflict)] hover:underline"
-            >
-              Cherry-pick in progress — resolve conflicts →
-            </button>
-            {conflicts.length ? (
-              <div className="mt-1 text-xs text-muted-foreground">
-                {conflicts.length} conflicted file(s): {conflicts.join(", ")}. Resolve, then
-                Continue.
-              </div>
-            ) : (
-              <div className="mt-1 text-xs text-muted-foreground">
-                No conflicts — Continue to finish, or Abort.
-              </div>
-            )}
+          <div className="m-3 rounded-lg border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
+            <span className="font-semibold text-[var(--color-conflict)]">
+              Cherry-pick in progress
+            </span>
             <div className="mt-2 flex gap-2">
               <button onClick={doCherryContinue} disabled={!!busy} className={cls.btnSm}>
                 {busy === "cp-continue" ? "…" : "Continue"}
@@ -232,23 +309,8 @@ export default function App() {
           </div>
         )}
         {revertInProgress && (
-          <div className="m-3 rounded-md border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
-            <button
-              onClick={() => setView("conflicts")}
-              className="font-semibold text-[var(--color-conflict)] hover:underline"
-            >
-              Revert in progress — resolve conflicts →
-            </button>
-            {conflicts.length ? (
-              <div className="mt-1 text-xs text-muted-foreground">
-                {conflicts.length} conflicted file(s): {conflicts.join(", ")}. Resolve, then
-                Continue.
-              </div>
-            ) : (
-              <div className="mt-1 text-xs text-muted-foreground">
-                No conflicts — Continue to finish, or Abort.
-              </div>
-            )}
+          <div className="m-3 rounded-lg border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
+            <span className="font-semibold text-[var(--color-conflict)]">Revert in progress</span>
             <div className="mt-2 flex gap-2">
               <button onClick={doRevertContinue} disabled={!!busy} className={cls.btnSm}>
                 {busy === "rv-continue" ? "…" : "Continue"}
@@ -259,13 +321,15 @@ export default function App() {
             </div>
           </div>
         )}
+
         {toast && (
           <div
-            className={`m-3 rounded-md px-3 py-2 text-sm ${toast.kind === "ok" ? "bg-[var(--color-added)]/20 text-[var(--color-added)]" : "bg-[var(--color-removed)]/20 text-[var(--color-removed)]"}`}
+            className={`m-3 rounded-lg px-3 py-2 text-sm ${toast.kind === "ok" ? "bg-[var(--color-added)]/20 text-[var(--color-added)]" : "bg-[var(--color-removed)]/20 text-[var(--color-removed)]"}`}
           >
             {toast.msg}
           </div>
         )}
+
         <div className="p-4">
           {view === "changes" && <Changes />}
           {view === "history" && <History />}
