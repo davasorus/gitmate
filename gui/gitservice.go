@@ -69,6 +69,12 @@ func (g *GitService) Undo() error {
 
 // NewGitService starts pointed at the given directory ("." by default).
 func NewGitService(dir string) *GitService {
+	// The repo directory is a persisted setting (first-class). Prefer the saved
+	// one; fall back to the launch dir only if nothing is saved yet.
+	saved := loadSettings().RepoDir
+	if saved != "" {
+		return &GitService{repoDir: saved}
+	}
 	if dir == "" {
 		dir = "."
 	}
@@ -79,9 +85,12 @@ func NewGitService(dir string) *GitService {
 
 // SetRepoDir lets the frontend re-point the service at another repo.
 func (g *GitService) SetRepoDir(dir string) {
-	if dir != "" {
-		g.repoDir = gitops.RepoRoot(dir)
+	if dir == "" {
+		return
 	}
+	g.repoDir = gitops.RepoRoot(dir)
+	// persist as the first-class setting so it survives relaunch
+	saveSettings(appSettings{RepoDir: g.repoDir})
 }
 
 // IsRepo reports whether the current repoDir is a git working tree.
