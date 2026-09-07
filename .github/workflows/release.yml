@@ -23,17 +23,18 @@ jobs:
   propose:
     runs-on: ubuntu-latest
     outputs:
-      new_release_published: ${{ steps.semrel.outputs.new_release_published }}
-      version: ${{ steps.semrel.outputs.new_release_version }}
+      # true when there's something to release (either path)
+      release: ${{ steps.collect.outputs.release }}
+      version: ${{ steps.collect.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      # semantic-release in DRY-RUN. This action exposes the computed version and
-      # the full rendered release notes as OUTPUTS (reliable — no file writing).
+      # ---- LIVE path: semantic-release DECIDES the version + notes (dry run) ----
       - name: Compute version + notes (dry run, creates nothing)
         id: semrel
+        if: github.ref == 'refs/heads/live'
         uses: cycjimmy/semantic-release-action@v6
         with:
           dry_run: true
@@ -45,36 +46,49 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Write the PROPOSAL as markdown to the run summary — THIS is what you review.
-      - name: Show release proposal
-        if: steps.semrel.outputs.new_release_published == 'true'
-        run: |
-          {
-            echo "# 🚀 Release proposal"
-            echo ""
-            echo "**Proposed version:** \`v${{ steps.semrel.outputs.new_release_version }}\`"
-            echo ""
-            echo "## Release notes (what will be published)"
-            echo ""
-            cat <<'NOTES'
-          ${{ steps.semrel.outputs.new_release_notes }}
-          NOTES
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Nothing to release
-        if: steps.semrel.outputs.new_release_published != 'true'
-        run: echo "No release-worthy commits since the last tag — nothing to propose." >> "$GITHUB_STEP_SUMMARY"
-
-      # Persist version + notes for the later stages (after approval).
-      - name: Save proposal
-        if: steps.semrel.outputs.new_release_published == 'true'
+      - name: Save proposal (live path)
+        if: github.ref == 'refs/heads/live' && steps.semrel.outputs.new_release_published == 'true'
         run: |
           echo "${{ steps.semrel.outputs.new_release_version }}" > release-version.txt
           cat <<'NOTES' > release-notes.md
           ${{ steps.semrel.outputs.new_release_notes }}
           NOTES
+
+      # ---- TAG path: version IS the tag; generate grouped notes for its range ----
+      - name: Compute notes from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          echo "$VER" > release-version.txt
+          npm install -g conventional-changelog-cli conventional-changelog-conventionalcommits@9
+          # grouped notes for just the latest tag's commit range
+          conventional-changelog -p conventionalcommits -r 2 --skip-unstable > release-notes.md || true
+          if [ ! -s release-notes.md ]; then echo "Release ${GITHUB_REF_NAME}" > release-notes.md; fi
+
+      # ---- collect: unify both paths into outputs + the reviewable proposal ----
+      - name: Collect + show proposal
+        id: collect
+        run: |
+          if [ -f release-version.txt ]; then
+            VER="$(cat release-version.txt)"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$VER" >> "$GITHUB_OUTPUT"
+            {
+              echo "# 🚀 Release proposal"
+              echo ""
+              echo "**Proposed version:** \`v${VER}\`"
+              echo ""
+              echo "## Release notes (what will be published)"
+              echo ""
+              cat release-notes.md
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "No release-worthy commits since the last tag — nothing to propose." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload proposal
-        if: steps.semrel.outputs.new_release_published == 'true'
+        if: steps.collect.outputs.release == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: release-meta
@@ -86,7 +100,7 @@ jobs:
   # ---- GATE: you review the proposal above, then approve. Nothing built yet. ----
   gate:
     needs: propose
-    if: needs.propose.outputs.new_release_published == 'true'
+    if: needs.propose.outputs.release == 'true'
     runs-on: ubuntu-latest
     environment: release # required reviewer here → pauses for your approval
     steps:
