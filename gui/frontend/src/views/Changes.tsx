@@ -174,12 +174,20 @@ export function Changes() {
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <input
+      <div className="flex items-start gap-2">
+        <textarea
           value={commitMsg}
           onChange={(e) => setCommitMsg(e.target.value)}
-          placeholder="commit message (stages all)"
-          className={`${cls.input} flex-1`}
+          onKeyDown={(e) => {
+            // Ctrl/Cmd+Enter commits; plain Enter inserts a newline (subject + body)
+            if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && commitMsg.trim() && !busy) {
+              e.preventDefault();
+              doCommit();
+            }
+          }}
+          placeholder={"commit message (stages all)\nsubject line, then blank line, then body\n⌘/Ctrl+Enter to commit"}
+          rows={3}
+          className={`${cls.input} flex-1 resize-y font-mono`}
         />
         <button onClick={doCommit} disabled={!!busy || !commitMsg.trim()} className={cls.btn}>
           {busy === "commit" ? "…" : "Commit"}
