@@ -18,7 +18,7 @@ import type {
 type StateFilter = "open" | "closed" | "all";
 
 export function PullRequests() {
-  const { branches, busy, run, service, flash, setBusy } = useGit();
+  const { branches, busy, run, service, flash, setBusy, dir } = useGit();
   const [prTitle, setPrTitle] = useState("");
   const [prHead, setPrHead] = useState("");
   const [prBase, setPrBase] = useState("live");
@@ -73,7 +73,9 @@ export function PullRequests() {
         /* non-fatal */
       }
     })();
-  }, []);
+    // re-run when the repo dir resolves/changes, so the template actually loads
+    // into the form (mount-only would miss it if dir wasn't set yet).
+  }, [dir]);
 
   const doPR = () =>
     run(
@@ -81,7 +83,13 @@ export function PullRequests() {
       async () => {
         let title = prTitle.trim();
         if (!title) title = (await service.DefaultPRTitle(prHead)) || prHead;
-        const url = await service.CreatePR(title, prBody, prHead, prBase);
+        // Fallback: if the body is still empty (mount-time prefill missed because
+        // the repo dir wasn't resolved yet), pull the PR template now.
+        let body = prBody;
+        if (!body.trim()) {
+          body = (await service.PRTemplate()) || "";
+        }
+        const url = await service.CreatePR(title, body, prHead, prBase);
         setPrResult(url);
         setPrTitle("");
         await reload();
