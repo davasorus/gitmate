@@ -50,6 +50,7 @@ export default function App() {
     service,
     reload,
     mergeInProgress,
+    notRepo,
     undoLabel,
     rebaseInProgress,
     cherryPickInProgress,
@@ -58,6 +59,26 @@ export default function App() {
   } = useGit();
 
   const [moreOpen, setMoreOpen] = useState(false);
+  const [recent, setRecent] = useState<string[]>([]);
+  const [recentOpen, setRecentOpen] = useState(false);
+
+  // native folder picker → point the app at a repo, remember it
+  const openRepo = async () => {
+    const path = await service.SelectDirectory();
+    if (!path) return;
+    setDir(path);
+    await service.AddRecentRepo(path);
+    setRecentOpen(false);
+  };
+  const pickRecent = async (path: string) => {
+    setDir(path);
+    await service.AddRecentRepo(path);
+    setRecentOpen(false);
+  };
+  const loadRecent = async () => {
+    setRecent((await service.RecentRepos()) ?? []);
+    setRecentOpen((v) => !v);
+  };
   const [showDir, setShowDir] = useState(false);
 
   const changed = (status?.Changes?.length ?? 0) + (status?.Untracked?.length ?? 0);
@@ -161,6 +182,45 @@ export default function App() {
           />
         )}
 
+        <div className="relative">
+          <button
+            onClick={openRepo}
+            className="rounded-lg border border-border px-2.5 py-1.5 text-[12px] font-medium text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)]"
+            title="open a repository folder"
+          >
+            Open…
+          </button>
+        </div>
+        <div className="relative">
+          <button
+            onClick={loadRecent}
+            className="rounded-lg px-1.5 py-1.5 text-[12px] text-[var(--color-faint)] hover:bg-[var(--color-muted)]"
+            title="recent repositories"
+          >
+            ▾
+          </button>
+          {recentOpen && (
+            <div className="absolute left-0 top-full z-20 mt-1 w-80 rounded-lg border border-border bg-[var(--color-background)] p-1 shadow-xl">
+              {recent.length === 0 ? (
+                <div className="px-2.5 py-2 text-[12px] text-[var(--color-faint)]">
+                  no recent repositories
+                </div>
+              ) : (
+                recent.map((rp) => (
+                  <button
+                    key={rp}
+                    onClick={() => pickRecent(rp)}
+                    className="block w-full truncate rounded-md px-2.5 py-1.5 text-left font-mono text-[11.5px] text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] hover:text-[var(--color-foreground)]"
+                    title={rp}
+                  >
+                    {rp}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         {/* jumps */}
         <nav className="ml-2 flex items-center gap-0.5">
           {TIER1.map((t) => (
@@ -253,6 +313,20 @@ export default function App() {
 
       {/* ---------------- MAIN ---------------- */}
       <main className="min-h-0 flex-1 overflow-y-auto">
+        {notRepo && (
+          <div className="m-3 rounded-lg border border-border bg-[var(--color-card)] px-4 py-3 text-sm">
+            <div className="font-semibold text-[var(--color-modified)]">Not a git repository</div>
+            <div className="mt-1 text-[var(--color-muted-foreground)]">
+              The folder <span className="font-mono">{dir || "."}</span> isn't a git repo.
+            </div>
+            <button
+              onClick={openRepo}
+              className="mt-2 rounded-lg bg-[var(--color-accent)] px-3 py-1.5 text-[12.5px] font-semibold text-white hover:opacity-90"
+            >
+              Open repository…
+            </button>
+          </div>
+        )}
         {/* in-progress banners */}
         {mergeInProgress && (
           <div className="m-3 rounded-lg border border-[var(--color-conflict)] bg-[var(--color-conflict)]/10 px-3 py-2 text-sm">
@@ -333,19 +407,19 @@ export default function App() {
         )}
 
         <div className="p-4">
-          {view === "changes" && <Changes />}
-          {view === "history" && <History />}
-          {view === "branches" && <Branches />}
-          {view === "prs" && <PullRequests />}
-          {view === "issues" && <Issues />}
-          {view === "stashes" && <Stashes />}
-          {view === "conflicts" && <Conflicts />}
-          {view === "tags" && <Tags />}
-          {view === "remotes" && <Remotes />}
-          {view === "labels" && <Labels />}
-          {view === "releases" && <Releases />}
-          {view === "actions" && <Actions />}
-          {view === "reflog" && <Reflog />}
+          {!notRepo && view === "changes" && <Changes />}
+          {!notRepo && view === "history" && <History />}
+          {!notRepo && view === "branches" && <Branches />}
+          {!notRepo && view === "prs" && <PullRequests />}
+          {!notRepo && view === "issues" && <Issues />}
+          {!notRepo && view === "stashes" && <Stashes />}
+          {!notRepo && view === "conflicts" && <Conflicts />}
+          {!notRepo && view === "tags" && <Tags />}
+          {!notRepo && view === "remotes" && <Remotes />}
+          {!notRepo && view === "labels" && <Labels />}
+          {!notRepo && view === "releases" && <Releases />}
+          {!notRepo && view === "actions" && <Actions />}
+          {!notRepo && view === "reflog" && <Reflog />}
         </div>
       </main>
     </div>

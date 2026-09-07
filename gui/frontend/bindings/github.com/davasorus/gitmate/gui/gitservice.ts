@@ -37,6 +37,13 @@ export function AddLabels($number: number, labels: string[] | null): $Cancellabl
 }
 
 /**
+ * AddRecentRepo records a repo path as most-recently-opened (deduped, capped).
+ */
+export function AddRecentRepo(path: string): $CancellablePromise<void> {
+    return $Call.ByID(2365701143, path);
+}
+
+/**
  * AddRemote adds a remote.
  */
 export function AddRemote(name: string, url: string): $CancellablePromise<void> {
@@ -313,6 +320,13 @@ export function InteractiveRebaseTodo(base: string): $CancellablePromise<gitops$
 }
 
 /**
+ * IsRepo reports whether the current repoDir is a git working tree.
+ */
+export function IsRepo(): $CancellablePromise<boolean> {
+    return $Call.ByID(1945612541);
+}
+
+/**
  * Issues returns issues by state (REST).
  */
 export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | null> {
@@ -582,6 +596,13 @@ export function RebaseInProgress(): $CancellablePromise<boolean> {
 }
 
 /**
+ * RecentRepos returns the recently opened repository paths, most recent first.
+ */
+export function RecentRepos(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(643539571);
+}
+
+/**
  * Reflog returns reflog entries.
  */
 export function Reflog(limit: number): $CancellablePromise<gitops$0.ReflogEntry[] | null> {
@@ -727,6 +748,14 @@ export function RunJobGraph(runID: number): $CancellablePromise<ghapi$0.JobNode[
  */
 export function RunJobs(runID: number): $CancellablePromise<ghapi$0.Job[] | null> {
     return $Call.ByID(2818376490, runID);
+}
+
+/**
+ * SelectDirectory opens the native OS folder picker and returns the chosen path
+ * (empty string if the user cancels). Used by the "Open repository" flow.
+ */
+export function SelectDirectory(): $CancellablePromise<string> {
+    return $Call.ByID(3892089408);
 }
 
 /**
