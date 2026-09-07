@@ -238,6 +238,118 @@ func (g *GitService) RemoveLabel(number int, label string) error {
 	return client.RemoveLabel(ctx, owner, repo, number, label)
 }
 
+// AddAssignees adds assignees to an issue or PR.
+func (g *GitService) AddAssignees(number int, users []string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.AddAssignees(ctx, owner, repo, number, users)
+}
+
+// RemoveAssignees removes assignees from an issue or PR.
+func (g *GitService) RemoveAssignees(number int, users []string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.RemoveAssignees(ctx, owner, repo, number, users)
+}
+
+// ListMilestones returns the repository's milestones by state.
+func (g *GitService) ListMilestones(state string) ([]ghapi.Milestone, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListMilestones(ctx, owner, repo, state)
+}
+
+// SetMilestone assigns an issue/PR to a milestone (0 clears it).
+func (g *GitService) SetMilestone(number, milestone int) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.SetMilestone(ctx, owner, repo, number, milestone)
+}
+
+// EditIssueComment edits an issue/PR comment by ID.
+func (g *GitService) EditIssueComment(commentID int64, body string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.EditIssueComment(ctx, owner, repo, commentID, body)
+}
+
+// DeleteIssueComment deletes an issue/PR comment by ID.
+func (g *GitService) DeleteIssueComment(commentID int64) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.DeleteIssueComment(ctx, owner, repo, commentID)
+}
+
+// LockConversation locks an issue/PR conversation (reason optional).
+func (g *GitService) LockConversation(number int, reason string) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.LockConversation(ctx, owner, repo, number, reason)
+}
+
+// UnlockConversation unlocks an issue/PR conversation.
+func (g *GitService) UnlockConversation(number int) error {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	return client.UnlockConversation(ctx, owner, repo, number)
+}
+
 // ListReleases returns the repository's releases.
 func (g *GitService) ListReleases() ([]ghapi.Release, error) {
 	ctx := context.Background()

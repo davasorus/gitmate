@@ -14,6 +14,7 @@ export type {
     JobLog,
     JobNode,
     Label,
+    Milestone,
     PR,
     PRDetail,
     PRDetailCheck,

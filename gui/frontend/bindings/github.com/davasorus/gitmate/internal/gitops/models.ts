@@ -163,6 +163,9 @@ export enum LineKind {
      */
     $zero = "",
 
+    /**
+     * Diff line kinds.
+     */
     LineContext = "context",
     LineAdd = "add",
     LineRemove = "remove",

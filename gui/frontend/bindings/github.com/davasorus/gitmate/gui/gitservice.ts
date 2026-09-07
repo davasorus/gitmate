@@ -19,6 +19,13 @@ import * as ghapi$0 from "../internal/ghapi/models.js";
 import * as gitops$0 from "../internal/gitops/models.js";
 
 /**
+ * AddAssignees adds assignees to an issue or PR.
+ */
+export function AddAssignees($number: number, users: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(3461485028, $number, users);
+}
+
+/**
  * AddLabels adds labels to an issue or PR.
  */
 export function AddLabels($number: number, labels: string[] | null): $CancellablePromise<void> {
@@ -174,6 +181,13 @@ export function DeleteBranch(name: string, force: boolean): $CancellablePromise<
 }
 
 /**
+ * DeleteIssueComment deletes an issue/PR comment by ID.
+ */
+export function DeleteIssueComment(commentID: number): $CancellablePromise<void> {
+    return $Call.ByID(1398086330, commentID);
+}
+
+/**
  * DeleteLabel deletes a label.
  */
 export function DeleteLabel(name: string): $CancellablePromise<void> {
@@ -221,6 +235,13 @@ export function DiscardPath(path: string): $CancellablePromise<void> {
  */
 export function DownloadAsset(assetID: number): $CancellablePromise<string> {
     return $Call.ByID(820770519, assetID);
+}
+
+/**
+ * EditIssueComment edits an issue/PR comment by ID.
+ */
+export function EditIssueComment(commentID: number, body: string): $CancellablePromise<void> {
+    return $Call.ByID(1747977297, commentID, body);
 }
 
 /**
@@ -323,6 +344,13 @@ export function ListLabels(): $CancellablePromise<ghapi$0.Label[] | null> {
 }
 
 /**
+ * ListMilestones returns the repository's milestones by state.
+ */
+export function ListMilestones(state: string): $CancellablePromise<ghapi$0.Milestone[] | null> {
+    return $Call.ByID(3110125630, state);
+}
+
+/**
  * ListReleases returns the repository's releases.
  */
 export function ListReleases(): $CancellablePromise<ghapi$0.Release[] | null> {
@@ -369,6 +397,13 @@ export function ListRuns(limit: number): $CancellablePromise<ghapi$0.WorkflowRun
  */
 export function ListTags(): $CancellablePromise<gitops$0.Tag[] | null> {
     return $Call.ByID(933116764);
+}
+
+/**
+ * LockConversation locks an issue/PR conversation (reason optional).
+ */
+export function LockConversation($number: number, reason: string): $CancellablePromise<void> {
+    return $Call.ByID(1111253409, $number, reason);
 }
 
 /**
@@ -527,6 +562,13 @@ export function Reflog(limit: number): $CancellablePromise<gitops$0.ReflogEntry[
 }
 
 /**
+ * RemoveAssignees removes assignees from an issue or PR.
+ */
+export function RemoveAssignees($number: number, users: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(4084133939, $number, users);
+}
+
+/**
  * RemoveLabel removes a label from an issue or PR.
  */
 export function RemoveLabel($number: number, label: string): $CancellablePromise<void> {
@@ -667,6 +709,13 @@ export function SetIssueState($number: number, state: string): $CancellablePromi
 }
 
 /**
+ * SetMilestone assigns an issue/PR to a milestone (0 clears it).
+ */
+export function SetMilestone($number: number, milestone: number): $CancellablePromise<void> {
+    return $Call.ByID(3071778403, $number, milestone);
+}
+
+/**
  * SetPRState opens or closes a pull request.
  */
 export function SetPRState($number: number, state: string): $CancellablePromise<void> {
@@ -777,6 +826,13 @@ export function SwitchNew(branch: string): $CancellablePromise<void> {
  */
 export function TriggerDispatch(workflowFile: string, ref: string, inputs: { [_ in string]?: string } | null): $CancellablePromise<void> {
     return $Call.ByID(3276770057, workflowFile, ref, inputs);
+}
+
+/**
+ * UnlockConversation unlocks an issue/PR conversation.
+ */
+export function UnlockConversation($number: number): $CancellablePromise<void> {
+    return $Call.ByID(2641153446, $number);
 }
 
 /**
