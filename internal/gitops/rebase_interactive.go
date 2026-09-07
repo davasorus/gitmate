@@ -80,14 +80,6 @@ func hasMessages(steps []RebaseStep) bool {
 	return false
 }
 
-// RunInteractiveRebase performs an interactive rebase onto base, applying the
-// given plan. It drives git non-interactively by pointing GIT_SEQUENCE_EDITOR
-// at this program's own hidden sequence-editor helper (see RebaseSeqEditorArg),
-// which overwrites git's generated todo with ours — no external shell script,
-// works the same on every OS.
-//
-// If any step provides a replacement message (reword/squash), those messages
-// are written in plan order and fed via a GIT_EDITOR helper likewise.
 // seqEditorCmd builds the GIT_SEQUENCE_EDITOR command that overwrites git's todo
 // with the prepared file at todoPath. It's a package var so tests can substitute
 // a shell copy (cp) instead of the self-invoke helper, letting RunInteractiveRebase
@@ -110,6 +102,9 @@ var msgEditorCmd = func(msgPath string) (string, error) {
 	return quoteArg(self) + " " + msgEditorSubcmd + " " + quoteArg(msgPath), nil
 }
 
+// RunInteractiveRebase performs an interactive rebase onto base, applying the
+// given plan (reorder/drop/squash/fixup/reword) by driving git non-interactively
+// via the injectable sequence/message editors.
 func RunInteractiveRebase(dir, base string, steps []RebaseStep) error {
 	// write our todo to a temp file the sequence editor will copy over git's todo
 	todoFile, err := os.CreateTemp("", "gitmate-rebase-todo-*")
@@ -117,12 +112,12 @@ func RunInteractiveRebase(dir, base string, steps []RebaseStep) error {
 		return err
 	}
 	todoPath := todoFile.Name()
-	defer os.Remove(todoPath)
+	defer func() { _ = os.Remove(todoPath) }()
 	if _, err := todoFile.WriteString(buildTodo(steps)); err != nil {
-		todoFile.Close()
+		_ = todoFile.Close()
 		return err
 	}
-	todoFile.Close()
+	_ = todoFile.Close()
 
 	seqEd, err := seqEditorCmd(todoPath)
 	if err != nil {

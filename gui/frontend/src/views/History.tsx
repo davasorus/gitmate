@@ -87,9 +87,7 @@ export function History() {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          History
-        </h2>
+        <span className="text-[15px] font-semibold tracking-[-0.01em]">History</span>
         <div className="flex items-center gap-2 text-xs">
           {!viewingOther && (
             <button
@@ -125,7 +123,7 @@ export function History() {
         </div>
       )}
 
-      <div className="rounded-lg border border-border">
+      <div className="space-y-1">
         {busy === "history-branch" ? (
           <div className="p-3 text-sm text-muted-foreground">…</div>
         ) : shown.length === 0 ? (
@@ -133,7 +131,7 @@ export function History() {
         ) : (
           shown.map((c) => (
             <div key={c.Hash}>
-              <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0 hover:bg-muted/60">
+              <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 hover:bg-[var(--color-card)] hover:bg-muted/60">
                 <button
                   onClick={() => showCommit(c.Hash)}
                   className="flex flex-1 items-baseline gap-2 text-left"

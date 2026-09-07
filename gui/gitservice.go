@@ -1221,3 +1221,17 @@ func (g *GitService) PRTemplate() string {
 func (g *GitService) DefaultPRTitle(branch string) (string, error) {
 	return gitops.LastCommitSubject(g.repoDir, branch)
 }
+
+// DefaultBranch returns the repo default branch (base for new PRs).
+func (g *GitService) DefaultBranch() (string, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return "", err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return "", err
+	}
+	return client.DefaultBranch(ctx, owner, repo)
+}

@@ -211,291 +211,333 @@ export function Actions() {
     groups.get(key)!.runs.push(r);
   }
 
+  const selectedRun = (runs ?? []).find((r) => r.ID === openRun) ?? null;
+
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Actions
-        </h2>
-        <div className="flex items-center gap-1 text-xs">
-          {(["all", "success", "failure", "in_progress"] as StatusFilter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`rounded-md border border-border px-2 py-0.5 ${filter === f ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}
-            >
-              {f === "in_progress" ? "running" : f}
-            </button>
-          ))}
-          <button onClick={loadRuns} disabled={!!busy} className={cls.btnSm}>
-            {busy === "runs-load" ? "…" : "Refresh"}
-          </button>
+    <div className="flex h-[calc(100vh-116px)] gap-0">
+      {/* LEFT: runs list */}
+      <div className="flex w-[380px] shrink-0 flex-col overflow-y-auto border-r border-border pr-3">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Actions
+            </h2>
+            <div className="flex items-center gap-1 text-xs">
+              {(["all", "success", "failure", "in_progress"] as StatusFilter[]).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`rounded-md border border-border px-2 py-0.5 ${filter === f ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}
+                >
+                  {f === "in_progress" ? "running" : f}
+                </button>
+              ))}
+              <button onClick={loadRuns} disabled={!!busy} className={cls.btnSm}>
+                {busy === "runs-load" ? "…" : "Refresh"}
+              </button>
+            </div>
+          </div>
+
+          {groups.size === 0 ? (
+            <div className="rounded-lg border border-border p-3 text-sm italic text-muted-foreground">
+              no runs match
+            </div>
+          ) : (
+            Array.from(groups.entries()).map(([key, g]) => {
+              const isCollapsed = collapsed[key];
+              const anyActive = g.runs.some(isActive);
+              const wf = dispatchableFor(g.id);
+              return (
+                <div key={key} className="rounded-lg border border-border">
+                  <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm font-semibold">
+                    <button
+                      onClick={() => setCollapsed((c) => ({ ...c, [key]: !c[key] }))}
+                      className="flex flex-1 items-center gap-2 text-left hover:opacity-80"
+                    >
+                      <span className="text-muted-foreground">{isCollapsed ? "▸" : "▾"}</span>
+                      <span className="truncate">{g.name}</span>
+                      {anyActive && (
+                        <span className="text-[10px] text-[var(--color-behind)]">live</span>
+                      )}
+                      <span className="ml-auto text-xs font-normal text-muted-foreground">
+                        {g.runs.length}
+                      </span>
+                    </button>
+                    {wf && (
+                      <button
+                        onClick={() => startRun(wf)}
+                        disabled={!!busy}
+                        className={cls.btnSm}
+                        title="run this workflow (workflow_dispatch)"
+                      >
+                        {busy === `dispatch-${wf.ID}` ? "…" : "Run"}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* inline dispatch form — only when this workflow has inputs and Run was clicked */}
+                  {wf && runForm === wf.ID && (
+                    <div className="space-y-2 border-b border-border bg-background px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">ref</span>
+                        <input
+                          value={runRef}
+                          onChange={(e) => setRunRef(e.target.value)}
+                          placeholder="branch or tag"
+                          className={`${cls.input} flex-1 text-xs`}
+                        />
+                      </div>
+                      {(wf.Inputs ?? []).map((inp) => (
+                        <div key={inp.Name} className="space-y-1">
+                          <label className="text-xs">
+                            {inp.Name}
+                            {inp.Required && (
+                              <span className="text-[var(--color-removed)]"> *</span>
+                            )}
+                            {inp.Description ? (
+                              <span className="text-muted-foreground"> — {inp.Description}</span>
+                            ) : null}
+                          </label>
+                          {inp.Type === "choice" ? (
+                            <select
+                              value={runInputs[inp.Name] ?? inp.Default}
+                              onChange={(e) =>
+                                setRunInputs((m) => ({ ...m, [inp.Name]: e.target.value }))
+                              }
+                              className={`${cls.input} w-full text-xs`}
+                            >
+                              {(inp.Options ?? []).map((o) => (
+                                <option key={o} value={o}>
+                                  {o}
+                                </option>
+                              ))}
+                            </select>
+                          ) : inp.Type === "boolean" ? (
+                            <select
+                              value={runInputs[inp.Name] ?? inp.Default ?? "false"}
+                              onChange={(e) =>
+                                setRunInputs((m) => ({ ...m, [inp.Name]: e.target.value }))
+                              }
+                              className={`${cls.input} w-full text-xs`}
+                            >
+                              <option value="true">true</option>
+                              <option value="false">false</option>
+                            </select>
+                          ) : (
+                            <input
+                              value={runInputs[inp.Name] ?? inp.Default}
+                              onChange={(e) =>
+                                setRunInputs((m) => ({ ...m, [inp.Name]: e.target.value }))
+                              }
+                              className={`${cls.input} w-full text-xs`}
+                            />
+                          )}
+                        </div>
+                      ))}
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => setRunForm(null)}
+                          disabled={!!busy}
+                          className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => doRunWorkflow(wf, runRef, runInputs)}
+                          disabled={!!busy}
+                          className={cls.btnSm}
+                        >
+                          {busy === `dispatch-${wf.ID}` ? "…" : "Run"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {!isCollapsed &&
+                    g.runs.map((r) => (
+                      <div key={r.ID} className="border-b border-border last:border-0">
+                        <button
+                          onClick={() => toggleRun(r)}
+                          className={`flex w-full min-w-0 flex-col gap-0.5 px-2.5 py-1.5 text-left ${openRun === r.ID ? "bg-[var(--color-accent-dim)]" : "hover:bg-[var(--color-card)]"} rounded-lg`}
+                        >
+                          <div className="flex min-w-0 items-center gap-2 text-xs">
+                            <span className={`shrink-0 ${statusColor(r.Status, r.Conclusion)}`}>
+                              ●
+                            </span>
+                            <span className="min-w-0 flex-1 truncate font-medium text-[var(--color-accent)]">
+                              {r.Branch}
+                            </span>
+                            <span
+                              className={`shrink-0 text-[10px] ${statusColor(r.Status, r.Conclusion)}`}
+                            >
+                              {statusLabel(r.Status, r.Conclusion)}
+                            </span>
+                          </div>
+                          <div className="flex min-w-0 items-center gap-2 pl-4 text-[11px] text-[var(--color-faint)]">
+                            <span className="shrink-0 font-mono">#{r.Number}</span>
+                            <span className="truncate">{r.Event}</span>
+                            {r.Duration && <span className="shrink-0">· {r.Duration}</span>}
+                            <span className="ml-auto shrink-0">{r.CreatedAt}</span>
+                          </div>
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
-      {groups.size === 0 ? (
-        <div className="rounded-lg border border-border p-3 text-sm italic text-muted-foreground">
-          no runs match
-        </div>
-      ) : (
-        Array.from(groups.entries()).map(([key, g]) => {
-          const isCollapsed = collapsed[key];
-          const anyActive = g.runs.some(isActive);
-          const wf = dispatchableFor(g.id);
-          return (
-            <div key={key} className="rounded-lg border border-border">
-              <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm font-semibold">
-                <button
-                  onClick={() => setCollapsed((c) => ({ ...c, [key]: !c[key] }))}
-                  className="flex flex-1 items-center gap-2 text-left hover:opacity-80"
-                >
-                  <span className="text-muted-foreground">{isCollapsed ? "▸" : "▾"}</span>
-                  <span className="truncate">{g.name}</span>
-                  {anyActive && (
-                    <span className="text-[10px] text-[var(--color-behind)]">live</span>
-                  )}
-                  <span className="ml-auto text-xs font-normal text-muted-foreground">
-                    {g.runs.length}
+      {/* RIGHT: selected run detail */}
+      <div className="min-w-0 flex-1 overflow-y-auto pl-4">
+        {!selectedRun ? (
+          <div className="grid h-full place-items-center text-[13px] text-[var(--color-faint)]">
+            Select a run
+          </div>
+        ) : (
+          [selectedRun].map((r) => (
+            <div key={r.ID} className="space-y-3">
+              <div className="border-b border-border pb-3">
+                <div className="flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em]">
+                  <span className={statusColor(r.Status, r.Conclusion)}>●</span>
+                  <span className="truncate">{r.Name}</span>
+                  <span className="font-mono text-[12px] font-normal text-[var(--color-faint)]">
+                    #{r.Number}
                   </span>
-                </button>
-                {wf && (
-                  <button
-                    onClick={() => startRun(wf)}
-                    disabled={!!busy}
-                    className={cls.btnSm}
-                    title="run this workflow (workflow_dispatch)"
-                  >
-                    {busy === `dispatch-${wf.ID}` ? "…" : "Run"}
-                  </button>
-                )}
-              </div>
-
-              {/* inline dispatch form — only when this workflow has inputs and Run was clicked */}
-              {wf && runForm === wf.ID && (
-                <div className="space-y-2 border-b border-border bg-background px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">ref</span>
-                    <input
-                      value={runRef}
-                      onChange={(e) => setRunRef(e.target.value)}
-                      placeholder="branch or tag"
-                      className={`${cls.input} flex-1 text-xs`}
-                    />
-                  </div>
-                  {(wf.Inputs ?? []).map((inp) => (
-                    <div key={inp.Name} className="space-y-1">
-                      <label className="text-xs">
-                        {inp.Name}
-                        {inp.Required && <span className="text-[var(--color-removed)]"> *</span>}
-                        {inp.Description ? (
-                          <span className="text-muted-foreground"> — {inp.Description}</span>
-                        ) : null}
-                      </label>
-                      {inp.Type === "choice" ? (
-                        <select
-                          value={runInputs[inp.Name] ?? inp.Default}
-                          onChange={(e) =>
-                            setRunInputs((m) => ({ ...m, [inp.Name]: e.target.value }))
-                          }
-                          className={`${cls.input} w-full text-xs`}
-                        >
-                          {(inp.Options ?? []).map((o) => (
-                            <option key={o} value={o}>
-                              {o}
-                            </option>
-                          ))}
-                        </select>
-                      ) : inp.Type === "boolean" ? (
-                        <select
-                          value={runInputs[inp.Name] ?? inp.Default ?? "false"}
-                          onChange={(e) =>
-                            setRunInputs((m) => ({ ...m, [inp.Name]: e.target.value }))
-                          }
-                          className={`${cls.input} w-full text-xs`}
-                        >
-                          <option value="true">true</option>
-                          <option value="false">false</option>
-                        </select>
-                      ) : (
-                        <input
-                          value={runInputs[inp.Name] ?? inp.Default}
-                          onChange={(e) =>
-                            setRunInputs((m) => ({ ...m, [inp.Name]: e.target.value }))
-                          }
-                          className={`${cls.input} w-full text-xs`}
-                        />
-                      )}
-                    </div>
-                  ))}
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setRunForm(null)}
-                      disabled={!!busy}
-                      className="rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => doRunWorkflow(wf, runRef, runInputs)}
-                      disabled={!!busy}
-                      className={cls.btnSm}
-                    >
-                      {busy === `dispatch-${wf.ID}` ? "…" : "Run"}
-                    </button>
-                  </div>
                 </div>
-              )}
-
-              {!isCollapsed &&
-                g.runs.map((r) => (
-                  <div key={r.ID} className="border-b border-border last:border-0">
-                    <button
-                      onClick={() => toggleRun(r)}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs hover:bg-muted/60"
-                    >
-                      <span className={`shrink-0 ${statusColor(r.Status, r.Conclusion)}`}>●</span>
-                      <span className="shrink-0 text-muted-foreground">#{r.Number}</span>
-                      <span className="shrink-0 text-[var(--color-ahead)]">{r.Branch}</span>
-                      <span className="shrink-0 text-muted-foreground">{r.Event}</span>
-                      {r.Duration && (
-                        <span className="shrink-0 text-muted-foreground/70">{r.Duration}</span>
-                      )}
-                      <span className="shrink-0 text-muted-foreground/60">{r.CreatedAt}</span>
-                      <span className={`ml-auto shrink-0 ${statusColor(r.Status, r.Conclusion)}`}>
-                        {statusLabel(r.Status, r.Conclusion)}
-                      </span>
-                    </button>
-                    {openRun === r.ID && (
-                      <div className="space-y-1 bg-background px-3 pb-2 pt-1">
-                        <div className="flex items-center gap-1 text-[10px]">
-                          <button
-                            onClick={() => setRunViewMode("tree")}
-                            className={`rounded border border-border px-1.5 py-0 ${runViewMode === "tree" ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}
-                          >
-                            Tree
-                          </button>
-                          <button
-                            onClick={() => showFlow(r.ID)}
-                            className={`rounded border border-border px-1.5 py-0 ${runViewMode === "flow" ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}
-                          >
-                            Flowchart
-                          </button>
-                        </div>
-                        {runViewMode === "flow" ? (
-                          <RunFlow graph={jobGraph} jobs={jobs} />
-                        ) : (
-                          <>
-                            {(jobs ?? []).length ? (
-                              (jobs ?? []).map((j) => (
-                                <div key={j.ID}>
-                                  <div className="flex items-center gap-2 text-xs">
-                                    <span className={statusColor(j.Status, j.Conclusion)}>●</span>
-                                    <span className="font-medium">{j.Name}</span>
-                                    <span
-                                      className={`text-[10px] ${statusColor(j.Status, j.Conclusion)}`}
-                                    >
-                                      {statusLabel(j.Status, j.Conclusion)}
-                                    </span>
-                                    {j.Status === "completed" && (
-                                      <button
-                                        onClick={() => toggleLogs(j.ID)}
-                                        disabled={!!busy}
-                                        className="ml-auto rounded border border-border px-1.5 py-0 text-[10px] hover:bg-muted disabled:opacity-40"
-                                      >
-                                        {busy === `logs-${j.ID}`
-                                          ? "…"
-                                          : openLog === j.ID
-                                            ? "Hide logs"
-                                            : "Logs"}
-                                      </button>
-                                    )}
-                                  </div>
-                                  {openLog === j.ID && jobLog && (
-                                    <div className="my-1 ml-4 max-h-80 overflow-auto rounded border border-border bg-black/40 p-2 font-mono text-[10px] leading-4">
-                                      {(jobLog.Steps ?? []).length ? (
-                                        (jobLog.Steps ?? []).map((sl, sli) => (
-                                          <details key={sli} className="mb-1">
-                                            <summary className="cursor-pointer text-[var(--color-ahead)]">
-                                              {sl.Name}
-                                            </summary>
-                                            <LogView text={sl.Text} />
-                                          </details>
-                                        ))
-                                      ) : (
-                                        <LogView text={jobLog.Raw} />
-                                      )}
-                                    </div>
-                                  )}
-                                  <div className="ml-4">
-                                    {(j.Steps ?? []).map((st, si) => (
-                                      <div key={si} className="flex items-center gap-2 text-[11px]">
-                                        <span className={statusColor(st.Status, st.Conclusion)}>
-                                          ○
-                                        </span>
-                                        <span className="truncate">{st.Name}</span>
-                                        <span
-                                          className={`text-[10px] ${statusColor(st.Status, st.Conclusion)}`}
-                                        >
-                                          {statusLabel(st.Status, st.Conclusion)}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-xs italic text-muted-foreground">
-                                no jobs (or still starting)
-                              </div>
-                            )}
-                          </>
-                        )}
-                        <div className="flex items-center gap-1 pt-1">
-                          {isActive(r) ? (
-                            <button
-                              onClick={() => doCancel(r)}
-                              disabled={!!busy}
-                              className={`${cls.btnSm} text-[var(--color-removed)]`}
-                            >
-                              {busy === `cancel-${r.ID}` ? "…" : "Cancel"}
-                            </button>
-                          ) : (
-                            <>
+                <div className="mt-1 flex items-center gap-2 text-[12px] text-[var(--color-muted-foreground)]">
+                  <span className="font-mono text-[var(--color-accent)]">{r.Branch}</span>
+                  <span>{r.Event}</span>
+                  <span className={statusColor(r.Status, r.Conclusion)}>
+                    {statusLabel(r.Status, r.Conclusion)}
+                  </span>
+                  {r.Duration && <span className="text-[var(--color-faint)]">{r.Duration}</span>}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-1 text-[10px]">
+                  <button
+                    onClick={() => setRunViewMode("tree")}
+                    className={`rounded border border-border px-1.5 py-0 ${runViewMode === "tree" ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}
+                  >
+                    Tree
+                  </button>
+                  <button
+                    onClick={() => showFlow(r.ID)}
+                    className={`rounded border border-border px-1.5 py-0 ${runViewMode === "flow" ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}
+                  >
+                    Flowchart
+                  </button>
+                </div>
+                {runViewMode === "flow" ? (
+                  <RunFlow graph={jobGraph} jobs={jobs} />
+                ) : (
+                  <>
+                    {(jobs ?? []).length ? (
+                      (jobs ?? []).map((j) => (
+                        <div key={j.ID}>
+                          <div className="flex min-w-0 items-center gap-2 text-xs">
+                            <span className={statusColor(j.Status, j.Conclusion)}>●</span>
+                            <span className="min-w-0 truncate font-medium">{j.Name}</span>
+                            <span className={`text-[10px] ${statusColor(j.Status, j.Conclusion)}`}>
+                              {statusLabel(j.Status, j.Conclusion)}
+                            </span>
+                            {j.Status === "completed" && (
                               <button
-                                onClick={() => doRerun(r, false)}
+                                onClick={() => toggleLogs(j.ID)}
                                 disabled={!!busy}
-                                className={cls.btnSm}
+                                className="ml-auto rounded border border-border px-1.5 py-0 text-[10px] hover:bg-muted disabled:opacity-40"
                               >
-                                {busy === `rerun-${r.ID}` ? "…" : "Re-run"}
+                                {busy === `logs-${j.ID}`
+                                  ? "…"
+                                  : openLog === j.ID
+                                    ? "Hide logs"
+                                    : "Logs"}
                               </button>
-                              {r.Conclusion === "failure" && (
-                                <button
-                                  onClick={() => doRerun(r, true)}
-                                  disabled={!!busy}
-                                  className={cls.btnSm}
-                                >
-                                  Re-run failed
-                                </button>
+                            )}
+                          </div>
+                          {openLog === j.ID && jobLog && (
+                            <div className="my-1 ml-4 max-h-80 overflow-auto rounded border border-border bg-black/40 p-2 font-mono text-[10px] leading-4">
+                              {(jobLog.Steps ?? []).length ? (
+                                (jobLog.Steps ?? []).map((sl, sli) => (
+                                  <details key={sli} className="mb-1">
+                                    <summary className="cursor-pointer text-[var(--color-ahead)]">
+                                      {sl.Name}
+                                    </summary>
+                                    <LogView text={sl.Text} />
+                                  </details>
+                                ))
+                              ) : (
+                                <LogView text={jobLog.Raw} />
                               )}
-                            </>
+                            </div>
                           )}
-                          <a
-                            href={r.URL}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="ml-auto text-[10px] text-[var(--color-ahead)] underline"
-                          >
-                            View on GitHub
-                          </a>
+                          <div className="ml-4">
+                            {(j.Steps ?? []).map((st, si) => (
+                              <div key={si} className="flex min-w-0 items-center gap-2 text-[11px]">
+                                <span className={statusColor(st.Status, st.Conclusion)}>○</span>
+                                <span className="truncate">{st.Name}</span>
+                                <span
+                                  className={`text-[10px] ${statusColor(st.Status, st.Conclusion)}`}
+                                >
+                                  {statusLabel(st.Status, st.Conclusion)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="text-xs italic text-muted-foreground">
+                        no jobs (or still starting)
                       </div>
                     )}
-                  </div>
-                ))}
+                  </>
+                )}
+                <div className="flex items-center gap-1 pt-1">
+                  {isActive(r) ? (
+                    <button
+                      onClick={() => doCancel(r)}
+                      disabled={!!busy}
+                      className={`${cls.btnSm} text-[var(--color-removed)]`}
+                    >
+                      {busy === `cancel-${r.ID}` ? "…" : "Cancel"}
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => doRerun(r, false)}
+                        disabled={!!busy}
+                        className={cls.btnSm}
+                      >
+                        {busy === `rerun-${r.ID}` ? "…" : "Re-run"}
+                      </button>
+                      {r.Conclusion === "failure" && (
+                        <button
+                          onClick={() => doRerun(r, true)}
+                          disabled={!!busy}
+                          className={cls.btnSm}
+                        >
+                          Re-run failed
+                        </button>
+                      )}
+                    </>
+                  )}
+                  <a
+                    href={r.URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="ml-auto text-[10px] text-[var(--color-ahead)] underline"
+                  >
+                    View on GitHub
+                  </a>
+                </div>
+              </div>
             </div>
-          );
-        })
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }

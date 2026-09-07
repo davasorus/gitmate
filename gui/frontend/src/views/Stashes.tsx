@@ -33,47 +33,61 @@ export function Stashes() {
     );
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-        Stashes
-      </h2>
-      <div className="flex gap-2 rounded-lg border border-border p-3">
+    <div className="mx-auto max-w-3xl space-y-4">
+      <div className="flex items-center gap-2">
+        <span className="text-[15px] font-semibold tracking-[-0.01em]">Stashes</span>
+      </div>
+
+      <div className="flex gap-2">
         <input
           value={msg}
           onChange={(e) => setMsg(e.target.value)}
           placeholder="stash message (optional)"
           className={`${cls.input} flex-1`}
         />
-        <button onClick={doSave} disabled={!!busy} className={cls.btn}>
+        <button
+          onClick={doSave}
+          disabled={!!busy}
+          className="rounded-lg bg-[var(--color-accent)] px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:opacity-90 disabled:opacity-40"
+        >
           {busy === "stash-save" ? "…" : "Stash changes"}
         </button>
       </div>
-      <div className="rounded-lg border border-border">
+
+      <div className="space-y-1">
         {(stashes ?? []).length ? (
           (stashes ?? []).map((st) => (
             <div
               key={st.Ref}
-              className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0"
+              className="group flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 hover:bg-[var(--color-card)]"
             >
-              <span className="shrink-0 text-[var(--color-modified)]">{st.Ref}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">{st.Branch}</span>
-              <span className="truncate">{st.Message}</span>
-              <span className="ml-auto flex shrink-0 gap-1">
+              <span className="shrink-0 font-mono text-[11px] text-[var(--color-modified)]">
+                {st.Ref}
+              </span>
+              <span className="shrink-0 font-mono text-[11px] text-[var(--color-faint)]">
+                {st.Branch}
+              </span>
+              <span className="min-w-0 flex-1 truncate text-[13px]">{st.Message}</span>
+              <span className="flex shrink-0 gap-1 opacity-0 group-hover:opacity-100">
                 <button
                   onClick={() => doApply(st.Ref)}
                   disabled={!!busy}
-                  className={cls.btnSm}
                   title="apply but keep the stash"
+                  className="rounded-md px-2 py-1 text-[11.5px] text-[var(--color-accent)] hover:bg-[var(--color-muted)]"
                 >
                   {busy === `stash-apply-${st.Ref}` ? "…" : "Apply"}
                 </button>
-                <button onClick={() => doPop(st.Ref)} disabled={!!busy} className={cls.btnSm}>
+                <button
+                  onClick={() => doPop(st.Ref)}
+                  disabled={!!busy}
+                  className="rounded-md px-2 py-1 text-[11.5px] text-[var(--color-accent)] hover:bg-[var(--color-muted)]"
+                >
                   {busy === `stash-pop-${st.Ref}` ? "…" : "Pop"}
                 </button>
                 <button
                   onClick={() => setConfirmDrop(st.Ref)}
                   disabled={!!busy}
-                  className={`${cls.btnSm} text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10`}
+                  className="rounded-md px-2 py-1 text-[11.5px] text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10"
                 >
                   {busy === `stash-drop-${st.Ref}` ? "…" : "Drop"}
                 </button>
@@ -81,9 +95,12 @@ export function Stashes() {
             </div>
           ))
         ) : (
-          <div className="p-3 text-sm italic text-muted-foreground">no stashes</div>
+          <div className="rounded-lg border border-border px-3 py-6 text-center text-[12.5px] italic text-[var(--color-faint)]">
+            no stashes
+          </div>
         )}
       </div>
+
       {confirmDrop && (
         <ConfirmDialog
           title="Drop stash?"

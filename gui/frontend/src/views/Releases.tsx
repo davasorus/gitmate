@@ -197,9 +197,7 @@ export function Releases() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-        Releases
-      </h2>
+      <span className="text-[15px] font-semibold tracking-[-0.01em]">Releases</span>
 
       <div className="space-y-2 rounded-lg border border-border p-3">
         <div className="text-xs text-muted-foreground">
@@ -251,7 +249,7 @@ export function Releases() {
         </div>
       </div>
 
-      <div className="rounded-lg border border-border">
+      <div className="space-y-1">
         {busy === "releases-load" ? (
           <div className="p-3 text-sm text-muted-foreground">…</div>
         ) : (releases ?? []).length ? (
@@ -359,7 +357,9 @@ export function Releases() {
             </div>
           ))
         ) : (
-          <div className="p-3 text-sm italic text-muted-foreground">no releases</div>
+          <div className="rounded-lg border border-border px-3 py-6 text-center text-[12.5px] italic text-[var(--color-faint)]">
+            no releases
+          </div>
         )}
       </div>
 
@@ -380,7 +380,7 @@ export function Releases() {
       )}
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-[32rem] space-y-3 rounded-lg border border-border bg-card p-4 shadow-lg">
+          <div className="w-[32rem] space-y-3 rounded-lg border border-border bg-[var(--color-background)] p-4 shadow-xl">
             <div className="text-sm font-semibold">Edit release — {editing.TagName}</div>
             <input
               value={editing.Name}

@@ -164,6 +164,13 @@ export function CurrentBranch(): $CancellablePromise<string> {
 }
 
 /**
+ * DefaultBranch returns the repo default branch (base for new PRs).
+ */
+export function DefaultBranch(): $CancellablePromise<string> {
+    return $Call.ByID(2507649214);
+}
+
+/**
  * DefaultPRTitle suggests a default PR title from the branch.
  */
 export function DefaultPRTitle(branch: string): $CancellablePromise<string> {

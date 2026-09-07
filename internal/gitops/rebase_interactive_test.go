@@ -97,8 +97,8 @@ func TestRunInteractiveRebase_Drop(t *testing.T) {
 	todo := buildTodo(steps)
 	tf, _ := os.CreateTemp("", "todo-*")
 	_, _ = tf.WriteString(todo)
-	tf.Close()
-	defer os.Remove(tf.Name())
+	_ = tf.Close()
+	defer func() { _ = os.Remove(tf.Name()) }()
 
 	editor := seqEditorCmdForTest(tf.Name())
 	cmd := exec.Command("git", "rebase", "-i", base)
