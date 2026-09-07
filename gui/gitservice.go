@@ -38,22 +38,27 @@ func (g *GitService) GetRepoDir() string {
 
 // --- local git (reads .git, no network) ---
 
+// Status returns the working-tree status.
 func (g *GitService) Status() (*gitops.Status, error) {
 	return gitops.GetStatus(g.repoDir)
 }
 
+// Log returns recent commits.
 func (g *GitService) Log(limit int) ([]gitops.Commit, error) {
 	return gitops.GetLog(g.repoDir, limit)
 }
 
+// LogRef returns commits for a specific ref.
 func (g *GitService) LogRef(ref string, limit int) ([]gitops.Commit, error) {
 	return gitops.GetLogRef(g.repoDir, ref, limit)
 }
 
+// Branches returns local and remote-tracking branches.
 func (g *GitService) Branches() ([]gitops.Branch, error) {
 	return gitops.GetBranches(g.repoDir)
 }
 
+// Diff returns the diff for a path (staged or unstaged).
 func (g *GitService) Diff(path string, staged bool) ([]gitops.FileDiff, error) {
 	return gitops.Diff(g.repoDir, gitops.DiffOptions{
 		Path:   path,
@@ -92,6 +97,7 @@ func (g *GitService) PRsRich(state string) ([]ghapi.PRListItem, error) {
 	return client.PRListGraphQL(ctx, owner, repo, state)
 }
 
+// Issues returns issues by state (REST).
 func (g *GitService) Issues(state string) ([]ghapi.Issue, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -120,6 +126,7 @@ func (g *GitService) IssuesRich(state string) ([]ghapi.IssueListItem, error) {
 	return client.IssueListGraphQL(ctx, owner, repo, state)
 }
 
+// SetPRState opens or closes a pull request.
 func (g *GitService) SetPRState(number int, state string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -133,6 +140,7 @@ func (g *GitService) SetPRState(number int, state string) error {
 	return client.SetPRState(ctx, owner, repo, number, state)
 }
 
+// SetIssueState opens or closes an issue.
 func (g *GitService) SetIssueState(number int, state string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -146,6 +154,7 @@ func (g *GitService) SetIssueState(number int, state string) error {
 	return client.SetIssueState(ctx, owner, repo, number, state)
 }
 
+// ListLabels returns the repository's labels.
 func (g *GitService) ListLabels() ([]ghapi.Label, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -159,6 +168,7 @@ func (g *GitService) ListLabels() ([]ghapi.Label, error) {
 	return client.ListLabels(ctx, owner, repo)
 }
 
+// CreateLabel creates a label.
 func (g *GitService) CreateLabel(name, color, description string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -172,6 +182,7 @@ func (g *GitService) CreateLabel(name, color, description string) error {
 	return client.CreateLabel(ctx, owner, repo, name, color, description)
 }
 
+// EditLabel renames/recolors a label.
 func (g *GitService) EditLabel(name, newName, color, description string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -185,6 +196,7 @@ func (g *GitService) EditLabel(name, newName, color, description string) error {
 	return client.EditLabel(ctx, owner, repo, name, newName, color, description)
 }
 
+// DeleteLabel deletes a label.
 func (g *GitService) DeleteLabel(name string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -198,6 +210,7 @@ func (g *GitService) DeleteLabel(name string) error {
 	return client.DeleteLabel(ctx, owner, repo, name)
 }
 
+// AddLabels adds labels to an issue or PR.
 func (g *GitService) AddLabels(number int, labels []string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -211,6 +224,7 @@ func (g *GitService) AddLabels(number int, labels []string) error {
 	return client.AddLabels(ctx, owner, repo, number, labels)
 }
 
+// RemoveLabel removes a label from an issue or PR.
 func (g *GitService) RemoveLabel(number int, label string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -224,6 +238,7 @@ func (g *GitService) RemoveLabel(number int, label string) error {
 	return client.RemoveLabel(ctx, owner, repo, number, label)
 }
 
+// ListReleases returns the repository's releases.
 func (g *GitService) ListReleases() ([]ghapi.Release, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -237,6 +252,7 @@ func (g *GitService) ListReleases() ([]ghapi.Release, error) {
 	return client.ListReleases(ctx, owner, repo)
 }
 
+// CreateRelease creates a release.
 func (g *GitService) CreateRelease(tag, name, body string, draft, prerelease bool) (ghapi.Release, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -250,6 +266,7 @@ func (g *GitService) CreateRelease(tag, name, body string, draft, prerelease boo
 	return client.CreateRelease(ctx, owner, repo, tag, name, body, draft, prerelease)
 }
 
+// EditRelease edits a release.
 func (g *GitService) EditRelease(id int64, name, body string, draft, prerelease bool) (ghapi.Release, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -263,6 +280,7 @@ func (g *GitService) EditRelease(id int64, name, body string, draft, prerelease 
 	return client.EditRelease(ctx, owner, repo, id, name, body, draft, prerelease)
 }
 
+// DeleteRelease deletes a release.
 func (g *GitService) DeleteRelease(id int64) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -276,6 +294,7 @@ func (g *GitService) DeleteRelease(id int64) error {
 	return client.DeleteRelease(ctx, owner, repo, id)
 }
 
+// ListAssets returns a release's assets.
 func (g *GitService) ListAssets(releaseID int64) ([]ghapi.Asset, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -327,6 +346,7 @@ func (g *GitService) DownloadAsset(assetID int64) (string, error) {
 	return base64.StdEncoding.EncodeToString(data), nil
 }
 
+// DeleteAsset deletes a release asset.
 func (g *GitService) DeleteAsset(assetID int64) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -369,42 +389,52 @@ func (g *GitService) resolve(ctx context.Context) (owner, repo string, err error
 
 // --- git write ---
 
+// Stage stages all changes.
 func (g *GitService) Stage() error {
 	return gitops.Stage(g.repoDir)
 }
 
+// StagePath stages a specific path.
 func (g *GitService) StagePath(path string) error {
 	return gitops.Stage(g.repoDir, path)
 }
 
+// UnstagePath unstages a specific path.
 func (g *GitService) UnstagePath(path string) error {
 	return gitops.Unstage(g.repoDir, path)
 }
 
+// DiscardPath discards changes to a path.
 func (g *GitService) DiscardPath(path string) error {
 	return gitops.Discard(g.repoDir, path)
 }
 
+// Switch switches to a branch.
 func (g *GitService) Switch(branch string) error {
 	return gitops.Switch(g.repoDir, branch)
 }
 
+// SwitchNew creates and switches to a new branch.
 func (g *GitService) SwitchNew(branch string) error {
 	return gitops.SwitchNew(g.repoDir, branch)
 }
 
+// DeleteBranch deletes a branch.
 func (g *GitService) DeleteBranch(name string, force bool) error {
 	return gitops.DeleteBranch(g.repoDir, name, force)
 }
 
+// RenameBranch renames a branch.
 func (g *GitService) RenameBranch(oldName, newName string) error {
 	return gitops.RenameBranch(g.repoDir, oldName, newName)
 }
 
+// Commit commits staged changes.
 func (g *GitService) Commit(message string) (string, error) {
 	return gitops.CreateCommit(g.repoDir, message)
 }
 
+// Push pushes a branch to a remote.
 func (g *GitService) Push(setUpstream bool) error {
 	branch, err := gitops.CurrentBranch(g.repoDir)
 	if err != nil {
@@ -413,58 +443,93 @@ func (g *GitService) Push(setUpstream bool) error {
 	return gitops.Push(g.repoDir, "origin", branch, setUpstream)
 }
 
+// Fetch fetches from origin (with prune).
 func (g *GitService) Fetch() error {
 	return gitops.Fetch(g.repoDir, "origin")
 }
 
+// Pull pulls from origin (merge or rebase).
 func (g *GitService) Pull(rebase bool) error {
 	return gitops.Pull(g.repoDir, rebase)
 }
 
-func (g *GitService) Merge(branch string) error          { return gitops.Merge(g.repoDir, branch) }
-func (g *GitService) MergeAbort() error                  { return gitops.MergeAbort(g.repoDir) }
+// Merge merges a branch into the current one.
+func (g *GitService) Merge(branch string) error { return gitops.Merge(g.repoDir, branch) }
+
+// MergeAbort aborts an in-progress merge.
+func (g *GitService) MergeAbort() error { return gitops.MergeAbort(g.repoDir) }
+
+// ConflictedFiles returns the paths with merge conflicts.
 func (g *GitService) ConflictedFiles() ([]string, error) { return gitops.ConflictedFiles(g.repoDir) }
-func (g *GitService) MergeInProgress() bool              { return gitops.MergeInProgress(g.repoDir) }
-func (g *GitService) CommitMerge() (string, error)       { return gitops.CommitMerge(g.repoDir) }
 
+// MergeInProgress reports whether a merge is in progress.
+func (g *GitService) MergeInProgress() bool { return gitops.MergeInProgress(g.repoDir) }
+
+// CommitMerge finishes an in-progress merge with git's prepared message.
+func (g *GitService) CommitMerge() (string, error) { return gitops.CommitMerge(g.repoDir) }
+
+// Rebase rebases the current branch onto a base.
 func (g *GitService) Rebase(base string) error { return gitops.Rebase(g.repoDir, base) }
-func (g *GitService) RebaseContinue() error    { return gitops.RebaseContinue(g.repoDir) }
-func (g *GitService) RebaseAbort() error       { return gitops.RebaseAbort(g.repoDir) }
-func (g *GitService) RebaseInProgress() bool   { return gitops.RebaseInProgress(g.repoDir) }
 
+// RebaseContinue resumes an in-progress rebase.
+func (g *GitService) RebaseContinue() error { return gitops.RebaseContinue(g.repoDir) }
+
+// RebaseAbort aborts an in-progress rebase.
+func (g *GitService) RebaseAbort() error { return gitops.RebaseAbort(g.repoDir) }
+
+// RebaseInProgress reports whether a rebase is in progress.
+func (g *GitService) RebaseInProgress() bool { return gitops.RebaseInProgress(g.repoDir) }
+
+// ListTags returns tags (local + remote).
 func (g *GitService) ListTags() ([]gitops.Tag, error) { return gitops.ListTags(g.repoDir) }
+
+// CreateTag creates a tag.
 func (g *GitService) CreateTag(name, message string) error {
 	return gitops.CreateTag(g.repoDir, name, message)
 }
-func (g *GitService) DeleteTag(name string) error { return gitops.DeleteTag(g.repoDir, name) }
-func (g *GitService) PushTag(name string) error   { return gitops.PushTag(g.repoDir, name) }
 
+// DeleteTag deletes a local tag.
+func (g *GitService) DeleteTag(name string) error { return gitops.DeleteTag(g.repoDir, name) }
+
+// PushTag pushes a tag to origin.
+func (g *GitService) PushTag(name string) error { return gitops.PushTag(g.repoDir, name) }
+
+// DeleteRemoteTag deletes a tag on origin.
 func (g *GitService) DeleteRemoteTag(name string) error {
 	return gitops.DeleteRemoteTag(g.repoDir, name)
 }
+
+// FetchTags fetches tags from origin.
 func (g *GitService) FetchTags() error { return gitops.FetchTags(g.repoDir) }
+
+// SmartDeleteTag deletes a tag locally and on origin.
 func (g *GitService) SmartDeleteTag(name string) (string, error) {
 	return gitops.SmartDeleteTag(g.repoDir, name)
 }
 
+// ReadConflict returns the conflict hunks for a file.
 func (g *GitService) ReadConflict(path string) (*gitops.ConflictFile, error) {
 	return gitops.ReadConflict(g.repoDir, path)
 }
 
+// ResolveOurs resolves a conflict by taking our side.
 func (g *GitService) ResolveOurs(path string) error {
 	return gitops.ResolveOurs(g.repoDir, path)
 }
 
+// ResolveTheirs resolves a conflict by taking their side.
 func (g *GitService) ResolveTheirs(path string) error {
 	return gitops.ResolveTheirs(g.repoDir, path)
 }
 
+// MarkResolved marks a conflicted file resolved.
 func (g *GitService) MarkResolved(path string) error {
 	return gitops.MarkResolved(g.repoDir, path)
 }
 
 // --- GitHub write ---
 
+// CreatePR opens a pull request.
 func (g *GitService) CreatePR(title, body, head, base string) (string, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -479,6 +544,7 @@ func (g *GitService) CreatePR(title, body, head, base string) (string, error) {
 	return url, err
 }
 
+// CreateIssue opens an issue.
 func (g *GitService) CreateIssue(title, body string) (string, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -493,6 +559,7 @@ func (g *GitService) CreateIssue(title, body string) (string, error) {
 	return url, err
 }
 
+// MergePR merges a pull request.
 func (g *GitService) MergePR(number int, method string) (string, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -506,6 +573,7 @@ func (g *GitService) MergePR(number int, method string) (string, error) {
 	return client.MergePR(ctx, owner, repo, number, method)
 }
 
+// PRChecks returns the CI check runs for a PR's head commit.
 func (g *GitService) PRChecks(number int) ([]ghapi.CheckRun, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -519,6 +587,7 @@ func (g *GitService) PRChecks(number int) ([]ghapi.CheckRun, error) {
 	return client.PRChecks(ctx, owner, repo, number)
 }
 
+// ListReviews returns a PR's reviews.
 func (g *GitService) ListReviews(number int) ([]ghapi.Review, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -532,6 +601,7 @@ func (g *GitService) ListReviews(number int) ([]ghapi.Review, error) {
 	return client.ListReviews(ctx, owner, repo, number)
 }
 
+// PRDiff returns a PR's unified diff.
 func (g *GitService) PRDiff(number int) ([]gitops.FileDiff, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -545,6 +615,7 @@ func (g *GitService) PRDiff(number int) ([]gitops.FileDiff, error) {
 	return client.PRDiff(ctx, owner, repo, number)
 }
 
+// ListReviewComments returns a PR's review (line) comments.
 func (g *GitService) ListReviewComments(number int) ([]ghapi.ExistingComment, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -558,6 +629,7 @@ func (g *GitService) ListReviewComments(number int) ([]ghapi.ExistingComment, er
 	return client.ListReviewComments(ctx, owner, repo, number)
 }
 
+// ListIssueComments returns a PR's general issue-comment stream.
 func (g *GitService) ListIssueComments(number int) ([]ghapi.IssueComment, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -571,6 +643,7 @@ func (g *GitService) ListIssueComments(number int) ([]ghapi.IssueComment, error)
 	return client.ListIssueComments(ctx, owner, repo, number)
 }
 
+// ReplyToReviewComment replies to a review comment.
 func (g *GitService) ReplyToReviewComment(number int, commentID int64, body string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -584,6 +657,7 @@ func (g *GitService) ReplyToReviewComment(number int, commentID int64, body stri
 	return client.ReplyToReviewComment(ctx, owner, repo, number, commentID, body)
 }
 
+// PRDetail returns the aggregated PR detail (reviews, threads, checks, labels, assignees) via GraphQL.
 func (g *GitService) PRDetail(number int) (*ghapi.PRDetail, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -597,6 +671,7 @@ func (g *GitService) PRDetail(number int) (*ghapi.PRDetail, error) {
 	return client.PRDetailGraphQL(ctx, owner, repo, number)
 }
 
+// ListRuns returns recent workflow runs.
 func (g *GitService) ListRuns(limit int) ([]ghapi.WorkflowRun, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -610,6 +685,7 @@ func (g *GitService) ListRuns(limit int) ([]ghapi.WorkflowRun, error) {
 	return client.ListRuns(ctx, owner, repo, limit)
 }
 
+// RunJobs returns a run's jobs.
 func (g *GitService) RunJobs(runID int64) ([]ghapi.Job, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -623,6 +699,7 @@ func (g *GitService) RunJobs(runID int64) ([]ghapi.Job, error) {
 	return client.ListRunJobs(ctx, owner, repo, runID)
 }
 
+// GetRun returns a single run.
 func (g *GitService) GetRun(runID int64) (ghapi.WorkflowRun, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -636,6 +713,7 @@ func (g *GitService) GetRun(runID int64) (ghapi.WorkflowRun, error) {
 	return client.GetRun(ctx, owner, repo, runID)
 }
 
+// CancelRun cancels a run (needs workflow scope).
 func (g *GitService) CancelRun(runID int64) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -649,6 +727,7 @@ func (g *GitService) CancelRun(runID int64) error {
 	return client.CancelRun(ctx, owner, repo, runID)
 }
 
+// RerunRun reruns a run (needs workflow scope).
 func (g *GitService) RerunRun(runID int64) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -662,6 +741,7 @@ func (g *GitService) RerunRun(runID int64) error {
 	return client.RerunRun(ctx, owner, repo, runID)
 }
 
+// RerunFailed reruns a run's failed jobs (needs workflow scope).
 func (g *GitService) RerunFailed(runID int64) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -675,6 +755,7 @@ func (g *GitService) RerunFailed(runID int64) error {
 	return client.RerunFailed(ctx, owner, repo, runID)
 }
 
+// JobLogs returns a job's logs, split by step.
 func (g *GitService) JobLogs(jobID int64) (ghapi.JobLog, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -688,6 +769,7 @@ func (g *GitService) JobLogs(jobID int64) (ghapi.JobLog, error) {
 	return client.JobLogs(ctx, owner, repo, jobID)
 }
 
+// RunJobGraph returns the run's job dependency graph (matrix legs expanded).
 func (g *GitService) RunJobGraph(runID int64) ([]ghapi.JobNode, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -701,6 +783,7 @@ func (g *GitService) RunJobGraph(runID int64) ([]ghapi.JobNode, error) {
 	return client.RunJobGraph(ctx, owner, repo, runID)
 }
 
+// ListDispatchableWorkflows returns workflows that accept workflow_dispatch, with their inputs.
 func (g *GitService) ListDispatchableWorkflows() ([]ghapi.DispatchableWorkflow, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -733,6 +816,7 @@ func (g *GitService) TriggerDispatch(workflowFile, ref string, inputs map[string
 	return client.TriggerDispatch(ctx, owner, repo, workflowFile, ref, m)
 }
 
+// ResolveThread marks a review thread resolved (GraphQL).
 func (g *GitService) ResolveThread(threadID string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -746,6 +830,7 @@ func (g *GitService) ResolveThread(threadID string) error {
 	return client.ResolveThread(ctx, threadID)
 }
 
+// UnresolveThread reopens a resolved review thread (GraphQL).
 func (g *GitService) UnresolveThread(threadID string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -759,6 +844,7 @@ func (g *GitService) UnresolveThread(threadID string) error {
 	return client.UnresolveThread(ctx, threadID)
 }
 
+// CommentPR adds a general comment to a PR.
 func (g *GitService) CommentPR(number int, body string) (string, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -772,6 +858,7 @@ func (g *GitService) CommentPR(number int, body string) (string, error) {
 	return client.CommentPR(ctx, owner, repo, number, body)
 }
 
+// SubmitReview submits a PR review (approve/request-changes/comment).
 func (g *GitService) SubmitReview(number int, event, body string, comments []ghapi.ReviewComment) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -785,6 +872,7 @@ func (g *GitService) SubmitReview(number int, event, body string, comments []gha
 	return client.SubmitReview(ctx, owner, repo, number, event, body, comments)
 }
 
+// ListRequestedReviewers returns a PR's requested reviewers.
 func (g *GitService) ListRequestedReviewers(number int) ([]ghapi.Reviewer, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -798,6 +886,7 @@ func (g *GitService) ListRequestedReviewers(number int) ([]ghapi.Reviewer, error
 	return client.ListRequestedReviewers(ctx, owner, repo, number)
 }
 
+// RequestReviewers requests reviewers on a PR.
 func (g *GitService) RequestReviewers(number int, logins []string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -811,6 +900,7 @@ func (g *GitService) RequestReviewers(number int, logins []string) error {
 	return client.RequestReviewers(ctx, owner, repo, number, logins)
 }
 
+// RemoveReviewer removes a requested reviewer from a PR.
 func (g *GitService) RemoveReviewer(number int, login string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)
@@ -824,41 +914,56 @@ func (g *GitService) RemoveReviewer(number int, login string) error {
 	return client.RemoveReviewer(ctx, owner, repo, number, login)
 }
 
+// StashSave saves a stash.
 func (g *GitService) StashSave(message string, includeUntracked bool) error {
 	return gitops.StashSave(g.repoDir, message, includeUntracked)
 }
 
+// StashList returns the stash list.
 func (g *GitService) StashList() ([]gitops.Stash, error) {
 	return gitops.StashList(g.repoDir)
 }
 
+// StashPop pops a stash.
 func (g *GitService) StashPop(ref string) error {
 	return gitops.StashPop(g.repoDir, ref)
 }
 
+// StashApply applies a stash without dropping it.
 func (g *GitService) StashApply(ref string) error {
 	return gitops.StashApply(g.repoDir, ref)
 }
 
+// StashDrop drops a stash.
 func (g *GitService) StashDrop(ref string) error {
 	return gitops.StashDrop(g.repoDir, ref)
 }
 
+// Show returns a commit's detail + diff.
 func (g *GitService) Show(rev string) (*gitops.CommitDetail, error) {
 	return gitops.Show(g.repoDir, rev)
 }
 
+// Reflog returns reflog entries.
 func (g *GitService) Reflog(limit int) ([]gitops.ReflogEntry, error) {
 	return gitops.Reflog(g.repoDir, limit)
 }
 
+// Blame returns line-by-line blame for a file.
 func (g *GitService) Blame(path string) ([]gitops.BlameLine, error) {
 	return gitops.Blame(g.repoDir, path)
 }
 
+// ListRemotes returns configured remotes.
 func (g *GitService) ListRemotes() ([]gitops.Remote, error) { return gitops.ListRemotes(g.repoDir) }
-func (g *GitService) AddRemote(name, url string) error      { return gitops.AddRemote(g.repoDir, name, url) }
-func (g *GitService) RemoveRemote(name string) error        { return gitops.RemoveRemote(g.repoDir, name) }
+
+// AddRemote adds a remote.
+func (g *GitService) AddRemote(name, url string) error { return gitops.AddRemote(g.repoDir, name, url) }
+
+// RemoveRemote removes a remote.
+func (g *GitService) RemoveRemote(name string) error { return gitops.RemoveRemote(g.repoDir, name) }
+
+// RenameRemote renames a remote.
 func (g *GitService) RenameRemote(oldName, newName string) error {
 	return gitops.RenameRemote(g.repoDir, oldName, newName)
 }
@@ -874,26 +979,43 @@ func (g *GitService) Clone(url, dest string) (string, error) {
 	return path, nil
 }
 
+// Reset resets HEAD to a ref (soft/mixed/hard).
 func (g *GitService) Reset(rev, mode string) error {
 	return gitops.Reset(g.repoDir, rev, gitops.ResetMode(mode))
 }
 
-func (g *GitService) CherryPick(rev string) error       { return gitops.CherryPick(g.repoDir, rev) }
-func (g *GitService) CherryPickContinue() error         { return gitops.CherryPickContinue(g.repoDir) }
-func (g *GitService) CherryPickAbort() error            { return gitops.CherryPickAbort(g.repoDir) }
-func (g *GitService) Revert(rev string) error           { return gitops.Revert(g.repoDir, rev) }
-func (g *GitService) RevertContinue() error             { return gitops.RevertContinue(g.repoDir) }
-func (g *GitService) RevertAbort() error                { return gitops.RevertAbort(g.repoDir) }
+// CherryPick cherry-picks a commit.
+func (g *GitService) CherryPick(rev string) error { return gitops.CherryPick(g.repoDir, rev) }
+
+// CherryPickContinue resumes an in-progress cherry-pick after conflicts are resolved.
+func (g *GitService) CherryPickContinue() error { return gitops.CherryPickContinue(g.repoDir) }
+
+// CherryPickAbort aborts an in-progress cherry-pick.
+func (g *GitService) CherryPickAbort() error { return gitops.CherryPickAbort(g.repoDir) }
+
+// Revert reverts a commit.
+func (g *GitService) Revert(rev string) error { return gitops.Revert(g.repoDir, rev) }
+
+// RevertContinue resumes an in-progress revert after conflicts are resolved.
+func (g *GitService) RevertContinue() error { return gitops.RevertContinue(g.repoDir) }
+
+// RevertAbort aborts an in-progress revert.
+func (g *GitService) RevertAbort() error { return gitops.RevertAbort(g.repoDir) }
+
+// SequencerInProgress reports cherry-pick/revert in-progress state.
 func (g *GitService) SequencerInProgress() (bool, bool) { return gitops.SequencerInProgress(g.repoDir) }
 
+// CurrentBranch returns the current branch name.
 func (g *GitService) CurrentBranch() (string, error) {
 	return gitops.CurrentBranch(g.repoDir)
 }
 
+// PRTemplate returns the repo's PR template body, if any.
 func (g *GitService) PRTemplate() string {
 	return gitops.ReadPRTemplate(g.repoDir)
 }
 
+// DefaultPRTitle suggests a default PR title from the branch.
 func (g *GitService) DefaultPRTitle(branch string) (string, error) {
 	return gitops.LastCommitSubject(g.repoDir, branch)
 }
