@@ -152,7 +152,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_TOKEN }} # PAT owned by davasorus (in ruleset bypass) → tag push allowed
           persist-credentials: true
       - uses: actions/download-artifact@v4
         with: { path: artifacts }
@@ -163,13 +162,11 @@ jobs:
           ls -la out || true
       - name: Create the single immutable release
         env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VER="v$(cat artifacts/release-meta/release-version.txt)"
           git tag "$VER"
-          # push the tag as davasorus (bypass actor) with the PAT explicit in the URL
-          git push "https://davasorus:${RELEASE_TOKEN}@github.com/davasorus/gitmate.git" "$VER"
+          git push origin "$VER"
           gh release create "$VER" \
             --title "$VER" \
             --notes-file artifacts/release-meta/release-notes.md \
