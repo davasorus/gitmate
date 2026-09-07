@@ -18,6 +18,10 @@ import * as ghapi$0 from "../internal/ghapi/models.js";
 // @ts-ignore: Unused imports
 import * as gitops$0 from "../internal/gitops/models.js";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
 /**
  * AddAssignees adds assignees to an issue or PR.
  */
@@ -313,6 +317,14 @@ export function IssuesRich(state: string): $CancellablePromise<ghapi$0.IssueList
  */
 export function JobLogs(jobID: number): $CancellablePromise<ghapi$0.JobLog> {
     return $Call.ByID(3461752551, jobID);
+}
+
+/**
+ * LastUndoable returns the pending undo point (label + short sha), or an empty
+ * UndoInfo if there is nothing to undo.
+ */
+export function LastUndoable(): $CancellablePromise<$models.UndoInfo> {
+    return $Call.ByID(609755711);
 }
 
 /**
@@ -826,6 +838,14 @@ export function SwitchNew(branch: string): $CancellablePromise<void> {
  */
 export function TriggerDispatch(workflowFile: string, ref: string, inputs: { [_ in string]?: string } | null): $CancellablePromise<void> {
     return $Call.ByID(3276770057, workflowFile, ref, inputs);
+}
+
+/**
+ * Undo hard-resets HEAD back to the captured restore point and clears it. The
+ * pre-undo state stays recoverable via the reflog.
+ */
+export function Undo(): $CancellablePromise<void> {
+    return $Call.ByID(2554715551);
 }
 
 /**

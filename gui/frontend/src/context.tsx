@@ -42,6 +42,7 @@ export interface GitmateState {
   tags: Tag[];
   checks: Record<number, CheckRun[]>;
   mergeInProgress: boolean;
+  undoLabel: string; // pending undoable op label ("" = nothing to undo)
   rebaseInProgress: boolean;
   cherryPickInProgress: boolean;
   revertInProgress: boolean;
@@ -79,6 +80,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
   const [tags, setTags] = useState<Tag[]>([]);
   const [checks] = useState<Record<number, CheckRun[]>>({});
   const [mergeInProgress, setMergeInProgress] = useState(false);
+  const [undoLabel, setUndoLabel] = useState("");
   const [rebaseInProgress, setRebaseInProgress] = useState(false);
   const [cherryPickInProgress, setCherryPickInProgress] = useState(false);
   const [revertInProgress, setRevertInProgress] = useState(false);
@@ -130,6 +132,12 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
         setCherryPickInProgress(!!seq && !!seq[0]);
         setRevertInProgress(!!seq && !!seq[1]);
         setConflicts((await GitService.ConflictedFiles()) ?? []);
+        try {
+          const u = await GitService.LastUndoable();
+          setUndoLabel(u?.Label ?? "");
+        } catch {
+          setUndoLabel("");
+        }
       } catch {
         setMergeInProgress(false);
         setRebaseInProgress(false);
@@ -208,6 +216,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
     tags,
     checks,
     mergeInProgress,
+    undoLabel,
     rebaseInProgress,
     cherryPickInProgress,
     revertInProgress,
