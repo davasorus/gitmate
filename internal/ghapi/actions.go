@@ -2,6 +2,7 @@ package ghapi
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -160,6 +161,23 @@ func fmtInt(n int) string {
 }
 
 // CancelRun cancels an in-progress workflow run.
+
+// workflowScopeErr rewraps a 403 from the workflow-mutating endpoints (cancel,
+// rerun, dispatch) into a clear message: these require a token with the
+// "workflow" scope, and a 403 here almost always means the scope is missing.
+func workflowScopeErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	if er, ok := err.(*github.ErrorResponse); ok && er.Response != nil &&
+		er.Response.StatusCode == http.StatusForbidden {
+		return fmt.Errorf("permission denied (403): your GitHub token needs the "+
+			"\"workflow\" scope to cancel, rerun, or dispatch Actions — regenerate "+
+			"the token with that scope. (original: %w)", err)
+	}
+	return err
+}
+
 func (c *Client) CancelRun(ctx context.Context, owner, repo string, runID int64) error {
 	_, err := c.gh.Actions.CancelWorkflowRunByID(ctx, owner, repo, runID)
 	// GitHub returns 202 Accepted for cancel; go-github surfaces that as
@@ -167,19 +185,19 @@ func (c *Client) CancelRun(ctx context.Context, owner, repo string, runID int64)
 	if _, ok := err.(*github.AcceptedError); ok {
 		return nil
 	}
-	return err
+	return workflowScopeErr(err)
 }
 
 // RerunRun re-runs all jobs of a completed run.
 func (c *Client) RerunRun(ctx context.Context, owner, repo string, runID int64) error {
 	_, err := c.gh.Actions.RerunWorkflowByID(ctx, owner, repo, runID)
-	return err
+	return workflowScopeErr(err)
 }
 
 // RerunFailed re-runs only the failed jobs of a completed run.
 func (c *Client) RerunFailed(ctx context.Context, owner, repo string, runID int64) error {
 	_, err := c.gh.Actions.RerunFailedJobsByID(ctx, owner, repo, runID)
-	return err
+	return workflowScopeErr(err)
 }
 
 // DispatchInput describes one workflow_dispatch input the workflow defines.
@@ -206,7 +224,7 @@ type DispatchableWorkflow struct {
 func (c *Client) TriggerDispatch(ctx context.Context, owner, repo, workflowFile, ref string, inputs map[string]interface{}) error {
 	_, _, err := c.gh.Actions.CreateWorkflowDispatchEventByFileName(ctx, owner, repo, workflowFile,
 		github.CreateWorkflowDispatchEventRequest{Ref: ref, Inputs: inputs})
-	return err
+	return workflowScopeErr(err)
 }
 
 // ListDispatchableWorkflows returns workflows that declare a workflow_dispatch

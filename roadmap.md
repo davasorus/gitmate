@@ -275,13 +275,13 @@ because it unlocks capability, not just efficiency:
 - [x] depends on Phase A: REST write-actions exist (Phase A merged) ✓
 - [ ] leaves the door open for GraphQL-only features later (Projects V2, etc.)
 
-### 3.7 / Later — REST→GraphQL migration pass (Phase 4 or late Phase 3)  [ ]
+### 3.7 / REST→GraphQL migration pass  [x] DONE
 Deliberate per-endpoint pass AFTER Phase B exists (don't migrate against a moving target,
 don't rip-and-replace). Decision rule:
   - USE GRAPHQL for: nested/aggregated reads (PR detail, dashboards), GraphQL-only features
   - KEEP REST for: simple single-resource reads, and most writes/mutations (clearer, already built)
-- [ ] audit each ghapi call against the rule; migrate the ones where GraphQL genuinely wins
-- [ ] mixed REST+GraphQL is expected and fine (GitHub explicitly supports it; node IDs bridge them)
+- [x] audited every ghapi call: PR detail (Phase B), PR list (+review decision & CI rollup badges), issue list (+assignees) migrated to GraphQL; PRChecks panel now reads from PRDetail. Writes, Actions (GraphQL has no Actions API), and simple single reads stay REST.
+- [x] mixed REST+GraphQL as intended
 
 ### 3.5 / Phase C — GitHub Actions (first-class)  [x]   ← DONE (C-1 data+polling, C-1.5 grouping, C-2 controls, C-3 logs+color, C-4 flowchart)
 Actions as a first-class citizen: watch, control, view. Live feel via SMART POLLING
@@ -304,13 +304,16 @@ Build order: (1) list+run-tree+status+polling → (2) controls → (3) logs → 
   (all/success/failure/in-progress); show richer per-run detail (trigger/event, branch,
   duration, run #). Engine adds WorkflowName + timing to the run; frontend groups + filters.
 - [x] view 2: flowchart DONE — RunJobGraph parses jobs+needs from workflow YAML; RunFlow renders depth-column DAG with SVG dependency arrows, boxes colored by live job status; Tree/Flowchart toggle in the run panel
-  - [ ] FLOWCHART GAP (deferred to end of project): matrix jobs not handled. A YAML job
+  - [x] FLOWCHART matrix DONE: parseJobGraph expands strategy.matrix into one node per leg
+        (cartesian product + include/exclude), named to match GitHub runtime jobs; RunFlow matches
+        by exact leg name. (Prior note kept below for context.)
+  - [~] (was) FLOWCHART GAP: matrix jobs not handled. A YAML job
     with strategy.matrix declares ONE node (e.g. "build"), but the run expands it into
     N jobs ("build (ubuntu-latest)", "build (windows-latest)"...). Current RunFlow matches
     node→job by exact name, so matrix legs don't render/color correctly. DECISION: option B —
     render ONE BOX PER MATRIX LEG (reflects what actually runs), not an aggregate. Needs:
     parse strategy.matrix from the YAML to expand nodes, fan the needs: edges to each leg.
-- [~] token needs `workflow` scope for dispatch/cancel — cancel/rerun/dispatch will 403 without it; regenerate token with workflow scope
+- [~] token needs `workflow` scope for dispatch/cancel. CODE: cancel/rerun/dispatch now return a CLEAR error naming the missing scope on 403. ACTION (user): regenerate the token with `workflow` scope.
 
 ### 3.6 — Webhooks  [DECLINED]
 Considered for live updates; declined. Webhooks require GitHub to POST to a public URL,
@@ -417,7 +420,7 @@ comments. STE *style* is human-followed, not machine-validated.
 
 ## CROSS-CUTTING BUILDS (not single commands — whole subsystems)
 
-### C.1 Diff renderer (GUI)  [ ]
+### C.1 Diff renderer (GUI)  [x] DONE (DiffView: file+hunk headers, +/- coloring, old/new line numbers, binary handling)
 - The backbone view. +/- line coloring, hunk headers, file headers.
 - Reused by: file diff, commit diff, merge/rebase conflict preview, PR review.
 - Do this properly as part of 1.1; everything leans on it.
@@ -453,14 +456,22 @@ comments. STE *style* is human-followed, not machine-validated.
 - Update this doc's checkboxes as things land.
 
 ### UX feedback (added post-Tier-2.2)
-- [ ] **Branch listing shows LOCAL branches only** — GetBranches lists refs/heads only, so
+
+> **STATUS (latest session):** All UX-feedback code items below are DONE (remote branches,
+> auto-refresh+prune, branch-row hierarchy, repoDir root, merge-completion). Remaining items
+> are NOT code: Windows path casing (docs), and the token `workflow`-scope regen (user action;
+> code now shows a clear error). Only Phase F (docs) remains after this.
+- [x] **Branch listing now surfaces remote + remote-only branches** (GetBranches scans refs/remotes;
+  local/remote/both flags; remote-only branches show a badge + Checkout that creates a tracking branch;
+  PR base dropdown & History selector get them for free). WAS: LOCAL branches only — GetBranches lists refs/heads only, so
   branches that exist on the remote (e.g. `dev` created on origin) are invisible in the
   Branches tab, the PR base dropdown, AND the History branch selector. Fix at the engine:
   GetBranches should also surface remote-tracking branches (refs/remotes) marked
   local/remote/both, with a checkout action to create a local tracking branch. Prereq: a
   fetch must have run to populate origin/* refs (pairs with the fetch --prune auto-refresh
   item). Blocks the two-trunk dev workflow — fix early (branch-management pass).
-- [ ] **Auto-refresh (kill the manual Reload button for normal use).** Two parts:
+- [x] **Auto-refresh DONE:** reload on window focus + visibilitychange; periodic background fetch every 5 min
+  (network) then reload; Fetch now uses --prune so deleted remote branches drop. WAS: Two parts:
   (1) reload local state on window focus, so returning to the app after terminal/
   browser work reflects reality without a manual Reload; (2) periodic background
   fetch (every few minutes and/or on focus) so ahead/behind + remote state stay
@@ -474,12 +485,13 @@ comments. STE *style* is human-followed, not machine-validated.
   linger in the branch list until a manual prune. Folding --prune into the
   auto-refresh fetch fixes this for free. (Reported: deleted remote branches not
   reflected locally.)
-- [ ] Branch-row actions: five equal-weight buttons (Switch/Merge/Rebase/Rename/Delete)
+- [x] Branch-row hierarchy DONE: Switch/Checkout primary weight, Merge/Rebase secondary, Rename/Delete muted;
+  no actions hidden behind menus. WAS: five equal-weight buttons (Switch/Merge/Rebase/Rename/Delete)
   feel cluttered, BUT the Integrate-menu redesign attempted mid-Tier-2 was worse
   (hidden click-to-switch, over-engineered dropdowns) and was reverted. Revisit in the
   dedicated polish stage with a light touch: visual hierarchy (primary vs secondary
   weight) only — do NOT hide state-changing actions behind clicks/menus.
-- [ ] **GUI reload on window focus** — the GUI polls, it doesn't watch. Actions taken
+- [x] **GUI reload on window focus DONE** (folded into Auto-refresh above). WAS: the GUI polls, it doesn't watch. Actions taken
   in the terminal (or another git tool) while the app is open aren't reflected until a
   manual Reload or a GUI action forces reload(). Reload on window-focus covers the
   common terminal↔GUI bounce cheaply (a filesystem watcher on .git is the heavier,
@@ -490,7 +502,8 @@ comments. STE *style* is human-followed, not machine-validated.
   `checkout --ours -- <path>`) broke because the pathspec resolved against gui/, not
   the root. ResolveOurs/Theirs/MarkResolved self-correct via `rev-parse --show-toplevel`,
   but the real fix is aligning repoDir/cwd once for all commands.
-- [ ] **Merge-completion UX** — banner should auto-clear when a merge concludes, and the
+- [x] **Merge-completion UX DONE:** Conflicts view shows a "Commit merge" button once conflicts hit zero
+  (CommitMerge = git commit --no-edit); banner auto-clears via reload after commit. WAS: banner should auto-clear when a merge concludes, and the
   Conflicts view should offer a "Commit merge" button once conflicts hit zero (right now
   it says "commit in Changes to finish" but nothing pulls you there).
 - [ ] Windows path casing (README.MD vs README.md) is a recurring gotcha — git pathspecs
