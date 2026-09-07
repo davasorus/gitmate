@@ -298,6 +298,14 @@ export function GetRun(runID: number): $CancellablePromise<ghapi$0.WorkflowRun> 
 }
 
 /**
+ * InteractiveRebaseTodo returns the commits from base..HEAD as a default
+ * interactive-rebase plan (all "pick"), for the UI to reorder/edit.
+ */
+export function InteractiveRebaseTodo(base: string): $CancellablePromise<gitops$0.RebaseStep[] | null> {
+    return $Call.ByID(1433891415, base);
+}
+
+/**
  * Issues returns issues by state (REST).
  */
 export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | null> {
@@ -690,6 +698,14 @@ export function RevertAbort(): $CancellablePromise<void> {
  */
 export function RevertContinue(): $CancellablePromise<void> {
     return $Call.ByID(3855291498);
+}
+
+/**
+ * RunInteractiveRebase executes an interactive rebase onto base applying the
+ * given plan (reorder/drop/squash/fixup/reword). Captures an undo point first.
+ */
+export function RunInteractiveRebase(base: string, steps: gitops$0.RebaseStep[] | null): $CancellablePromise<void> {
+    return $Call.ByID(3743826970, base, steps);
 }
 
 /**

@@ -662,6 +662,19 @@ func (g *GitService) RebaseAbort() error { return gitops.RebaseAbort(g.repoDir) 
 // RebaseInProgress reports whether a rebase is in progress.
 func (g *GitService) RebaseInProgress() bool { return gitops.RebaseInProgress(g.repoDir) }
 
+// InteractiveRebaseTodo returns the commits from base..HEAD as a default
+// interactive-rebase plan (all "pick"), for the UI to reorder/edit.
+func (g *GitService) InteractiveRebaseTodo(base string) ([]gitops.RebaseStep, error) {
+	return gitops.InteractiveRebaseTodo(g.repoDir, base)
+}
+
+// RunInteractiveRebase executes an interactive rebase onto base applying the
+// given plan (reorder/drop/squash/fixup/reword). Captures an undo point first.
+func (g *GitService) RunInteractiveRebase(base string, steps []gitops.RebaseStep) error {
+	g.captureUndo("Interactive rebase onto " + base)
+	return gitops.RunInteractiveRebase(g.repoDir, base, steps)
+}
+
 // ListTags returns tags (local + remote).
 func (g *GitService) ListTags() ([]gitops.Tag, error) { return gitops.ListTags(g.repoDir) }
 

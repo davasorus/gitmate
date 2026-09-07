@@ -172,6 +172,51 @@ export enum LineKind {
 };
 
 /**
+ * RebaseAction is what to do with a commit in an interactive rebase.
+ */
+export enum RebaseAction {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * Interactive-rebase actions.
+     */
+    RebasePick = "pick",
+    RebaseReword = "reword",
+    RebaseSquash = "squash",
+    RebaseFixup = "fixup",
+    RebaseDrop = "drop",
+};
+
+/**
+ * RebaseStep is one line of the interactive-rebase plan: a commit + the action
+ * to take, plus (for reword/squash) an optional replacement message.
+ */
+export interface RebaseStep {
+    /**
+     * full or short commit SHA
+     */
+    "SHA": string;
+
+    /**
+     * commit subject (for display)
+     */
+    "Subject": string;
+
+    /**
+     * pick/reword/squash/fixup/drop
+     */
+    "Action": RebaseAction;
+
+    /**
+     * replacement/combined message for reword & squash; empty otherwise
+     */
+    "Message": string;
+}
+
+/**
  * ReflogEntry is one line of `git reflog` — where HEAD moved and why.
  */
 export interface ReflogEntry {

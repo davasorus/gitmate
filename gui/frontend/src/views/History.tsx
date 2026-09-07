@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useGit, cls } from "../context";
 import { DiffView } from "../components/DiffView";
+import { RebasePanel } from "../components/RebasePanel";
 import type {
   Commit,
   CommitDetail,
@@ -13,6 +14,7 @@ export function History() {
 
   const [viewBranch, setViewBranch] = useState(""); // "" = current branch
   const [refCommits, setRefCommits] = useState<Commit[] | null>(null);
+  const [showRebase, setShowRebase] = useState(false);
 
   const current = status?.Branch ?? "";
   const shown = refCommits ?? commits ?? [];
@@ -89,6 +91,15 @@ export function History() {
           History
         </h2>
         <div className="flex items-center gap-2 text-xs">
+          {!viewingOther && (
+            <button
+              onClick={() => setShowRebase((v) => !v)}
+              disabled={!!busy}
+              className={cls.btnSm}
+            >
+              {showRebase ? "Close rebase" : "Rebase"}
+            </button>
+          )}
           <span className="text-muted-foreground">branch:</span>
           <select
             value={viewBranch || current}
@@ -104,6 +115,7 @@ export function History() {
           </select>
         </div>
       </div>
+      {showRebase && <RebasePanel onClose={() => setShowRebase(false)} />}
 
       {viewingOther && (
         <div className="rounded-md border border-[var(--color-ahead)]/40 bg-[var(--color-ahead)]/5 px-3 py-1.5 text-xs text-muted-foreground">
