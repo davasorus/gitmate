@@ -137,11 +137,14 @@ export function RebasePanel({ onClose }: { onClose: () => void }) {
               >
                 {s.Subject}
               </span>
-              {(s.Action === RebaseAction.RebaseReword || s.Action === RebaseAction.RebaseSquash) && (
+              {(s.Action === RebaseAction.RebaseReword ||
+                s.Action === RebaseAction.RebaseSquash) && (
                 <input
                   value={s.Message ?? ""}
                   onChange={(e) => setMessage(i, e.target.value)}
-                  placeholder={s.Action === RebaseAction.RebaseReword ? "new message" : "combined message"}
+                  placeholder={
+                    s.Action === RebaseAction.RebaseReword ? "new message" : "combined message"
+                  }
                   className={`${cls.input} h-6 w-40 px-2 py-0`}
                 />
               )}
