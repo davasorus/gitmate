@@ -134,3 +134,24 @@ func seqEditorCmdForTest(src string) string {
 	}
 	return `cp "` + src + `"`
 }
+
+func TestHasMessagesAndQuoteArg(t *testing.T) {
+	// hasMessages: true only when a reword/squash carries a non-empty message
+	none := []RebaseStep{{Action: RebasePick}, {Action: RebaseDrop}}
+	if hasMessages(none) {
+		t.Error("pick/drop should need no messages")
+	}
+	with := []RebaseStep{{Action: RebaseReword, Message: "new msg"}}
+	if !hasMessages(with) {
+		t.Error("reword with a message should report true")
+	}
+	emptyMsg := []RebaseStep{{Action: RebaseSquash, Message: "  "}}
+	if hasMessages(emptyMsg) {
+		t.Error("blank message should not count")
+	}
+	// quoteArg always wraps in quotes
+	q := quoteArg("some path")
+	if q[0] != '"' || q[len(q)-1] != '"' {
+		t.Errorf("quoteArg should wrap in quotes: %q", q)
+	}
+}

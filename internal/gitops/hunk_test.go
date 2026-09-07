@@ -68,3 +68,29 @@ func TestStageHunk(t *testing.T) {
 		t.Errorf("expected nothing staged after unstage, got %+v", staged2)
 	}
 }
+
+func TestBuildHunkPatch(t *testing.T) {
+	h := Hunk{
+		Header: "@@ -1,3 +1,3 @@",
+		Lines: []Line{
+			{Kind: LineContext, Content: "ctx"},
+			{Kind: LineRemove, Content: "old"},
+			{Kind: LineAdd, Content: "new"},
+		},
+	}
+	patch := buildHunkPatch("f.txt", h)
+	// must have file headers, the hunk header, and correctly-prefixed lines
+	for _, want := range []string{
+		"diff --git a/f.txt b/f.txt",
+		"--- a/f.txt",
+		"+++ b/f.txt",
+		"@@ -1,3 +1,3 @@",
+		" ctx",
+		"-old",
+		"+new",
+	} {
+		if !strings.Contains(patch, want) {
+			t.Errorf("patch missing %q:\n%s", want, patch)
+		}
+	}
+}
