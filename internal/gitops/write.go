@@ -306,3 +306,24 @@ func CommitMerge(dir string) (string, error) {
 	}
 	return strings.TrimSpace(out), nil
 }
+
+// HeadSHA returns the full commit SHA that HEAD currently points at. Used to
+// capture a restore point before a history-moving operation (merge/rebase/reset).
+func HeadSHA(dir string) (string, error) {
+	out, err := run(dir, "rev-parse", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// UndoTo hard-resets HEAD back to a previously captured SHA — the mechanism
+// behind "undo last operation". The pre-undo state remains recoverable via the
+// reflog, so an undo is itself reversible.
+func UndoTo(dir, sha string) error {
+	if strings.TrimSpace(sha) == "" {
+		return errors.New("no restore point to undo to")
+	}
+	_, err := run(dir, "reset", "--hard", sha)
+	return err
+}

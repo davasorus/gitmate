@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 
 	"github.com/davasorus/gitmate/internal/ghapi"
 	"github.com/davasorus/gitmate/internal/gitops"
@@ -12,6 +13,58 @@ import (
 // delegates to the same internal/ engine the CLI uses.
 type GitService struct {
 	repoDir string // working directory for local git operations
+
+	// lastUndo captures the state before the most recent history-moving op
+	// (merge/rebase/reset/cherry-pick/revert), backing the "undo last" feature.
+	lastUndo *undoPoint
+}
+
+// undoPoint is a restore point: the SHA HEAD pointed at before an operation,
+// plus a human label for the affordance ("Merge feature-x").
+type undoPoint struct {
+	Label string // e.g. "Merge feature-x"
+	SHA   string // HEAD before the op
+}
+
+// captureUndo records the current HEAD as the restore point for a labeled op.
+// Best-effort: if HEAD can't be read (e.g. empty repo) it records nothing.
+func (g *GitService) captureUndo(label string) {
+	if sha, err := gitops.HeadSHA(g.repoDir); err == nil {
+		g.lastUndo = &undoPoint{Label: label, SHA: sha}
+	}
+}
+
+// UndoInfo describes the pending undoable operation for the UI (empty Label
+// means nothing to undo).
+type UndoInfo struct {
+	Label string
+	SHA   string
+}
+
+// LastUndoable returns the pending undo point (label + short sha), or an empty
+// UndoInfo if there is nothing to undo.
+func (g *GitService) LastUndoable() UndoInfo {
+	if g.lastUndo == nil {
+		return UndoInfo{}
+	}
+	short := g.lastUndo.SHA
+	if len(short) > 7 {
+		short = short[:7]
+	}
+	return UndoInfo{Label: g.lastUndo.Label, SHA: short}
+}
+
+// Undo hard-resets HEAD back to the captured restore point and clears it. The
+// pre-undo state stays recoverable via the reflog.
+func (g *GitService) Undo() error {
+	if g.lastUndo == nil {
+		return errors.New("nothing to undo")
+	}
+	if err := gitops.UndoTo(g.repoDir, g.lastUndo.SHA); err != nil {
+		return err
+	}
+	g.lastUndo = nil
+	return nil
 }
 
 // NewGitService starts pointed at the given directory ("." by default).
@@ -566,7 +619,10 @@ func (g *GitService) Pull(rebase bool) error {
 }
 
 // Merge merges a branch into the current one.
-func (g *GitService) Merge(branch string) error { return gitops.Merge(g.repoDir, branch) }
+func (g *GitService) Merge(branch string) error {
+	g.captureUndo("Merge " + branch)
+	return gitops.Merge(g.repoDir, branch)
+}
 
 // MergeAbort aborts an in-progress merge.
 func (g *GitService) MergeAbort() error { return gitops.MergeAbort(g.repoDir) }
@@ -581,7 +637,10 @@ func (g *GitService) MergeInProgress() bool { return gitops.MergeInProgress(g.re
 func (g *GitService) CommitMerge() (string, error) { return gitops.CommitMerge(g.repoDir) }
 
 // Rebase rebases the current branch onto a base.
-func (g *GitService) Rebase(base string) error { return gitops.Rebase(g.repoDir, base) }
+func (g *GitService) Rebase(base string) error {
+	g.captureUndo("Rebase onto " + base)
+	return gitops.Rebase(g.repoDir, base)
+}
 
 // RebaseContinue resumes an in-progress rebase.
 func (g *GitService) RebaseContinue() error { return gitops.RebaseContinue(g.repoDir) }
@@ -1093,11 +1152,15 @@ func (g *GitService) Clone(url, dest string) (string, error) {
 
 // Reset resets HEAD to a ref (soft/mixed/hard).
 func (g *GitService) Reset(rev, mode string) error {
+	g.captureUndo("Reset (" + mode + ") to " + rev)
 	return gitops.Reset(g.repoDir, rev, gitops.ResetMode(mode))
 }
 
 // CherryPick cherry-picks a commit.
-func (g *GitService) CherryPick(rev string) error { return gitops.CherryPick(g.repoDir, rev) }
+func (g *GitService) CherryPick(rev string) error {
+	g.captureUndo("Cherry-pick " + rev)
+	return gitops.CherryPick(g.repoDir, rev)
+}
 
 // CherryPickContinue resumes an in-progress cherry-pick after conflicts are resolved.
 func (g *GitService) CherryPickContinue() error { return gitops.CherryPickContinue(g.repoDir) }
@@ -1106,7 +1169,10 @@ func (g *GitService) CherryPickContinue() error { return gitops.CherryPickContin
 func (g *GitService) CherryPickAbort() error { return gitops.CherryPickAbort(g.repoDir) }
 
 // Revert reverts a commit.
-func (g *GitService) Revert(rev string) error { return gitops.Revert(g.repoDir, rev) }
+func (g *GitService) Revert(rev string) error {
+	g.captureUndo("Revert " + rev)
+	return gitops.Revert(g.repoDir, rev)
+}
 
 // RevertContinue resumes an in-progress revert after conflicts are resolved.
 func (g *GitService) RevertContinue() error { return gitops.RevertContinue(g.repoDir) }

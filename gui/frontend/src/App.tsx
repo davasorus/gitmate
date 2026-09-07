@@ -31,6 +31,7 @@ export default function App() {
     service,
     reload,
     mergeInProgress,
+    undoLabel,
     rebaseInProgress,
     cherryPickInProgress,
     revertInProgress,
@@ -43,6 +44,15 @@ export default function App() {
   const doFetch = () => run("fetch", () => service.Fetch(), "fetched");
   const doPull = () => run("pull", () => service.Pull(false), "pulled");
   const doMergeAbort = () => run("merge-abort", () => service.MergeAbort(), "merge aborted");
+  const doUndo = () => {
+    if (
+      !window.confirm(
+        `Undo "${undoLabel}"? This resets to before that operation (recoverable via reflog).`,
+      )
+    )
+      return;
+    run("undo", () => service.Undo(), "undone");
+  };
   const doRebaseContinue = () =>
     run("rebase-continue", () => service.RebaseContinue(), "rebase continued");
   const doRebaseAbort = () => run("rebase-abort", () => service.RebaseAbort(), "rebase aborted");
@@ -117,6 +127,16 @@ export default function App() {
             <button onClick={reload} disabled={!!busy} className={`${cls.btnSm} flex-1`}>
               Reload
             </button>
+            {undoLabel && (
+              <button
+                onClick={doUndo}
+                disabled={!!busy}
+                className={`${cls.btnSm} flex-1 text-[var(--color-modified)]`}
+                title={`Undo: ${undoLabel}`}
+              >
+                {busy === "undo" ? "…" : "Undo"}
+              </button>
+            )}
             <button onClick={doFetch} disabled={!!busy} className={`${cls.btnSm} flex-1`}>
               {busy === "fetch" ? "…" : "Fetch"}
             </button>

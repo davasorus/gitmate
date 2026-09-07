@@ -5,3 +5,7 @@ import * as GitService from "./gitservice.js";
 export {
     GitService
 };
+
+export type {
+    UndoInfo
+} from "./models.js";
