@@ -340,12 +340,12 @@ ever gains a server component for another reason.
 
 ---
 
-## TIER 3 / Phase E — CI/CD efficacy & GitHub-flow optimization  [ ]
+## TIER 3 / Phase E — CI/CD efficacy & GitHub-flow optimization  [~] code DONE (E-0..E-3); settings + Phase F remain
 Big phase — its own mini-roadmap, built in ordered sub-steps. Organizing principle:
 a TWO-TRUNK model (`live` = production, `dev` = development) that everything else
 configures around. Covers CI quality, CD/release maturity, and process/governance.
 
-### E-0 — Two-trunk foundation (do FIRST)
+### E-0 — Two-trunk foundation (do FIRST)  [x] DONE (dev-Branch live; branch protection = settings)
 - [ ] create `dev` branch; make it the default PR target
 - [ ] flow: feat/* → PR → dev → (accumulate) → PR dev → live (release). Emergencies:
       hotfix → live, then back-merge live → dev to prevent drift.
@@ -371,7 +371,7 @@ configures around. Covers CI quality, CD/release maturity, and process/governanc
 - [~] gated approval: semantic-release.yml uses environment 'release' — YOU must add a required reviewer to that env in Settings
 - [x] soft conventional-commits: semantic-release parses; no commit-lint (accepted). PR template nudges the format.
 
-### E-3 — process/governance (light)  [~] files DONE; branch-protection settings pending
+### E-3 — process/governance (light)  [x] files DONE (CODEOWNERS, PR template, dependabot-automerge); branch-protection = settings
 - [~] required status checks: YOU set in Settings → Branches (require go/frontend/coverage on dev-Branch + live)
 - [x] Dependabot auto-merge on green patch/minor: .github/workflows/dependabot-automerge.yml
 - [x] PR template (.github/pull_request_template.md) + CODEOWNERS (.github/CODEOWNERS — @davasorus owns .github + .releaserc)
