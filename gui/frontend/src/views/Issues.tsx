@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useGit, cls } from "../context";
-import type { IssueListItem } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type {
+  IssueListItem,
+  Milestone,
+} from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StateFilter = "open" | "closed" | "all";
 
@@ -11,6 +14,7 @@ export function Issues() {
 
   const [filter, setFilter] = useState<StateFilter>("open");
   const [issues, setIssues] = useState<IssueListItem[]>([]);
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
 
   const reload = async () => {
     setBusy("issues-load");
@@ -31,6 +35,12 @@ export function Issues() {
       try {
         const list = (await service.IssuesRich(filter)) ?? [];
         if (!cancelled) setIssues(list);
+        try {
+          const ms = (await service.ListMilestones("open")) ?? [];
+          if (!cancelled) setMilestones(ms);
+        } catch {
+          /* milestones optional */
+        }
       } catch (e) {
         if (!cancelled) flash("err", String(e));
       } finally {
@@ -76,6 +86,53 @@ export function Issues() {
       `reopened #${n}`,
     );
   const [labelInput, setLabelInput] = useState<Record<number, string>>({});
+  const [assigneeInput, setAssigneeInput] = useState<Record<number, string>>({});
+  const doAddAssignee = (n: number, user: string) =>
+    run(
+      `assign-${n}`,
+      async () => {
+        await service.AddAssignees(n, [user]);
+        setAssigneeInput((m) => ({ ...m, [n]: "" }));
+        return `assigned @${user}`;
+      },
+      "assigned",
+    );
+  const doRemoveAssignee = (n: number, user: string) =>
+    run(
+      `unassign-${n}-${user}`,
+      async () => {
+        await service.RemoveAssignees(n, [user]);
+        return `unassigned @${user}`;
+      },
+      "unassigned",
+    );
+  const doLock = (n: number) =>
+    run(
+      `lock-${n}`,
+      async () => {
+        await service.LockConversation(n, "");
+        return `locked #${n}`;
+      },
+      "locked",
+    );
+  const doUnlock = (n: number) =>
+    run(
+      `unlock-${n}`,
+      async () => {
+        await service.UnlockConversation(n);
+        return `unlocked #${n}`;
+      },
+      "unlocked",
+    );
+  const doSetMilestone = (n: number, milestone: number) =>
+    run(
+      `milestone-${n}`,
+      async () => {
+        await service.SetMilestone(n, milestone);
+        return milestone === 0 ? `cleared milestone on #${n}` : `set milestone on #${n}`;
+      },
+      "milestone set",
+    );
   const doAddLabel = (n: number, label: string) =>
     run(
       `lbl-add-${n}`,
@@ -147,11 +204,17 @@ export function Issues() {
                 </span>
                 <span className="truncate">{i.Title}</span>
                 <span className="text-xs text-muted-foreground">@{i.Author}</span>
-                {(i.Assignees ?? []).length > 0 && (
-                  <span className="text-xs text-muted-foreground" title="assignees">
-                    → {(i.Assignees ?? []).map((a) => "@" + a).join(", ")}
-                  </span>
-                )}
+                {(i.Assignees ?? []).map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => doRemoveAssignee(i.Number, a)}
+                    disabled={!!busy}
+                    className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-[var(--color-removed)]/10"
+                    title="click to unassign"
+                  >
+                    @{a} ✕
+                  </button>
+                ))}
                 <span className="ml-auto flex shrink-0 gap-1">
                   <button
                     onClick={() => doClose(i.Number)}
@@ -166,6 +229,22 @@ export function Issues() {
                     className={cls.btnSm}
                   >
                     {busy === `issue-reopen-${i.Number}` ? "…" : "Reopen"}
+                  </button>
+                  <button
+                    onClick={() => doLock(i.Number)}
+                    disabled={!!busy}
+                    className={cls.btnSm}
+                    title="lock conversation"
+                  >
+                    {busy === `lock-${i.Number}` ? "…" : "Lock"}
+                  </button>
+                  <button
+                    onClick={() => doUnlock(i.Number)}
+                    disabled={!!busy}
+                    className={cls.btnSm}
+                    title="unlock conversation"
+                  >
+                    {busy === `unlock-${i.Number}` ? "…" : "Unlock"}
                   </button>
                 </span>
               </div>
@@ -191,6 +270,36 @@ export function Issues() {
                   placeholder="+ label"
                   className={`${cls.input} h-6 w-24 px-2 py-0 text-[10px]`}
                 />
+                <input
+                  value={assigneeInput[i.Number] ?? ""}
+                  onChange={(e) => setAssigneeInput((m) => ({ ...m, [i.Number]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (assigneeInput[i.Number] ?? "").trim())
+                      doAddAssignee(i.Number, assigneeInput[i.Number].trim());
+                  }}
+                  placeholder="+ assignee"
+                  className={`${cls.input} h-6 w-28 px-2 py-0 text-[10px]`}
+                />
+                {milestones.length > 0 && (
+                  <select
+                    disabled={!!busy}
+                    defaultValue=""
+                    onChange={(e) => {
+                      const v = parseInt(e.target.value, 10);
+                      if (!Number.isNaN(v)) doSetMilestone(i.Number, v);
+                    }}
+                    className={`${cls.input} h-6 px-1 py-0 text-[10px]`}
+                    title="set milestone"
+                  >
+                    <option value="">milestone…</option>
+                    {milestones.map((m) => (
+                      <option key={m.Number} value={m.Number}>
+                        {m.Title}
+                      </option>
+                    ))}
+                    <option value="0">(clear)</option>
+                  </select>
+                )}
               </div>
             </div>
           ))

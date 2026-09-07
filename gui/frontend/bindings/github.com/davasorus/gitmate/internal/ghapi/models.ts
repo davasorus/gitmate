@@ -150,6 +150,15 @@ export interface Label {
 }
 
 /**
+ * Milestone is a repository milestone (number + title + open/closed state).
+ */
+export interface Milestone {
+    "Number": number;
+    "Title": string;
+    "State": string;
+}
+
+/**
  * PR is a trimmed pull-request view.
  */
 export interface PR {

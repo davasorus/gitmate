@@ -128,6 +128,35 @@ export function PullRequests() {
       `reopened #${n}`,
     );
   const [labelInput, setLabelInput] = useState<Record<number, string>>({});
+  const [assigneeInput, setAssigneeInput] = useState<Record<number, string>>({});
+  const doAddAssignee = (n: number, user: string) =>
+    run(
+      `assign-${n}`,
+      async () => {
+        await service.AddAssignees(n, [user]);
+        setAssigneeInput((m) => ({ ...m, [n]: "" }));
+        return `assigned @${user}`;
+      },
+      "assigned",
+    );
+  const doLockPR = (n: number) =>
+    run(
+      `lock-${n}`,
+      async () => {
+        await service.LockConversation(n, "");
+        return `locked #${n}`;
+      },
+      "locked",
+    );
+  const doUnlockPR = (n: number) =>
+    run(
+      `unlock-${n}`,
+      async () => {
+        await service.UnlockConversation(n);
+        return `unlocked #${n}`;
+      },
+      "unlocked",
+    );
   const [openReview, setOpenReview] = useState<number | null>(null);
   const [prDiff, setPrDiff] = useState<FileDiff[]>([]);
   const [pending, setPending] = useState<PendingComment[]>([]);
@@ -219,6 +248,29 @@ export function PullRequests() {
       },
       "reply posted",
     );
+  const doDeleteComment = (n: number, id: number) =>
+    run(
+      `delcomment-${id}`,
+      async () => {
+        await service.DeleteIssueComment(id);
+        setIssueComments((cs) => cs.filter((c) => c.ID !== id));
+        return "comment deleted";
+      },
+      "deleted",
+    );
+  const doEditComment = (n: number, id: number, current: string) => {
+    const next = window.prompt("Edit comment:", current);
+    if (next === null || next.trim() === current.trim()) return;
+    run(
+      `editcomment-${id}`,
+      async () => {
+        await service.EditIssueComment(id, next);
+        setIssueComments((cs) => cs.map((c) => (c.ID === id ? { ...c, Body: next } : c)));
+        return "comment edited";
+      },
+      "edited",
+    );
+  };
   const postGeneralComment = (n: number) => {
     if (!generalComment.trim()) return;
     run(
@@ -582,9 +634,27 @@ export function PullRequests() {
                   </div>
                   {(issueComments ?? []).length ? (
                     (issueComments ?? []).map((ic) => (
-                      <div key={ic.ID} className="text-xs">
-                        <span className="font-medium">{ic.Author}</span>:{" "}
-                        <span className="text-muted-foreground">{ic.Body}</span>
+                      <div key={ic.ID} className="group flex items-start gap-1 text-xs">
+                        <div className="flex-1">
+                          <span className="font-medium">{ic.Author}</span>:{" "}
+                          <span className="text-muted-foreground">{ic.Body}</span>
+                        </div>
+                        <button
+                          onClick={() => doEditComment(p.Number, ic.ID, ic.Body)}
+                          disabled={!!busy}
+                          className="shrink-0 text-[10px] text-muted-foreground opacity-0 hover:underline group-hover:opacity-100"
+                          title="edit comment"
+                        >
+                          edit
+                        </button>
+                        <button
+                          onClick={() => doDeleteComment(p.Number, ic.ID)}
+                          disabled={!!busy}
+                          className="shrink-0 text-[10px] text-[var(--color-removed)] opacity-0 hover:underline group-hover:opacity-100"
+                          title="delete comment"
+                        >
+                          delete
+                        </button>
                       </div>
                     ))
                   ) : (
@@ -698,6 +768,32 @@ export function PullRequests() {
                   placeholder="+ label"
                   className={`${cls.input} h-6 w-24 px-2 py-0 text-[10px]`}
                 />
+                <input
+                  value={assigneeInput[p.Number] ?? ""}
+                  onChange={(e) => setAssigneeInput((m) => ({ ...m, [p.Number]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (assigneeInput[p.Number] ?? "").trim())
+                      doAddAssignee(p.Number, assigneeInput[p.Number].trim());
+                  }}
+                  placeholder="+ assignee"
+                  className={`${cls.input} h-6 w-28 px-2 py-0 text-[10px]`}
+                />
+                <button
+                  onClick={() => doLockPR(p.Number)}
+                  disabled={!!busy}
+                  className={`${cls.btnSm} text-[10px]`}
+                  title="lock conversation"
+                >
+                  {busy === `lock-${p.Number}` ? "…" : "Lock"}
+                </button>
+                <button
+                  onClick={() => doUnlockPR(p.Number)}
+                  disabled={!!busy}
+                  className={`${cls.btnSm} text-[10px]`}
+                  title="unlock conversation"
+                >
+                  {busy === `unlock-${p.Number}` ? "…" : "Unlock"}
+                </button>
               </div>
             </div>
           ))
