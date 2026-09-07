@@ -155,3 +155,55 @@ func TestHasMessagesAndQuoteArg(t *testing.T) {
 		t.Errorf("quoteArg should wrap in quotes: %q", q)
 	}
 }
+
+func TestRunInteractiveRebase_EndToEnd(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+	// Substitute the sequence editor with a cp (forward-slashed on Windows) so
+	// RunInteractiveRebase's full body runs without needing the gitmate binary.
+	origSeq := seqEditorCmd
+	seqEditorCmd = func(todoPath string) (string, error) {
+		p := todoPath
+		if runtime.GOOS == "windows" {
+			p = strings.ReplaceAll(p, `\`, `/`)
+		}
+		return `cp "` + p + `"`, nil
+	}
+	defer func() { seqEditorCmd = origSeq }()
+
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "1\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "keep-1")
+	base, _ := HeadSHA(dir)
+	writeFile(t, dir, "b.txt", "x\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "drop-me")
+	writeFile(t, dir, "c.txt", "y\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "keep-2")
+
+	steps, err := InteractiveRebaseTodo(dir, base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range steps {
+		if steps[i].Subject == "drop-me" {
+			steps[i].Action = RebaseDrop
+		}
+	}
+
+	if err := RunInteractiveRebase(dir, base, steps); err != nil {
+		t.Fatalf("RunInteractiveRebase: %v", err)
+	}
+	log, _ := GetLog(dir, 10)
+	for _, c := range log {
+		if c.Subject == "drop-me" {
+			t.Fatalf("drop-me should be gone; log %+v", log)
+		}
+	}
+	if len(log) != 2 {
+		t.Fatalf("expected 2 commits, got %d", len(log))
+	}
+}

@@ -88,13 +88,30 @@ func hasMessages(steps []RebaseStep) bool {
 //
 // If any step provides a replacement message (reword/squash), those messages
 // are written in plan order and fed via a GIT_EDITOR helper likewise.
-func RunInteractiveRebase(dir, base string, steps []RebaseStep) error {
+// seqEditorCmd builds the GIT_SEQUENCE_EDITOR command that overwrites git's todo
+// with the prepared file at todoPath. It's a package var so tests can substitute
+// a shell copy (cp) instead of the self-invoke helper, letting RunInteractiveRebase
+// run end-to-end under test. Production default: this program's own helper.
+var seqEditorCmd = func(todoPath string) (string, error) {
 	self, err := os.Executable()
 	if err != nil {
-		return fmt.Errorf("cannot locate self for rebase editor: %w", err)
+		return "", fmt.Errorf("cannot locate self for rebase editor: %w", err)
 	}
+	return quoteArg(self) + " " + seqEditorSubcmd + " " + quoteArg(todoPath), nil
+}
 
-	// write our todo to a temp file the helper will copy over git's todo
+// msgEditorCmd builds the GIT_EDITOR command that feeds reword/squash messages.
+// Also a package var for test substitution.
+var msgEditorCmd = func(msgPath string) (string, error) {
+	self, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	return quoteArg(self) + " " + msgEditorSubcmd + " " + quoteArg(msgPath), nil
+}
+
+func RunInteractiveRebase(dir, base string, steps []RebaseStep) error {
+	// write our todo to a temp file the sequence editor will copy over git's todo
 	todoFile, err := os.CreateTemp("", "gitmate-rebase-todo-*")
 	if err != nil {
 		return err
@@ -107,24 +124,29 @@ func RunInteractiveRebase(dir, base string, steps []RebaseStep) error {
 	}
 	todoFile.Close()
 
+	seqEd, err := seqEditorCmd(todoPath)
+	if err != nil {
+		return err
+	}
+
 	cmd := exec.Command("git", "rebase", "-i", "--autostash", base)
 	cmd.Dir = dir
 	env := os.Environ()
-	// GIT_SEQUENCE_EDITOR runs via the shell; quote paths for spaces.
-	env = append(env, "GIT_SEQUENCE_EDITOR="+quoteArg(self)+" "+seqEditorSubcmd+" "+quoteArg(todoPath))
+	env = append(env, "GIT_SEQUENCE_EDITOR="+seqEd)
 
 	// messages for reword/squash, if any
-	var msgPath string
 	if hasMessages(steps) {
 		mp, cleanup, mErr := writeMessagesFile(steps)
 		if mErr != nil {
 			return mErr
 		}
 		defer cleanup()
-		msgPath = mp
-		env = append(env, "GIT_EDITOR="+quoteArg(self)+" "+msgEditorSubcmd+" "+quoteArg(msgPath))
+		msgEd, mErr := msgEditorCmd(mp)
+		if mErr != nil {
+			return mErr
+		}
+		env = append(env, "GIT_EDITOR="+msgEd)
 	}
-	_ = msgPath
 	cmd.Env = env
 
 	out, err := cmd.CombinedOutput()
