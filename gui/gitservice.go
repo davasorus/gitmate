@@ -425,6 +425,7 @@ func (g *GitService) Merge(branch string) error          { return gitops.Merge(g
 func (g *GitService) MergeAbort() error                  { return gitops.MergeAbort(g.repoDir) }
 func (g *GitService) ConflictedFiles() ([]string, error) { return gitops.ConflictedFiles(g.repoDir) }
 func (g *GitService) MergeInProgress() bool              { return gitops.MergeInProgress(g.repoDir) }
+func (g *GitService) CommitMerge() (string, error)       { return gitops.CommitMerge(g.repoDir) }
 
 func (g *GitService) Rebase(base string) error { return gitops.Rebase(g.repoDir, base) }
 func (g *GitService) RebaseContinue() error    { return gitops.RebaseContinue(g.repoDir) }

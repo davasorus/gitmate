@@ -287,3 +287,17 @@ func RepoRoot(dir string) string {
 	}
 	return strings.TrimSpace(top)
 }
+
+// CommitMerge finishes an in-progress merge by committing with git's prepared
+// MERGE_MSG (no editor). Use after all conflicts are resolved + staged. Returns
+// the new commit's short hash.
+func CommitMerge(dir string) (string, error) {
+	if _, err := run(dir, "-c", "core.editor=true", "commit", "--no-edit"); err != nil {
+		return "", err
+	}
+	out, err := run(dir, "rev-parse", "--short", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}

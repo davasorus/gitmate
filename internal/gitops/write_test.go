@@ -334,3 +334,39 @@ func TestRepoRoot(t *testing.T) {
 		t.Fatalf("RepoRoot(%q) = %q, want repo root %q", sub, got, dir)
 	}
 }
+
+func TestCommitMerge(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "base\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "base")
+	base, _ := CurrentBranch(dir)
+
+	_ = SwitchNew(dir, "other")
+	writeFile(t, dir, "a.txt", "theirs\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "other")
+
+	_ = Switch(dir, base)
+	writeFile(t, dir, "a.txt", "ours\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "ours")
+
+	_ = Merge(dir, "other") // conflicts
+	if !MergeInProgress(dir) {
+		t.Fatal("expected merge in progress")
+	}
+	// resolve + stage, then finish the merge
+	_ = ResolveOurs(dir, "a.txt")
+	_ = MarkResolved(dir, "a.txt")
+	hash, err := CommitMerge(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hash == "" {
+		t.Fatal("expected a commit hash")
+	}
+	if MergeInProgress(dir) {
+		t.Fatal("merge should be finished after CommitMerge")
+	}
+}
