@@ -5,6 +5,7 @@ import "strings"
 // LineKind classifies a diff line.
 type LineKind string
 
+// Diff line kinds.
 const (
 	LineContext LineKind = "context"
 	LineAdd     LineKind = "add"

@@ -211,6 +211,7 @@ func RebaseInProgress(dir string) bool {
 // after the target — recoverable via reflog until it expires).
 type ResetMode string
 
+// Reset modes for Reset (soft keeps changes staged; mixed unstages; hard discards).
 const (
 	ResetSoft  ResetMode = "soft"
 	ResetMixed ResetMode = "mixed"
