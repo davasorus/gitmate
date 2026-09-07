@@ -61,7 +61,8 @@ export default function App() {
   const [showDir, setShowDir] = useState(false);
 
   const changed = (status?.Changes?.length ?? 0) + (status?.Untracked?.length ?? 0);
-  const inProgress = mergeInProgress || rebaseInProgress || cherryPickInProgress || revertInProgress;
+  const inProgress =
+    mergeInProgress || rebaseInProgress || cherryPickInProgress || revertInProgress;
 
   const doPush = () => run("push", () => service.Push(true), "pushed");
   const doFetch = () => run("fetch", () => service.Fetch(), "fetched");
@@ -81,7 +82,8 @@ export default function App() {
   const doRebaseAbort = () => run("rebase-abort", () => service.RebaseAbort(), "rebase aborted");
   const doCherryContinue = () =>
     run("cp-continue", () => service.CherryPickContinue(), "cherry-pick continued");
-  const doCherryAbort = () => run("cp-abort", () => service.CherryPickAbort(), "cherry-pick aborted");
+  const doCherryAbort = () =>
+    run("cp-abort", () => service.CherryPickAbort(), "cherry-pick aborted");
   const doRevertContinue = () =>
     run("rv-continue", () => service.RevertContinue(), "revert continued");
   const doRevertAbort = () => run("rv-abort", () => service.RevertAbort(), "revert aborted");
@@ -262,8 +264,8 @@ export default function App() {
             </button>
             {conflicts.length ? (
               <div className="mt-1 text-xs text-muted-foreground">
-                {conflicts.length} conflicted file(s): {conflicts.join(", ")}. Resolve, then commit —
-                or abort.
+                {conflicts.length} conflicted file(s): {conflicts.join(", ")}. Resolve, then commit
+                — or abort.
               </div>
             ) : (
               <div className="mt-1 text-xs text-muted-foreground">

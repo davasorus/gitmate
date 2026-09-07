@@ -178,9 +178,7 @@ export function Changes() {
             <span className="font-mono text-[11px] text-[var(--color-faint)]">{staged.length}</span>
             {staged.length > 0 && (
               <button
-                onClick={() =>
-                  staged.forEach((c) => doUnstage(c.Path))
-                }
+                onClick={() => staged.forEach((c) => doUnstage(c.Path))}
                 className="ml-auto text-[11px] font-medium text-[var(--color-accent)] hover:underline"
               >
                 Unstage all

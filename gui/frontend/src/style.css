@@ -91,3 +91,17 @@ pre,
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-border-strong);
 }
+
+/* native <select> options render with the OS default palette (white-on-white on
+   our dark theme). Force them to the app surface + text so they're legible. */
+select {
+  color: var(--color-foreground);
+  background-color: var(--color-muted);
+}
+select option {
+  background-color: #0b0c0e;
+  color: var(--color-foreground);
+}
+html[data-theme="light"] select option {
+  background-color: #fbfbfc;
+}
