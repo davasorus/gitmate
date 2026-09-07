@@ -32,6 +32,21 @@ export interface BlameLine {
 export interface Branch {
     "Name": string;
     "IsCurrent": boolean;
+
+    /**
+     * has a local refs/heads/ ref
+     */
+    "IsLocal": boolean;
+
+    /**
+     * exists on a remote (refs/remotes/)
+     */
+    "IsRemote": boolean;
+
+    /**
+     * remote name for remote-only branches (e.g. "origin")
+     */
+    "Remote": string;
     "Upstream": string;
     "Ahead": number;
     "Behind": number;

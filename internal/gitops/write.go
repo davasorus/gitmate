@@ -272,3 +272,18 @@ func SequencerInProgress(dir string) (cherryPick bool, revert bool) {
 	}
 	return strings.Contains(out, "cherry-pick"), strings.Contains(out, "revert")
 }
+
+// RepoRoot resolves dir to the top level of its git working tree (via
+// rev-parse --show-toplevel). Returns the input unchanged if resolution fails
+// (e.g. not a repo yet). The GUI uses this to pin repoDir to the repo ROOT, so
+// path-relative git commands don't resolve against a subdirectory like gui/.
+func RepoRoot(dir string) string {
+	if dir == "" {
+		dir = "."
+	}
+	top, err := run(dir, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return dir
+	}
+	return strings.TrimSpace(top)
+}

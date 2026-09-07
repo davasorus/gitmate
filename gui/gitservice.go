@@ -19,13 +19,15 @@ func NewGitService(dir string) *GitService {
 	if dir == "" {
 		dir = "."
 	}
-	return &GitService{repoDir: dir}
+	// pin to the repo ROOT so path-relative git commands work regardless of the
+	// process working dir (Wails runs from gui/).
+	return &GitService{repoDir: gitops.RepoRoot(dir)}
 }
 
 // SetRepoDir lets the frontend re-point the service at another repo.
 func (g *GitService) SetRepoDir(dir string) {
 	if dir != "" {
-		g.repoDir = dir
+		g.repoDir = gitops.RepoRoot(dir)
 	}
 }
 

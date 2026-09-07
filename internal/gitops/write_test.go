@@ -1,6 +1,10 @@
 package gitops
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestMergeNoConflict(t *testing.T) {
 	dir := newTestRepo(t)
@@ -309,4 +313,24 @@ func TestRebaseContinue(t *testing.T) {
 	_ = ResolveOurs(dir, "a.txt")
 	_ = MarkResolved(dir, "a.txt")
 	_ = RebaseContinue(dir) // exercise the path
+}
+
+func TestRepoRoot(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "x\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "init")
+
+	// make a subdirectory; RepoRoot from there should resolve to the repo root
+	sub := filepath.Join(dir, "gui")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got := RepoRoot(sub)
+	// resolve symlinks/case for a robust compare (macOS /private, Windows casing)
+	wantResolved, _ := filepath.EvalSymlinks(dir)
+	gotResolved, _ := filepath.EvalSymlinks(got)
+	if gotResolved != wantResolved && got != dir {
+		t.Fatalf("RepoRoot(%q) = %q, want repo root %q", sub, got, dir)
+	}
 }
