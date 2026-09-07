@@ -157,7 +157,6 @@ export function Issues() {
       `unlabeled #${n}`,
     );
 
-
   const selected = (issues ?? []).find((x) => x.Number === sel) ?? null;
 
   return (
@@ -222,9 +221,7 @@ export function Issues() {
                   <span className="shrink-0 font-mono text-[11px] text-[var(--color-faint)]">
                     #{i.Number}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium">
-                    {i.Title}
-                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium">{i.Title}</span>
                 </div>
                 <div className="mt-1 flex items-center gap-1.5 pl-1">
                   <span className="text-[11px] text-[var(--color-faint)]">@{i.Author}</span>

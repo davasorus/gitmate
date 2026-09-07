@@ -91,9 +91,7 @@ export function Labels() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-        Labels
-      </h2>
+      <span className="text-[15px] font-semibold tracking-[-0.01em]">Labels</span>
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border p-3">
         <input
@@ -134,14 +132,14 @@ export function Labels() {
         </button>
       </div>
 
-      <div className="rounded-lg border border-border">
+      <div className="space-y-1">
         {busy === "labels-load" ? (
           <div className="p-3 text-sm text-muted-foreground">…</div>
         ) : (labels ?? []).length ? (
           (labels ?? []).map((l) => (
             <div
               key={l.Name}
-              className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0"
+              className="group flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 hover:bg-[var(--color-card)]"
             >
               <span
                 className="h-4 w-4 shrink-0 rounded-full border border-border"
@@ -149,7 +147,7 @@ export function Labels() {
               />
               <span className="shrink-0 font-medium">{l.Name}</span>
               <span className="truncate text-xs text-muted-foreground">{l.Description}</span>
-              <span className="ml-auto flex shrink-0 gap-1">
+              <span className="ml-auto flex shrink-0 gap-1 opacity-0 group-hover:opacity-100">
                 <button
                   onClick={() => setEditing({ ...l, newName: l.Name })}
                   disabled={!!busy}
@@ -168,7 +166,9 @@ export function Labels() {
             </div>
           ))
         ) : (
-          <div className="p-3 text-sm italic text-muted-foreground">no labels</div>
+          <div className="rounded-lg border border-border px-3 py-6 text-center text-[12.5px] italic text-[var(--color-faint)]">
+            no labels
+          </div>
         )}
       </div>
 
@@ -189,7 +189,7 @@ export function Labels() {
       )}
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-96 space-y-3 rounded-lg border border-border bg-card p-4 shadow-lg">
+          <div className="w-96 space-y-3 rounded-lg border border-border bg-[var(--color-background)] p-4 shadow-xl">
             <div className="text-sm font-semibold">Edit label</div>
             <input
               value={editing.newName}

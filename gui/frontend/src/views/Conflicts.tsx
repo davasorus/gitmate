@@ -60,9 +60,7 @@ export function Conflicts() {
   if (!mergeInProgress) {
     return (
       <div className="space-y-2">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Conflicts
-        </h2>
+        <span className="text-[15px] font-semibold tracking-[-0.01em]">Conflicts</span>
         <div className="rounded-lg border border-border p-3 text-sm italic text-muted-foreground">
           No merge in progress. Conflicts appear here when a merge, rebase, or pull hits them.
         </div>
@@ -73,9 +71,7 @@ export function Conflicts() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Conflicts
-        </h2>
+        <span className="text-[15px] font-semibold tracking-[-0.01em]">Conflicts</span>
         <button onClick={abort} disabled={!!busy} className={cls.btnSm}>
           {busy === "merge-abort" ? "…" : "Abort merge"}
         </button>
