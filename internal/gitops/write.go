@@ -211,6 +211,7 @@ func RebaseInProgress(dir string) bool {
 // after the target — recoverable via reflog until it expires).
 type ResetMode string
 
+// Reset modes for Reset (soft keeps changes staged; mixed unstages; hard discards).
 const (
 	ResetSoft  ResetMode = "soft"
 	ResetMixed ResetMode = "mixed"
@@ -235,11 +236,13 @@ func CherryPick(dir, rev string) error {
 	return err
 }
 
+// CherryPickContinue resumes an in-progress cherry-pick after conflicts are resolved and staged.
 func CherryPickContinue(dir string) error {
 	_, err := run(dir, "-c", "core.editor=true", "cherry-pick", "--continue")
 	return err
 }
 
+// CherryPickAbort cancels an in-progress cherry-pick and restores the pre-cherry-pick state.
 func CherryPickAbort(dir string) error {
 	_, err := run(dir, "cherry-pick", "--abort")
 	return err
@@ -253,11 +256,13 @@ func Revert(dir, rev string) error {
 	return err
 }
 
+// RevertContinue resumes an in-progress revert after conflicts are resolved and staged.
 func RevertContinue(dir string) error {
 	_, err := run(dir, "-c", "core.editor=true", "revert", "--continue")
 	return err
 }
 
+// RevertAbort cancels an in-progress revert and restores the pre-revert state.
 func RevertAbort(dir string) error {
 	_, err := run(dir, "revert", "--abort")
 	return err
@@ -300,4 +305,25 @@ func CommitMerge(dir string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(out), nil
+}
+
+// HeadSHA returns the full commit SHA that HEAD currently points at. Used to
+// capture a restore point before a history-moving operation (merge/rebase/reset).
+func HeadSHA(dir string) (string, error) {
+	out, err := run(dir, "rev-parse", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
+}
+
+// UndoTo hard-resets HEAD back to a previously captured SHA — the mechanism
+// behind "undo last operation". The pre-undo state remains recoverable via the
+// reflog, so an undo is itself reversible.
+func UndoTo(dir, sha string) error {
+	if strings.TrimSpace(sha) == "" {
+		return errors.New("no restore point to undo to")
+	}
+	_, err := run(dir, "reset", "--hard", sha)
+	return err
 }

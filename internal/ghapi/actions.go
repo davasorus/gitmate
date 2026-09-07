@@ -45,6 +45,7 @@ type Job struct {
 	Steps      []Step
 }
 
+// Step is a single step within an Actions job (name + status/conclusion).
 type Step struct {
 	Name       string
 	Status     string
@@ -178,6 +179,7 @@ func workflowScopeErr(err error) error {
 	return err
 }
 
+// CancelRun cancels an in-progress workflow run. Requires a token with the workflow scope.
 func (c *Client) CancelRun(ctx context.Context, owner, repo string, runID int64) error {
 	_, err := c.gh.Actions.CancelWorkflowRunByID(ctx, owner, repo, runID)
 	// GitHub returns 202 Accepted for cancel; go-github surfaces that as
@@ -339,6 +341,7 @@ type JobLog struct {
 	Raw     string // full log; shown when per-step split isn't reliable
 }
 
+// StepLog is the parsed log output for one step of a job (name + its log lines).
 type StepLog struct {
 	Name string
 	Text string

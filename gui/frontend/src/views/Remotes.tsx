@@ -77,9 +77,7 @@ export function Remotes() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-        Remotes
-      </h2>
+      <span className="text-[15px] font-semibold tracking-[-0.01em]">Remotes</span>
 
       <div className="space-y-2 rounded-lg border border-border p-3">
         <div className="text-xs text-muted-foreground">
@@ -127,16 +125,16 @@ export function Remotes() {
         </button>
       </div>
 
-      <div className="rounded-lg border border-border">
+      <div className="space-y-1">
         {(remotes ?? []).length ? (
           (remotes ?? []).map((r) => (
             <div
               key={r.Name}
-              className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0"
+              className="group flex items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 hover:bg-[var(--color-card)]"
             >
               <span className="shrink-0 font-semibold text-[var(--color-ahead)]">{r.Name}</span>
               <span className="truncate text-xs text-muted-foreground">{r.URL}</span>
-              <span className="ml-auto flex shrink-0 gap-1">
+              <span className="ml-auto flex shrink-0 gap-1 opacity-0 group-hover:opacity-100">
                 <button
                   onClick={() => setRenaming({ old: r.Name, next: r.Name })}
                   disabled={!!busy}
@@ -155,7 +153,9 @@ export function Remotes() {
             </div>
           ))
         ) : (
-          <div className="p-3 text-sm italic text-muted-foreground">no remotes</div>
+          <div className="rounded-lg border border-border px-3 py-6 text-center text-[12.5px] italic text-[var(--color-faint)]">
+            no remotes
+          </div>
         )}
       </div>
 
@@ -176,7 +176,7 @@ export function Remotes() {
       )}
       {renaming && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-96 rounded-lg border border-border bg-card p-4 shadow-lg">
+          <div className="w-96 rounded-lg border border-border bg-[var(--color-background)] p-4 shadow-xl">
             <div className="mb-2 text-sm font-semibold">Rename remote</div>
             <input
               autoFocus

@@ -46,3 +46,13 @@ func (c *Client) CreateRepo(ctx context.Context, name, description string, priva
 	}
 	return created.GetCloneURL(), nil // https://github.com/owner/name.git
 }
+
+// DefaultBranch returns the repository's default branch (e.g. "main"/"live"),
+// used as the sensible base when opening a pull request.
+func (c *Client) DefaultBranch(ctx context.Context, owner, repo string) (string, error) {
+	r, _, err := c.gh.Repositories.Get(ctx, owner, repo)
+	if err != nil {
+		return "", err
+	}
+	return r.GetDefaultBranch(), nil
+}

@@ -18,34 +18,69 @@ import * as ghapi$0 from "../internal/ghapi/models.js";
 // @ts-ignore: Unused imports
 import * as gitops$0 from "../internal/gitops/models.js";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
+/**
+ * AddAssignees adds assignees to an issue or PR.
+ */
+export function AddAssignees($number: number, users: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(3461485028, $number, users);
+}
+
+/**
+ * AddLabels adds labels to an issue or PR.
+ */
 export function AddLabels($number: number, labels: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(2840114755, $number, labels);
 }
 
+/**
+ * AddRemote adds a remote.
+ */
 export function AddRemote(name: string, url: string): $CancellablePromise<void> {
     return $Call.ByID(2602220066, name, url);
 }
 
+/**
+ * Blame returns line-by-line blame for a file.
+ */
 export function Blame(path: string): $CancellablePromise<gitops$0.BlameLine[] | null> {
     return $Call.ByID(2208585044, path);
 }
 
+/**
+ * Branches returns local and remote-tracking branches.
+ */
 export function Branches(): $CancellablePromise<gitops$0.Branch[] | null> {
     return $Call.ByID(3913623929);
 }
 
+/**
+ * CancelRun cancels a run (needs workflow scope).
+ */
 export function CancelRun(runID: number): $CancellablePromise<void> {
     return $Call.ByID(1044576492, runID);
 }
 
+/**
+ * CherryPick cherry-picks a commit.
+ */
 export function CherryPick(rev: string): $CancellablePromise<void> {
     return $Call.ByID(4264862881, rev);
 }
 
+/**
+ * CherryPickAbort aborts an in-progress cherry-pick.
+ */
 export function CherryPickAbort(): $CancellablePromise<void> {
     return $Call.ByID(4269242301);
 }
 
+/**
+ * CherryPickContinue resumes an in-progress cherry-pick after conflicts are resolved.
+ */
 export function CherryPickContinue(): $CancellablePromise<void> {
     return $Call.ByID(709290592);
 }
@@ -58,78 +93,149 @@ export function Clone(url: string, dest: string): $CancellablePromise<string> {
     return $Call.ByID(3320935538, url, dest);
 }
 
+/**
+ * CommentPR adds a general comment to a PR.
+ */
 export function CommentPR($number: number, body: string): $CancellablePromise<string> {
     return $Call.ByID(1745206744, $number, body);
 }
 
+/**
+ * Commit commits staged changes.
+ */
 export function Commit(message: string): $CancellablePromise<string> {
     return $Call.ByID(471482348, message);
 }
 
+/**
+ * CommitMerge finishes an in-progress merge with git's prepared message.
+ */
 export function CommitMerge(): $CancellablePromise<string> {
     return $Call.ByID(1227884784);
 }
 
+/**
+ * ConflictedFiles returns the paths with merge conflicts.
+ */
 export function ConflictedFiles(): $CancellablePromise<string[] | null> {
     return $Call.ByID(4266596273);
 }
 
+/**
+ * CreateIssue opens an issue.
+ */
 export function CreateIssue(title: string, body: string): $CancellablePromise<string> {
     return $Call.ByID(4181657864, title, body);
 }
 
+/**
+ * CreateLabel creates a label.
+ */
 export function CreateLabel(name: string, color: string, description: string): $CancellablePromise<void> {
     return $Call.ByID(1900097333, name, color, description);
 }
 
+/**
+ * CreatePR opens a pull request.
+ */
 export function CreatePR(title: string, body: string, head: string, base: string): $CancellablePromise<string> {
     return $Call.ByID(1421252495, title, body, head, base);
 }
 
+/**
+ * CreateRelease creates a release.
+ */
 export function CreateRelease(tag: string, name: string, body: string, draft: boolean, prerelease: boolean): $CancellablePromise<ghapi$0.Release> {
     return $Call.ByID(166699366, tag, name, body, draft, prerelease);
 }
 
+/**
+ * CreateTag creates a tag.
+ */
 export function CreateTag(name: string, message: string): $CancellablePromise<void> {
     return $Call.ByID(2405478571, name, message);
 }
 
+/**
+ * CurrentBranch returns the current branch name.
+ */
 export function CurrentBranch(): $CancellablePromise<string> {
     return $Call.ByID(2226668274);
 }
 
+/**
+ * DefaultBranch returns the repo default branch (base for new PRs).
+ */
+export function DefaultBranch(): $CancellablePromise<string> {
+    return $Call.ByID(2507649214);
+}
+
+/**
+ * DefaultPRTitle suggests a default PR title from the branch.
+ */
 export function DefaultPRTitle(branch: string): $CancellablePromise<string> {
     return $Call.ByID(2798687038, branch);
 }
 
+/**
+ * DeleteAsset deletes a release asset.
+ */
 export function DeleteAsset(assetID: number): $CancellablePromise<void> {
     return $Call.ByID(726459054, assetID);
 }
 
+/**
+ * DeleteBranch deletes a branch.
+ */
 export function DeleteBranch(name: string, force: boolean): $CancellablePromise<void> {
     return $Call.ByID(1821812546, name, force);
 }
 
+/**
+ * DeleteIssueComment deletes an issue/PR comment by ID.
+ */
+export function DeleteIssueComment(commentID: number): $CancellablePromise<void> {
+    return $Call.ByID(1398086330, commentID);
+}
+
+/**
+ * DeleteLabel deletes a label.
+ */
 export function DeleteLabel(name: string): $CancellablePromise<void> {
     return $Call.ByID(1785281120, name);
 }
 
+/**
+ * DeleteRelease deletes a release.
+ */
 export function DeleteRelease(id: number): $CancellablePromise<void> {
     return $Call.ByID(1545519419, id);
 }
 
+/**
+ * DeleteRemoteTag deletes a tag on origin.
+ */
 export function DeleteRemoteTag(name: string): $CancellablePromise<void> {
     return $Call.ByID(75779088, name);
 }
 
+/**
+ * DeleteTag deletes a local tag.
+ */
 export function DeleteTag(name: string): $CancellablePromise<void> {
     return $Call.ByID(436388354, name);
 }
 
+/**
+ * Diff returns the diff for a path (staged or unstaged).
+ */
 export function Diff(path: string, staged: boolean): $CancellablePromise<gitops$0.FileDiff[] | null> {
     return $Call.ByID(1934352874, path, staged);
 }
 
+/**
+ * DiscardPath discards changes to a path.
+ */
 export function DiscardPath(path: string): $CancellablePromise<void> {
     return $Call.ByID(2677726826, path);
 }
@@ -142,18 +248,37 @@ export function DownloadAsset(assetID: number): $CancellablePromise<string> {
     return $Call.ByID(820770519, assetID);
 }
 
+/**
+ * EditIssueComment edits an issue/PR comment by ID.
+ */
+export function EditIssueComment(commentID: number, body: string): $CancellablePromise<void> {
+    return $Call.ByID(1747977297, commentID, body);
+}
+
+/**
+ * EditLabel renames/recolors a label.
+ */
 export function EditLabel(name: string, newName: string, color: string, description: string): $CancellablePromise<void> {
     return $Call.ByID(440390313, name, newName, color, description);
 }
 
+/**
+ * EditRelease edits a release.
+ */
 export function EditRelease(id: number, name: string, body: string, draft: boolean, prerelease: boolean): $CancellablePromise<ghapi$0.Release> {
     return $Call.ByID(3597022626, id, name, body, draft, prerelease);
 }
 
+/**
+ * Fetch fetches from origin (with prune).
+ */
 export function Fetch(): $CancellablePromise<void> {
     return $Call.ByID(3105763379);
 }
 
+/**
+ * FetchTags fetches tags from origin.
+ */
 export function FetchTags(): $CancellablePromise<void> {
     return $Call.ByID(2222523430);
 }
@@ -172,10 +297,24 @@ export function GetRepoDir(): $CancellablePromise<string> {
     return $Call.ByID(2807244446);
 }
 
+/**
+ * GetRun returns a single run.
+ */
 export function GetRun(runID: number): $CancellablePromise<ghapi$0.WorkflowRun> {
     return $Call.ByID(1972643456, runID);
 }
 
+/**
+ * InteractiveRebaseTodo returns the commits from base..HEAD as a default
+ * interactive-rebase plan (all "pick"), for the UI to reorder/edit.
+ */
+export function InteractiveRebaseTodo(base: string): $CancellablePromise<gitops$0.RebaseStep[] | null> {
+    return $Call.ByID(1433891415, base);
+}
+
+/**
+ * Issues returns issues by state (REST).
+ */
 export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | null> {
     return $Call.ByID(1294470425, state);
 }
@@ -188,94 +327,185 @@ export function IssuesRich(state: string): $CancellablePromise<ghapi$0.IssueList
     return $Call.ByID(465427515, state);
 }
 
+/**
+ * JobLogs returns a job's logs, split by step.
+ */
 export function JobLogs(jobID: number): $CancellablePromise<ghapi$0.JobLog> {
     return $Call.ByID(3461752551, jobID);
 }
 
+/**
+ * LastUndoable returns the pending undo point (label + short sha), or an empty
+ * UndoInfo if there is nothing to undo.
+ */
+export function LastUndoable(): $CancellablePromise<$models.UndoInfo> {
+    return $Call.ByID(609755711);
+}
+
+/**
+ * ListAssets returns a release's assets.
+ */
 export function ListAssets(releaseID: number): $CancellablePromise<ghapi$0.Asset[] | null> {
     return $Call.ByID(1953238676, releaseID);
 }
 
+/**
+ * ListDispatchableWorkflows returns workflows that accept workflow_dispatch, with their inputs.
+ */
 export function ListDispatchableWorkflows(): $CancellablePromise<ghapi$0.DispatchableWorkflow[] | null> {
     return $Call.ByID(1071859323);
 }
 
+/**
+ * ListIssueComments returns a PR's general issue-comment stream.
+ */
 export function ListIssueComments($number: number): $CancellablePromise<ghapi$0.IssueComment[] | null> {
     return $Call.ByID(4209960726, $number);
 }
 
+/**
+ * ListLabels returns the repository's labels.
+ */
 export function ListLabels(): $CancellablePromise<ghapi$0.Label[] | null> {
     return $Call.ByID(2781467806);
 }
 
+/**
+ * ListMilestones returns the repository's milestones by state.
+ */
+export function ListMilestones(state: string): $CancellablePromise<ghapi$0.Milestone[] | null> {
+    return $Call.ByID(3110125630, state);
+}
+
+/**
+ * ListReleases returns the repository's releases.
+ */
 export function ListReleases(): $CancellablePromise<ghapi$0.Release[] | null> {
     return $Call.ByID(1457386739);
 }
 
+/**
+ * ListRemotes returns configured remotes.
+ */
 export function ListRemotes(): $CancellablePromise<gitops$0.Remote[] | null> {
     return $Call.ByID(2290322204);
 }
 
+/**
+ * ListRequestedReviewers returns a PR's requested reviewers.
+ */
 export function ListRequestedReviewers($number: number): $CancellablePromise<ghapi$0.Reviewer[] | null> {
     return $Call.ByID(1061340549, $number);
 }
 
+/**
+ * ListReviewComments returns a PR's review (line) comments.
+ */
 export function ListReviewComments($number: number): $CancellablePromise<ghapi$0.ExistingComment[] | null> {
     return $Call.ByID(1633293631, $number);
 }
 
+/**
+ * ListReviews returns a PR's reviews.
+ */
 export function ListReviews($number: number): $CancellablePromise<ghapi$0.Review[] | null> {
     return $Call.ByID(3728537402, $number);
 }
 
+/**
+ * ListRuns returns recent workflow runs.
+ */
 export function ListRuns(limit: number): $CancellablePromise<ghapi$0.WorkflowRun[] | null> {
     return $Call.ByID(4052380023, limit);
 }
 
+/**
+ * ListTags returns tags (local + remote).
+ */
 export function ListTags(): $CancellablePromise<gitops$0.Tag[] | null> {
     return $Call.ByID(933116764);
 }
 
+/**
+ * LockConversation locks an issue/PR conversation (reason optional).
+ */
+export function LockConversation($number: number, reason: string): $CancellablePromise<void> {
+    return $Call.ByID(1111253409, $number, reason);
+}
+
+/**
+ * Log returns recent commits.
+ */
 export function Log(limit: number): $CancellablePromise<gitops$0.Commit[] | null> {
     return $Call.ByID(2074061505, limit);
 }
 
+/**
+ * LogRef returns commits for a specific ref.
+ */
 export function LogRef(ref: string, limit: number): $CancellablePromise<gitops$0.Commit[] | null> {
     return $Call.ByID(2234953638, ref, limit);
 }
 
+/**
+ * MarkResolved marks a conflicted file resolved.
+ */
 export function MarkResolved(path: string): $CancellablePromise<void> {
     return $Call.ByID(2864979112, path);
 }
 
+/**
+ * Merge merges a branch into the current one.
+ */
 export function Merge(branch: string): $CancellablePromise<void> {
     return $Call.ByID(4048865143, branch);
 }
 
+/**
+ * MergeAbort aborts an in-progress merge.
+ */
 export function MergeAbort(): $CancellablePromise<void> {
     return $Call.ByID(3275036075);
 }
 
+/**
+ * MergeInProgress reports whether a merge is in progress.
+ */
 export function MergeInProgress(): $CancellablePromise<boolean> {
     return $Call.ByID(296209399);
 }
 
+/**
+ * MergePR merges a pull request.
+ */
 export function MergePR($number: number, method: string): $CancellablePromise<string> {
     return $Call.ByID(2365324437, $number, method);
 }
 
+/**
+ * PRChecks returns the CI check runs for a PR's head commit.
+ */
 export function PRChecks($number: number): $CancellablePromise<ghapi$0.CheckRun[] | null> {
     return $Call.ByID(3470830078, $number);
 }
 
+/**
+ * PRDetail returns the aggregated PR detail (reviews, threads, checks, labels, assignees) via GraphQL.
+ */
 export function PRDetail($number: number): $CancellablePromise<ghapi$0.PRDetail | null> {
     return $Call.ByID(3903033078, $number);
 }
 
+/**
+ * PRDiff returns a PR's unified diff.
+ */
 export function PRDiff($number: number): $CancellablePromise<gitops$0.FileDiff[] | null> {
     return $Call.ByID(3658489820, $number);
 }
 
+/**
+ * PRTemplate returns the repo's PR template body, if any.
+ */
 export function PRTemplate(): $CancellablePromise<string> {
     return $Call.ByID(2667485909);
 }
@@ -295,122 +525,234 @@ export function PRsRich(state: string): $CancellablePromise<ghapi$0.PRListItem[]
     return $Call.ByID(762179970, state);
 }
 
+/**
+ * Pull pulls from origin (merge or rebase).
+ */
 export function Pull(rebase: boolean): $CancellablePromise<void> {
     return $Call.ByID(3924717390, rebase);
 }
 
+/**
+ * Push pushes a branch to a remote.
+ */
 export function Push(setUpstream: boolean): $CancellablePromise<void> {
     return $Call.ByID(4024544461, setUpstream);
 }
 
+/**
+ * PushTag pushes a tag to origin.
+ */
 export function PushTag(name: string): $CancellablePromise<void> {
     return $Call.ByID(653298187, name);
 }
 
+/**
+ * ReadConflict returns the conflict hunks for a file.
+ */
 export function ReadConflict(path: string): $CancellablePromise<gitops$0.ConflictFile | null> {
     return $Call.ByID(1015254207, path);
 }
 
+/**
+ * Rebase rebases the current branch onto a base.
+ */
 export function Rebase(base: string): $CancellablePromise<void> {
     return $Call.ByID(1192392517, base);
 }
 
+/**
+ * RebaseAbort aborts an in-progress rebase.
+ */
 export function RebaseAbort(): $CancellablePromise<void> {
     return $Call.ByID(654207257);
 }
 
+/**
+ * RebaseContinue resumes an in-progress rebase.
+ */
 export function RebaseContinue(): $CancellablePromise<void> {
     return $Call.ByID(1428905956);
 }
 
+/**
+ * RebaseInProgress reports whether a rebase is in progress.
+ */
 export function RebaseInProgress(): $CancellablePromise<boolean> {
     return $Call.ByID(2123162065);
 }
 
+/**
+ * Reflog returns reflog entries.
+ */
 export function Reflog(limit: number): $CancellablePromise<gitops$0.ReflogEntry[] | null> {
     return $Call.ByID(1601046040, limit);
 }
 
+/**
+ * RemoveAssignees removes assignees from an issue or PR.
+ */
+export function RemoveAssignees($number: number, users: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(4084133939, $number, users);
+}
+
+/**
+ * RemoveLabel removes a label from an issue or PR.
+ */
 export function RemoveLabel($number: number, label: string): $CancellablePromise<void> {
     return $Call.ByID(540707925, $number, label);
 }
 
+/**
+ * RemoveRemote removes a remote.
+ */
 export function RemoveRemote(name: string): $CancellablePromise<void> {
     return $Call.ByID(2331660635, name);
 }
 
+/**
+ * RemoveReviewer removes a requested reviewer from a PR.
+ */
 export function RemoveReviewer($number: number, login: string): $CancellablePromise<void> {
     return $Call.ByID(320614290, $number, login);
 }
 
+/**
+ * RenameBranch renames a branch.
+ */
 export function RenameBranch(oldName: string, newName: string): $CancellablePromise<void> {
     return $Call.ByID(1363441787, oldName, newName);
 }
 
+/**
+ * RenameRemote renames a remote.
+ */
 export function RenameRemote(oldName: string, newName: string): $CancellablePromise<void> {
     return $Call.ByID(424528649, oldName, newName);
 }
 
+/**
+ * ReplyToReviewComment replies to a review comment.
+ */
 export function ReplyToReviewComment($number: number, commentID: number, body: string): $CancellablePromise<void> {
     return $Call.ByID(2839797543, $number, commentID, body);
 }
 
+/**
+ * RequestReviewers requests reviewers on a PR.
+ */
 export function RequestReviewers($number: number, logins: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(4134688474, $number, logins);
 }
 
+/**
+ * RerunFailed reruns a run's failed jobs (needs workflow scope).
+ */
 export function RerunFailed(runID: number): $CancellablePromise<void> {
     return $Call.ByID(3190066500, runID);
 }
 
+/**
+ * RerunRun reruns a run (needs workflow scope).
+ */
 export function RerunRun(runID: number): $CancellablePromise<void> {
     return $Call.ByID(651277306, runID);
 }
 
+/**
+ * Reset resets HEAD to a ref (soft/mixed/hard).
+ */
 export function Reset(rev: string, mode: string): $CancellablePromise<void> {
     return $Call.ByID(478003792, rev, mode);
 }
 
+/**
+ * ResolveOurs resolves a conflict by taking our side.
+ */
 export function ResolveOurs(path: string): $CancellablePromise<void> {
     return $Call.ByID(1197531072, path);
 }
 
+/**
+ * ResolveTheirs resolves a conflict by taking their side.
+ */
 export function ResolveTheirs(path: string): $CancellablePromise<void> {
     return $Call.ByID(1737476826, path);
 }
 
+/**
+ * ResolveThread marks a review thread resolved (GraphQL).
+ */
 export function ResolveThread(threadID: string): $CancellablePromise<void> {
     return $Call.ByID(149470811, threadID);
 }
 
+/**
+ * Revert reverts a commit.
+ */
 export function Revert(rev: string): $CancellablePromise<void> {
     return $Call.ByID(2468644051, rev);
 }
 
+/**
+ * RevertAbort aborts an in-progress revert.
+ */
 export function RevertAbort(): $CancellablePromise<void> {
     return $Call.ByID(2212313231);
 }
 
+/**
+ * RevertContinue resumes an in-progress revert after conflicts are resolved.
+ */
 export function RevertContinue(): $CancellablePromise<void> {
     return $Call.ByID(3855291498);
 }
 
+/**
+ * RunInteractiveRebase executes an interactive rebase onto base applying the
+ * given plan (reorder/drop/squash/fixup/reword). Captures an undo point first.
+ */
+export function RunInteractiveRebase(base: string, steps: gitops$0.RebaseStep[] | null): $CancellablePromise<void> {
+    return $Call.ByID(3743826970, base, steps);
+}
+
+/**
+ * RunJobGraph returns the run's job dependency graph (matrix legs expanded).
+ */
 export function RunJobGraph(runID: number): $CancellablePromise<ghapi$0.JobNode[] | null> {
     return $Call.ByID(1391988671, runID);
 }
 
+/**
+ * RunJobs returns a run's jobs.
+ */
 export function RunJobs(runID: number): $CancellablePromise<ghapi$0.Job[] | null> {
     return $Call.ByID(2818376490, runID);
 }
 
+/**
+ * SequencerInProgress reports cherry-pick/revert in-progress state.
+ */
 export function SequencerInProgress(): $CancellablePromise<[boolean, boolean]> {
     return $Call.ByID(365654410);
 }
 
+/**
+ * SetIssueState opens or closes an issue.
+ */
 export function SetIssueState($number: number, state: string): $CancellablePromise<void> {
     return $Call.ByID(3236175167, $number, state);
 }
 
+/**
+ * SetMilestone assigns an issue/PR to a milestone (0 clears it).
+ */
+export function SetMilestone($number: number, milestone: number): $CancellablePromise<void> {
+    return $Call.ByID(3071778403, $number, milestone);
+}
+
+/**
+ * SetPRState opens or closes a pull request.
+ */
 export function SetPRState($number: number, state: string): $CancellablePromise<void> {
     return $Call.ByID(972438818, $number, state);
 }
@@ -422,54 +764,102 @@ export function SetRepoDir(dir: string): $CancellablePromise<void> {
     return $Call.ByID(1616087450, dir);
 }
 
+/**
+ * Show returns a commit's detail + diff.
+ */
 export function Show(rev: string): $CancellablePromise<gitops$0.CommitDetail | null> {
     return $Call.ByID(2821441612, rev);
 }
 
+/**
+ * SmartDeleteTag deletes a tag locally and on origin.
+ */
 export function SmartDeleteTag(name: string): $CancellablePromise<string> {
     return $Call.ByID(2023693563, name);
 }
 
+/**
+ * Stage stages all changes.
+ */
 export function Stage(): $CancellablePromise<void> {
     return $Call.ByID(1407503261);
 }
 
+/**
+ * UnstagePath unstages a specific path.
+ * StageHunk stages a single hunk of a file (partial staging) by applying just
+ * that hunk's patch to the index.
+ */
+export function StageHunk(path: string, hunk: gitops$0.Hunk): $CancellablePromise<void> {
+    return $Call.ByID(647477841, path, hunk);
+}
+
+/**
+ * StagePath stages a specific path.
+ */
 export function StagePath(path: string): $CancellablePromise<void> {
     return $Call.ByID(1959303550, path);
 }
 
+/**
+ * StashApply applies a stash without dropping it.
+ */
 export function StashApply(ref: string): $CancellablePromise<void> {
     return $Call.ByID(3648520378, ref);
 }
 
+/**
+ * StashDrop drops a stash.
+ */
 export function StashDrop(ref: string): $CancellablePromise<void> {
     return $Call.ByID(1123069703, ref);
 }
 
+/**
+ * StashList returns the stash list.
+ */
 export function StashList(): $CancellablePromise<gitops$0.Stash[] | null> {
     return $Call.ByID(615021102);
 }
 
+/**
+ * StashPop pops a stash.
+ */
 export function StashPop(ref: string): $CancellablePromise<void> {
     return $Call.ByID(106599041, ref);
 }
 
+/**
+ * StashSave saves a stash.
+ */
 export function StashSave(message: string, includeUntracked: boolean): $CancellablePromise<void> {
     return $Call.ByID(2954681087, message, includeUntracked);
 }
 
+/**
+ * Status returns the working-tree status.
+ */
 export function Status(): $CancellablePromise<gitops$0.Status | null> {
     return $Call.ByID(1385891039);
 }
 
+/**
+ * SubmitReview submits a PR review (approve/request-changes/comment).
+ */
 export function SubmitReview($number: number, event: string, body: string, comments: ghapi$0.ReviewComment[] | null): $CancellablePromise<void> {
     return $Call.ByID(3295771057, $number, event, body, comments);
 }
 
+/**
+ * Switch switches to a branch.
+ */
 export function Switch(branch: string): $CancellablePromise<void> {
     return $Call.ByID(1272999137, branch);
 }
 
+/**
+ * SwitchNew creates and switches to a new branch.
+ */
 export function SwitchNew(branch: string): $CancellablePromise<void> {
     return $Call.ByID(637393581, branch);
 }
@@ -482,8 +872,33 @@ export function TriggerDispatch(workflowFile: string, ref: string, inputs: { [_ 
     return $Call.ByID(3276770057, workflowFile, ref, inputs);
 }
 
+/**
+ * Undo hard-resets HEAD back to the captured restore point and clears it. The
+ * pre-undo state stays recoverable via the reflog.
+ */
+export function Undo(): $CancellablePromise<void> {
+    return $Call.ByID(2554715551);
+}
+
+/**
+ * UnlockConversation unlocks an issue/PR conversation.
+ */
+export function UnlockConversation($number: number): $CancellablePromise<void> {
+    return $Call.ByID(2641153446, $number);
+}
+
+/**
+ * UnresolveThread reopens a resolved review thread (GraphQL).
+ */
 export function UnresolveThread(threadID: string): $CancellablePromise<void> {
     return $Call.ByID(3879277182, threadID);
+}
+
+/**
+ * UnstageHunk removes a single staged hunk from the index.
+ */
+export function UnstageHunk(path: string, hunk: gitops$0.Hunk): $CancellablePromise<void> {
+    return $Call.ByID(1367559188, path, hunk);
 }
 
 export function UnstagePath(path: string): $CancellablePromise<void> {

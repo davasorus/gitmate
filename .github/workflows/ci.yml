@@ -6,7 +6,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
 
 # Run CI on every push and every PR, but avoid double runs when a push lands on a
 # branch that already has an open PR: both events share the same head branch, so
@@ -111,9 +111,11 @@ jobs:
         shell: bash
         run: |
           go test -coverprofile=coverage.out -covermode=count ./internal/...
-          go tool cover -func=coverage.out   # TEMP: per-function coverage to diagnose Linux vs local gap
           total=$(go tool cover -func=coverage.out | tail -1 | awk '{print $3}' | tr -d '%')
           echo "----- total coverage: ${total}% (min ${COVERAGE_MIN}%) -----"
+          # capture the number for the sync job's PR report (before the gate, so it's
+          # recorded regardless of pass/fail)
+          echo "$total" > coverage-total.txt
           if awk "BEGIN{exit !($total < $COVERAGE_MIN)}"; then
             echo "::error::coverage ${total}% is below the required ${COVERAGE_MIN}%"
             exit 1
@@ -124,7 +126,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: coverage
-          path: coverage.out
+          path: |
+            coverage.out
+            coverage-total.txt
 
       - name: golangci-lint
         if: matrix.os == 'ubuntu-latest' # lint is OS-agnostic; run once
@@ -189,3 +193,70 @@ jobs:
       - name: Build (creates dist/ for the Go embed)
         run: npx vite build --mode production
         working-directory: gui/frontend
+
+      # Lint the Go GUI package HERE (not in the go job): gui/main.go embeds
+      # frontend/dist via //go:embed, which only exists after the vite build above.
+      # Linting it here means the embed resolves naturally — no placeholder tricks.
+      - name: golangci-lint (gui)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.13.2
+          args: ./gui/...
+
+  # ---- SYNC: aggregate status + report to the PR --------------------------
+  # One required check: passes only if go and frontend both succeeded (a skipped
+  # job — because its paths didn't change — counts as not-failing). Also posts a
+  # self-updating summary comment on the PR with per-job status + coverage.
+  sync:
+    needs: [changes, go, frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download coverage
+        if: needs.go.result == 'success'
+        uses: actions/download-artifact@v7
+        with:
+          name: coverage
+          path: cov
+        continue-on-error: true
+
+      - name: Report tests + coverage to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            // a job that was skipped (paths unchanged) is not a failure
+            const bad = (v) => v === 'failure' || v === 'cancelled';
+            const anyFailed = bad('${{ needs.go.result }}') || bad('${{ needs.frontend.result }}');
+
+            // --- the PR comment reports TEST + COVERAGE results (go test suite) ---
+            const testsRan = '${{ needs.go.result }}' !== 'skipped';
+            const testsOk = '${{ needs.go.result }}' === 'success';
+            let cov = null;
+            try { cov = fs.readFileSync('cov/coverage-total.txt', 'utf8').trim(); } catch (e) {}
+            const min = '${{ env.COVERAGE_MIN }}';
+
+            let line;
+            if (!testsRan) {
+              line = `⏭️ **Tests skipped** — no Go changes`;
+            } else if (testsOk) {
+              line = `✅ **Tests passed**${cov ? ` — coverage ${cov}%` : ''}`;
+            } else {
+              line = `❌ **Tests failed**${cov ? ` — coverage ${cov}% (min ${min}%)` : ''}`;
+            }
+            const body = `<!-- gitmate-ci -->\n${line}`;
+
+            if (context.payload.pull_request) {
+              const { owner, repo } = context.repo;
+              const prNum = context.payload.pull_request.number;
+              const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number: prNum });
+              const mine = comments.find(c => c.body && c.body.includes('<!-- gitmate-ci -->'));
+              if (mine) {
+                await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body });
+              } else {
+                await github.rest.issues.createComment({ owner, repo, issue_number: prNum, body });
+              }
+            }
+
+            // required-check semantics: the sync job itself fails if any CI job failed
+            if (anyFailed) core.setFailed('one or more CI jobs failed');

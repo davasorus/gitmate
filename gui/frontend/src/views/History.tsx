@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useGit, cls } from "../context";
 import { DiffView } from "../components/DiffView";
+import { RebasePanel } from "../components/RebasePanel";
 import type {
   Commit,
   CommitDetail,
@@ -13,6 +14,7 @@ export function History() {
 
   const [viewBranch, setViewBranch] = useState(""); // "" = current branch
   const [refCommits, setRefCommits] = useState<Commit[] | null>(null);
+  const [showRebase, setShowRebase] = useState(false);
 
   const current = status?.Branch ?? "";
   const shown = refCommits ?? commits ?? [];
@@ -85,10 +87,17 @@ export function History() {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          History
-        </h2>
+        <span className="text-[15px] font-semibold tracking-[-0.01em]">History</span>
         <div className="flex items-center gap-2 text-xs">
+          {!viewingOther && (
+            <button
+              onClick={() => setShowRebase((v) => !v)}
+              disabled={!!busy}
+              className={cls.btnSm}
+            >
+              {showRebase ? "Close rebase" : "Rebase"}
+            </button>
+          )}
           <span className="text-muted-foreground">branch:</span>
           <select
             value={viewBranch || current}
@@ -104,6 +113,7 @@ export function History() {
           </select>
         </div>
       </div>
+      {showRebase && <RebasePanel onClose={() => setShowRebase(false)} />}
 
       {viewingOther && (
         <div className="rounded-md border border-[var(--color-ahead)]/40 bg-[var(--color-ahead)]/5 px-3 py-1.5 text-xs text-muted-foreground">
@@ -113,7 +123,7 @@ export function History() {
         </div>
       )}
 
-      <div className="rounded-lg border border-border">
+      <div className="space-y-1">
         {busy === "history-branch" ? (
           <div className="p-3 text-sm text-muted-foreground">…</div>
         ) : shown.length === 0 ? (
@@ -121,7 +131,7 @@ export function History() {
         ) : (
           shown.map((c) => (
             <div key={c.Hash}>
-              <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-sm last:border-0 hover:bg-muted/60">
+              <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 hover:bg-[var(--color-card)] hover:bg-muted/60">
                 <button
                   onClick={() => showCommit(c.Hash)}
                   className="flex flex-1 items-baseline gap-2 text-left"

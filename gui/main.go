@@ -2,10 +2,11 @@ package main
 
 import (
 	"embed"
-
 	"log"
+	"os"
 	"time"
 
+	"github.com/davasorus/gitmate/internal/gitops"
 	"github.com/joho/godotenv"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -33,6 +34,11 @@ func init() {
 // and starts a goroutine that emits a time-based event every second. It subsequently runs the application and
 // logs any error that might occur.
 func main() {
+	// If git invoked us as its rebase editor during an interactive rebase, handle
+	// it and exit before starting the GUI.
+	if handled, code := gitops.MaybeRunRebaseEditor(os.Args); handled {
+		os.Exit(code)
+	}
 
 	// Create a new Wails application by providing the necessary options.
 	// Variables 'Name' and 'Description' are for application metadata.

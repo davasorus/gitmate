@@ -370,3 +370,35 @@ func TestCommitMerge(t *testing.T) {
 		t.Fatal("merge should be finished after CommitMerge")
 	}
 }
+
+func TestHeadSHAAndUndoTo(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "one\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "first")
+
+	// capture the restore point (before a second commit)
+	before, err := HeadSHA(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, dir, "a.txt", "two\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "second")
+
+	// two commits now
+	if log, _ := GetLog(dir, 10); len(log) != 2 {
+		t.Fatalf("expected 2 commits, got %d", len(log))
+	}
+	// undo back to the captured point
+	if err := UndoTo(dir, before); err != nil {
+		t.Fatal(err)
+	}
+	if log, _ := GetLog(dir, 10); len(log) != 1 || log[0].Subject != "first" {
+		t.Fatalf("undo did not restore to first commit: %+v", log)
+	}
+	// empty sha is rejected
+	if err := UndoTo(dir, ""); err == nil {
+		t.Fatal("expected error undoing to empty sha")
+	}
+}

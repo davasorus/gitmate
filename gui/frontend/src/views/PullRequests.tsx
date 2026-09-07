@@ -21,13 +21,30 @@ export function PullRequests() {
   const { branches, busy, run, service, flash, setBusy, dir } = useGit();
   const [prTitle, setPrTitle] = useState("");
   const [prHead, setPrHead] = useState("");
-  const [prBase, setPrBase] = useState("live");
+  const [prBase, setPrBase] = useState("");
   const [prBody, setPrBody] = useState("");
   const [prResult, setPrResult] = useState("");
   const [checks, setChecks] = useState<Record<number, PRDetailCheck[]>>({});
 
   // this view owns its PR list + state filter (open/closed/all)
   const [filter, setFilter] = useState<StateFilter>("open");
+  const [showNewPR, setShowNewPR] = useState(false);
+
+  // default the PR base to the repo's actual default branch (not a hardcoded name)
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const d = await service.DefaultBranch();
+        if (!cancelled && d) setPrBase(d);
+      } catch {
+        /* leave empty; the select still lists branches */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [service]);
   const [prs, setPrs] = useState<PRListItem[]>([]);
 
   const reload = async () => {
@@ -128,6 +145,35 @@ export function PullRequests() {
       `reopened #${n}`,
     );
   const [labelInput, setLabelInput] = useState<Record<number, string>>({});
+  const [assigneeInput, setAssigneeInput] = useState<Record<number, string>>({});
+  const doAddAssignee = (n: number, user: string) =>
+    run(
+      `assign-${n}`,
+      async () => {
+        await service.AddAssignees(n, [user]);
+        setAssigneeInput((m) => ({ ...m, [n]: "" }));
+        return `assigned @${user}`;
+      },
+      "assigned",
+    );
+  const doLockPR = (n: number) =>
+    run(
+      `lock-${n}`,
+      async () => {
+        await service.LockConversation(n, "");
+        return `locked #${n}`;
+      },
+      "locked",
+    );
+  const doUnlockPR = (n: number) =>
+    run(
+      `unlock-${n}`,
+      async () => {
+        await service.UnlockConversation(n);
+        return `unlocked #${n}`;
+      },
+      "unlocked",
+    );
   const [openReview, setOpenReview] = useState<number | null>(null);
   const [prDiff, setPrDiff] = useState<FileDiff[]>([]);
   const [pending, setPending] = useState<PendingComment[]>([]);
@@ -219,6 +265,29 @@ export function PullRequests() {
       },
       "reply posted",
     );
+  const doDeleteComment = (n: number, id: number) =>
+    run(
+      `delcomment-${id}`,
+      async () => {
+        await service.DeleteIssueComment(id);
+        setIssueComments((cs) => cs.filter((c) => c.ID !== id));
+        return "comment deleted";
+      },
+      "deleted",
+    );
+  const doEditComment = (n: number, id: number, current: string) => {
+    const next = window.prompt("Edit comment:", current);
+    if (next === null || next.trim() === current.trim()) return;
+    run(
+      `editcomment-${id}`,
+      async () => {
+        await service.EditIssueComment(id, next);
+        setIssueComments((cs) => cs.map((c) => (c.ID === id ? { ...c, Body: next } : c)));
+        return "comment edited";
+      },
+      "edited",
+    );
+  };
   const postGeneralComment = (n: number) => {
     if (!generalComment.trim()) return;
     run(
@@ -313,169 +382,211 @@ export function PullRequests() {
     }
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Pull requests
-        </h2>
-        <div className="flex items-center gap-1 text-xs">
-          {(["open", "closed", "all"] as StateFilter[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`rounded-md border border-border px-2 py-0.5 ${filter === f ? "bg-muted font-semibold" : "hover:bg-muted/60"}`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
+  const selectedPR = (prs ?? []).find((p) => p.Number === openReview) ?? null;
 
-      <div className="space-y-2 rounded-lg border border-border p-3">
-        <div className="text-xs text-muted-foreground">
-          Open a PR from <span className="text-[var(--color-ahead)]">{prHead || "…"}</span> into{" "}
-          <span className="text-[var(--color-ahead)]">{prBase}</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <input
-            value={prHead}
-            onChange={(e) => setPrHead(e.target.value)}
-            placeholder="head branch"
-            className={`${cls.input} flex-1`}
-          />
-          <select value={prBase} onChange={(e) => setPrBase(e.target.value)} className={cls.input}>
-            {(branches ?? []).map((b) => (
-              <option key={b.Name} value={b.Name}>
-                {b.Name}
-              </option>
+  return (
+    <div className="flex h-[calc(100vh-116px)] gap-0">
+      {/* LEFT: PR list */}
+      <div className="flex w-[360px] shrink-0 flex-col border-r border-border pr-3">
+        <div className="mb-2 flex items-center gap-2 px-1">
+          <div className="flex items-center gap-0.5 rounded-lg border border-border bg-[var(--color-muted)] p-0.5">
+            {(["open", "closed", "all"] as StateFilter[]).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`rounded-md px-2.5 py-1 text-[11.5px] font-medium ${filter === f ? "bg-[var(--color-raised)] text-[var(--color-foreground)]" : "text-[var(--color-faint)]"}`}
+              >
+                {f}
+              </button>
             ))}
-            {!(branches ?? []).some((b) => b.Name === prBase) && (
-              <option value={prBase}>{prBase}</option>
-            )}
-          </select>
-        </div>
-        <input
-          value={prTitle}
-          onChange={(e) => setPrTitle(e.target.value)}
-          placeholder="title (optional — defaults to last commit subject)"
-          className={`${cls.input} w-full`}
-        />
-        <textarea
-          value={prBody}
-          onChange={(e) => setPrBody(e.target.value)}
-          placeholder="description (loaded from PR template if present)"
-          className={`${cls.input} h-28 w-full resize-y`}
-        />
-        <div className="flex items-center gap-3">
-          <button onClick={doPR} disabled={!!busy || !prHead.trim()} className={cls.btn}>
-            {busy === "pr" ? "…" : "Open PR"}
+          </div>
+          <button
+            onClick={() => setShowNewPR((v) => !v)}
+            className="ml-auto text-[11.5px] font-semibold text-[var(--color-accent)] hover:underline"
+          >
+            {showNewPR ? "Cancel" : "+ New PR"}
           </button>
-          {prResult && (
-            <a
-              href={prResult}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs text-[var(--color-ahead)] underline"
-            >
-              {prResult}
-            </a>
+        </div>
+
+        {showNewPR && (
+          <div className="mb-2 space-y-2 rounded-lg border border-border p-3">
+            <div className="text-xs text-muted-foreground">
+              Open a PR from <span className="text-[var(--color-ahead)]">{prHead || "…"}</span> into{" "}
+              <span className="text-[var(--color-ahead)]">{prBase}</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={prHead}
+                onChange={(e) => setPrHead(e.target.value)}
+                placeholder="head branch"
+                className={`${cls.input} flex-1`}
+              />
+              <select
+                value={prBase}
+                onChange={(e) => setPrBase(e.target.value)}
+                className={cls.input}
+              >
+                {(branches ?? []).map((b) => (
+                  <option key={b.Name} value={b.Name}>
+                    {b.Name}
+                  </option>
+                ))}
+                {!(branches ?? []).some((b) => b.Name === prBase) && (
+                  <option value={prBase}>{prBase}</option>
+                )}
+              </select>
+            </div>
+            <input
+              value={prTitle}
+              onChange={(e) => setPrTitle(e.target.value)}
+              placeholder="title (optional — defaults to last commit subject)"
+              className={`${cls.input} w-full`}
+            />
+            <textarea
+              value={prBody}
+              onChange={(e) => setPrBody(e.target.value)}
+              placeholder="description (loaded from PR template if present)"
+              className={`${cls.input} h-28 w-full resize-y`}
+            />
+            <div className="flex items-center gap-3">
+              <button onClick={doPR} disabled={!!busy || !prHead.trim()} className={cls.btn}>
+                {busy === "pr" ? "…" : "Open PR"}
+              </button>
+              {prResult && (
+                <a
+                  href={prResult}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-[var(--color-ahead)] underline"
+                >
+                  {prResult}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {busy === "prs-load" ? (
+            <div className="p-3 text-sm text-muted-foreground">…</div>
+          ) : (prs ?? []).length ? (
+            (prs ?? []).map((p) => (
+              <div
+                key={p.Number}
+                onClick={() => toggleReview(p.Number)}
+                className={`cursor-pointer rounded-lg px-2.5 py-2 ${p.Number === openReview ? "bg-[var(--color-accent-dim)]" : "hover:bg-[var(--color-card)]"}`}
+              >
+                <div className="flex items-baseline gap-2 text-sm">
+                  <span className="font-semibold text-[var(--color-ahead)]">#{p.Number}</span>
+                  <span className="truncate">{p.Title}</span>
+                  <span className="text-xs text-muted-foreground">@{p.Author}</span>
+                  <span className="flex items-center gap-1 text-[10px]">
+                    {p.Draft && (
+                      <span className="rounded-full border border-border px-1.5 py-0.5 text-muted-foreground">
+                        draft
+                      </span>
+                    )}
+                    {p.ReviewDecision === "APPROVED" && (
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-[var(--color-ahead)]"
+                        title="approved"
+                      >
+                        ✓ approved
+                      </span>
+                    )}
+                    {p.ReviewDecision === "CHANGES_REQUESTED" && (
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-[var(--color-removed)]"
+                        title="changes requested"
+                      >
+                        ✗ changes
+                      </span>
+                    )}
+                    {p.ReviewDecision === "REVIEW_REQUIRED" && (
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-muted-foreground"
+                        title="review required"
+                      >
+                        review needed
+                      </span>
+                    )}
+                    {p.ChecksTotal > 0 && (
+                      <span
+                        className={
+                          p.ChecksFailed > 0
+                            ? "text-[var(--color-removed)]"
+                            : p.ChecksPending > 0
+                              ? "text-muted-foreground"
+                              : "text-[var(--color-ahead)]"
+                        }
+                        title={`${p.ChecksPassed} passed, ${p.ChecksFailed} failed, ${p.ChecksPending} pending`}
+                      >
+                        {p.ChecksFailed > 0
+                          ? `✗ ${p.ChecksFailed}/${p.ChecksTotal}`
+                          : p.ChecksPending > 0
+                            ? `● ${p.ChecksPending}/${p.ChecksTotal}`
+                            : `✓ ${p.ChecksTotal}`}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="p-3 text-sm italic text-muted-foreground">no {filter} PRs</div>
           )}
         </div>
       </div>
 
-      <div className="rounded-lg border border-border">
-        {busy === "prs-load" ? (
-          <div className="p-3 text-sm text-muted-foreground">…</div>
-        ) : (prs ?? []).length ? (
-          (prs ?? []).map((p) => (
-            <div key={p.Number} className="border-b border-border p-3 last:border-0">
-              <div className="flex items-baseline gap-2 text-sm">
-                <span className="font-semibold text-[var(--color-ahead)]">#{p.Number}</span>
-                <span className="truncate">{p.Title}</span>
-                <span className="text-xs text-muted-foreground">@{p.Author}</span>
-                <span className="flex items-center gap-1 text-[10px]">
-                  {p.Draft && (
-                    <span className="rounded-full border border-border px-1.5 py-0.5 text-muted-foreground">
-                      draft
-                    </span>
-                  )}
-                  {p.ReviewDecision === "APPROVED" && (
-                    <span
-                      className="rounded-full px-1.5 py-0.5 text-[var(--color-ahead)]"
-                      title="approved"
-                    >
-                      ✓ approved
-                    </span>
-                  )}
-                  {p.ReviewDecision === "CHANGES_REQUESTED" && (
-                    <span
-                      className="rounded-full px-1.5 py-0.5 text-[var(--color-removed)]"
-                      title="changes requested"
-                    >
-                      ✗ changes
-                    </span>
-                  )}
-                  {p.ReviewDecision === "REVIEW_REQUIRED" && (
-                    <span
-                      className="rounded-full px-1.5 py-0.5 text-muted-foreground"
-                      title="review required"
-                    >
-                      review needed
-                    </span>
-                  )}
-                  {p.ChecksTotal > 0 && (
-                    <span
-                      className={
-                        p.ChecksFailed > 0
-                          ? "text-[var(--color-removed)]"
-                          : p.ChecksPending > 0
-                            ? "text-muted-foreground"
-                            : "text-[var(--color-ahead)]"
-                      }
-                      title={`${p.ChecksPassed} passed, ${p.ChecksFailed} failed, ${p.ChecksPending} pending`}
-                    >
-                      {p.ChecksFailed > 0
-                        ? `✗ ${p.ChecksFailed}/${p.ChecksTotal}`
-                        : p.ChecksPending > 0
-                          ? `● ${p.ChecksPending}/${p.ChecksTotal}`
-                          : `✓ ${p.ChecksTotal}`}
-                    </span>
-                  )}
-                </span>
-                <span className="ml-auto flex gap-1">
+      {/* RIGHT: selected PR detail */}
+      <div className="min-w-0 flex-1 overflow-y-auto pl-4">
+        {!selectedPR ? (
+          <div className="grid h-full place-items-center text-[13px] text-[var(--color-faint)]">
+            Select a pull request
+          </div>
+        ) : (
+          [selectedPR].map((p) => (
+            <div key={p.Number} className="space-y-3">
+              <div className="border-b border-border pb-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-[12px] text-[var(--color-faint)]">
+                    #{p.Number}
+                  </span>
+                  <span className="text-[16px] font-semibold tracking-[-0.02em]">{p.Title}</span>
+                </div>
+                <div className="mt-1 text-[12px] text-[var(--color-muted-foreground)]">
+                  @{p.Author}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
                   <button
-                    onClick={() => toggleReview(p.Number)}
+                    onClick={() => doMerge(p.Number)}
                     disabled={!!busy}
-                    className={cls.btnSm}
+                    className="rounded-lg bg-[var(--color-accent)] px-3.5 py-1.5 text-[12.5px] font-semibold text-white hover:opacity-90 disabled:opacity-40"
                   >
-                    {busy === `review-load-${p.Number}` ? "…" : "Review"}
+                    {busy === `merge-${p.Number}` ? "…" : "Merge"}
                   </button>
                   <button
                     onClick={() => loadChecks(p.Number)}
                     disabled={!!busy}
-                    className={cls.btnSm}
+                    className="rounded-lg border border-border px-3.5 py-1.5 text-[12.5px] font-medium text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40"
                   >
                     {busy === `checks-${p.Number}` ? "…" : "Checks"}
-                  </button>
-                  <button onClick={() => doMerge(p.Number)} disabled={!!busy} className={cls.btnSm}>
-                    {busy === `merge-${p.Number}` ? "…" : "Merge"}
                   </button>
                   <button
                     onClick={() => doClose(p.Number)}
                     disabled={!!busy}
-                    className={`${cls.btnSm} text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10`}
+                    className="rounded-lg border border-border px-3.5 py-1.5 text-[12.5px] font-medium text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10 disabled:opacity-40"
                   >
                     {busy === `pr-close-${p.Number}` ? "…" : "Close"}
                   </button>
                   <button
                     onClick={() => doReopen(p.Number)}
                     disabled={!!busy}
-                    className={cls.btnSm}
+                    className="rounded-lg border border-border px-3.5 py-1.5 text-[12.5px] font-medium text-[var(--color-muted-foreground)] hover:bg-[var(--color-muted)] disabled:opacity-40"
                   >
                     {busy === `pr-reopen-${p.Number}` ? "…" : "Reopen"}
                   </button>
-                </span>
+                </div>
               </div>
               {checks[p.Number] && (
                 <div className="mt-1 space-y-0.5 pl-6">
@@ -582,9 +693,27 @@ export function PullRequests() {
                   </div>
                   {(issueComments ?? []).length ? (
                     (issueComments ?? []).map((ic) => (
-                      <div key={ic.ID} className="text-xs">
-                        <span className="font-medium">{ic.Author}</span>:{" "}
-                        <span className="text-muted-foreground">{ic.Body}</span>
+                      <div key={ic.ID} className="group flex items-start gap-1 text-xs">
+                        <div className="flex-1">
+                          <span className="font-medium">{ic.Author}</span>:{" "}
+                          <span className="text-muted-foreground">{ic.Body}</span>
+                        </div>
+                        <button
+                          onClick={() => doEditComment(p.Number, ic.ID, ic.Body)}
+                          disabled={!!busy}
+                          className="shrink-0 text-[10px] text-muted-foreground opacity-0 hover:underline group-hover:opacity-100"
+                          title="edit comment"
+                        >
+                          edit
+                        </button>
+                        <button
+                          onClick={() => doDeleteComment(p.Number, ic.ID)}
+                          disabled={!!busy}
+                          className="shrink-0 text-[10px] text-[var(--color-removed)] opacity-0 hover:underline group-hover:opacity-100"
+                          title="delete comment"
+                        >
+                          delete
+                        </button>
                       </div>
                     ))
                   ) : (
@@ -698,11 +827,35 @@ export function PullRequests() {
                   placeholder="+ label"
                   className={`${cls.input} h-6 w-24 px-2 py-0 text-[10px]`}
                 />
+                <input
+                  value={assigneeInput[p.Number] ?? ""}
+                  onChange={(e) => setAssigneeInput((m) => ({ ...m, [p.Number]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (assigneeInput[p.Number] ?? "").trim())
+                      doAddAssignee(p.Number, assigneeInput[p.Number].trim());
+                  }}
+                  placeholder="+ assignee"
+                  className={`${cls.input} h-6 w-28 px-2 py-0 text-[10px]`}
+                />
+                <button
+                  onClick={() => doLockPR(p.Number)}
+                  disabled={!!busy}
+                  className={`${cls.btnSm} text-[10px]`}
+                  title="lock conversation"
+                >
+                  {busy === `lock-${p.Number}` ? "…" : "Lock"}
+                </button>
+                <button
+                  onClick={() => doUnlockPR(p.Number)}
+                  disabled={!!busy}
+                  className={`${cls.btnSm} text-[10px]`}
+                  title="unlock conversation"
+                >
+                  {busy === `unlock-${p.Number}` ? "…" : "Unlock"}
+                </button>
               </div>
             </div>
           ))
-        ) : (
-          <div className="p-3 text-sm italic text-muted-foreground">no {filter} PRs</div>
         )}
       </div>
     </div>
