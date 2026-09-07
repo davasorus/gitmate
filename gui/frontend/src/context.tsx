@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  ReactNode,
+} from "react";
 import { GitService } from "../bindings/github.com/davasorus/gitmate/gui";
 import type {
   Status,
@@ -172,18 +180,49 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
     }
   }, [dir]);
 
+  // keep a stable ref to the latest reload so the focus/interval effects don't
+  // tear down + recreate every time `dir` (and thus `reload`) changes — that
+  // churn was causing the reload cascade.
+  const reloadRef = useRef(reload);
+  reloadRef.current = reload;
+  const notRepoRef = useRef(notRepo);
+  notRepoRef.current = notRepo;
+
   useEffect(() => {
-    reload();
-  }, []); // initial
+    // load the persisted repo directory (first-class setting) before the first
+    // reload; if none is saved, dir stays "" and reload guards via IsRepo.
+    (async () => {
+      try {
+        const saved = await GitService.RepoDir();
+        if (saved) setDir(saved);
+      } catch {
+        /* no saved setting — fine */
+      }
+      reloadRef.current();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // initial, once
+
+  // when the repo directory changes (user picked a different repo), reload once.
+  // Skips the very first render (the initial effect above handles startup).
+  const firstDir = useRef(true);
+  useEffect(() => {
+    if (firstDir.current) {
+      firstDir.current = false;
+      return;
+    }
+    reloadRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dir]);
 
   // (1) Reload local state when the window regains focus — reflects changes made
   // in a terminal / another git tool without a manual Reload. Cheap + local (no network).
   useEffect(() => {
     const onFocus = () => {
-      reload();
+      reloadRef.current();
     };
     const onVisible = () => {
-      if (document.visibilityState === "visible") reload();
+      if (document.visibilityState === "visible") reloadRef.current();
     };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisible);
@@ -191,7 +230,8 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [reload]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // (2) Periodic background fetch (network) so ahead/behind + remote branches stay
   // fresh, then reload. Every 5 minutes. NOT on every reload (fetch is network;
@@ -199,10 +239,10 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const id = setInterval(
       async () => {
-        if (notRepo) return; // no repo → nothing to fetch
+        if (notRepoRef.current) return; // no repo → nothing to fetch
         try {
           await GitService.Fetch();
-          await reload();
+          await reloadRef.current();
         } catch {
           /* offline / no remote — non-fatal, try again next tick */
         }
@@ -210,7 +250,8 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
       5 * 60 * 1000,
     );
     return () => clearInterval(id);
-  }, [reload, notRepo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const run = async (name: string, fn: () => Promise<string | void>, okMsg: string) => {
     setBusy(name);

@@ -659,6 +659,13 @@ export function ReplyToReviewComment($number: number, commentID: number, body: s
 }
 
 /**
+ * RepoDir returns the current repository directory (the persisted setting).
+ */
+export function RepoDir(): $CancellablePromise<string> {
+    return $Call.ByID(1730534428);
+}
+
+/**
  * RequestReviewers requests reviewers on a PR.
  */
 export function RequestReviewers($number: number, logins: string[] | null): $CancellablePromise<void> {

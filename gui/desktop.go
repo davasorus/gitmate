@@ -75,3 +75,50 @@ func (g *GitService) AddRecentRepo(path string) {
 		_ = os.WriteFile(p, data, 0o644)
 	}
 }
+
+// --- persisted settings --------------------------------------------------
+// The repository directory is a first-class, persisted setting — the source of
+// truth lives here, not in transient frontend state. Loaded once at startup,
+// saved whenever the user opens a different repo.
+
+type appSettings struct {
+	RepoDir string `json:"repoDir"`
+}
+
+func settingsPath() string {
+	dir, err := os.UserConfigDir()
+	if err != nil || dir == "" {
+		return ""
+	}
+	return filepath.Join(dir, "gitmate", "settings.json")
+}
+
+func loadSettings() appSettings {
+	var s appSettings
+	p := settingsPath()
+	if p == "" {
+		return s
+	}
+	data, err := os.ReadFile(p)
+	if err != nil {
+		return s
+	}
+	_ = json.Unmarshal(data, &s)
+	return s
+}
+
+func saveSettings(s appSettings) {
+	p := settingsPath()
+	if p == "" {
+		return
+	}
+	_ = os.MkdirAll(filepath.Dir(p), 0o755)
+	if data, err := json.Marshal(s); err == nil {
+		_ = os.WriteFile(p, data, 0o644)
+	}
+}
+
+// RepoDir returns the current repository directory (the persisted setting).
+func (g *GitService) RepoDir() string {
+	return g.repoDir
+}
