@@ -26,7 +26,7 @@ jobs:
       new_release_published: ${{ steps.semrel.outputs.new_release_published }}
       version: ${{ steps.semrel.outputs.new_release_version }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -75,7 +75,7 @@ jobs:
           NOTES
       - name: Upload proposal
         if: steps.semrel.outputs.new_release_published == 'true'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: release-meta
           path: |
@@ -97,14 +97,14 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - uses: ./.github/actions/setup-go
-      - uses: goreleaser/goreleaser-action@v7
+      - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
           args: build --clean --snapshot
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
           name: cli-artifacts
           path: dist/**/gitmate*
@@ -118,15 +118,27 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/wails-setup
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Linux GUI deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
       - name: Frontend deps
         run: npm ci
         working-directory: gui/frontend
       - name: Build GUI
         run: wails3 build
         working-directory: gui
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@v4
         with:
           name: gui-${{ matrix.os }}
           path: gui/bin/*
@@ -137,7 +149,7 @@ jobs:
     needs: [propose, build-cli, build-gui]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ssh-key: ${{ secrets.RELEASE_SSH_KEY }} # tag push bypasses v* ruleset
