@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useGit, cls } from "../context";
-import type { IssueListItem, Milestone } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type {
+  IssueListItem,
+  Milestone,
+} from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StateFilter = "open" | "closed" | "all";
 
@@ -95,25 +98,41 @@ export function Issues() {
       "assigned",
     );
   const doRemoveAssignee = (n: number, user: string) =>
-    run(`unassign-${n}-${user}`, async () => {
-      await service.RemoveAssignees(n, [user]);
-      return `unassigned @${user}`;
-    }, "unassigned");
+    run(
+      `unassign-${n}-${user}`,
+      async () => {
+        await service.RemoveAssignees(n, [user]);
+        return `unassigned @${user}`;
+      },
+      "unassigned",
+    );
   const doLock = (n: number) =>
-    run(`lock-${n}`, async () => {
-      await service.LockConversation(n, "");
-      return `locked #${n}`;
-    }, "locked");
+    run(
+      `lock-${n}`,
+      async () => {
+        await service.LockConversation(n, "");
+        return `locked #${n}`;
+      },
+      "locked",
+    );
   const doUnlock = (n: number) =>
-    run(`unlock-${n}`, async () => {
-      await service.UnlockConversation(n);
-      return `unlocked #${n}`;
-    }, "unlocked");
+    run(
+      `unlock-${n}`,
+      async () => {
+        await service.UnlockConversation(n);
+        return `unlocked #${n}`;
+      },
+      "unlocked",
+    );
   const doSetMilestone = (n: number, milestone: number) =>
-    run(`milestone-${n}`, async () => {
-      await service.SetMilestone(n, milestone);
-      return milestone === 0 ? `cleared milestone on #${n}` : `set milestone on #${n}`;
-    }, "milestone set");
+    run(
+      `milestone-${n}`,
+      async () => {
+        await service.SetMilestone(n, milestone);
+        return milestone === 0 ? `cleared milestone on #${n}` : `set milestone on #${n}`;
+      },
+      "milestone set",
+    );
   const doAddLabel = (n: number, label: string) =>
     run(
       `lbl-add-${n}`,

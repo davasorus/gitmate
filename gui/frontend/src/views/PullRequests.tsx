@@ -130,21 +130,33 @@ export function PullRequests() {
   const [labelInput, setLabelInput] = useState<Record<number, string>>({});
   const [assigneeInput, setAssigneeInput] = useState<Record<number, string>>({});
   const doAddAssignee = (n: number, user: string) =>
-    run(`assign-${n}`, async () => {
-      await service.AddAssignees(n, [user]);
-      setAssigneeInput((m) => ({ ...m, [n]: "" }));
-      return `assigned @${user}`;
-    }, "assigned");
+    run(
+      `assign-${n}`,
+      async () => {
+        await service.AddAssignees(n, [user]);
+        setAssigneeInput((m) => ({ ...m, [n]: "" }));
+        return `assigned @${user}`;
+      },
+      "assigned",
+    );
   const doLockPR = (n: number) =>
-    run(`lock-${n}`, async () => {
-      await service.LockConversation(n, "");
-      return `locked #${n}`;
-    }, "locked");
+    run(
+      `lock-${n}`,
+      async () => {
+        await service.LockConversation(n, "");
+        return `locked #${n}`;
+      },
+      "locked",
+    );
   const doUnlockPR = (n: number) =>
-    run(`unlock-${n}`, async () => {
-      await service.UnlockConversation(n);
-      return `unlocked #${n}`;
-    }, "unlocked");
+    run(
+      `unlock-${n}`,
+      async () => {
+        await service.UnlockConversation(n);
+        return `unlocked #${n}`;
+      },
+      "unlocked",
+    );
   const [openReview, setOpenReview] = useState<number | null>(null);
   const [prDiff, setPrDiff] = useState<FileDiff[]>([]);
   const [pending, setPending] = useState<PendingComment[]>([]);
@@ -237,19 +249,27 @@ export function PullRequests() {
       "reply posted",
     );
   const doDeleteComment = (n: number, id: number) =>
-    run(`delcomment-${id}`, async () => {
-      await service.DeleteIssueComment(id);
-      setIssueComments((cs) => cs.filter((c) => c.ID !== id));
-      return "comment deleted";
-    }, "deleted");
+    run(
+      `delcomment-${id}`,
+      async () => {
+        await service.DeleteIssueComment(id);
+        setIssueComments((cs) => cs.filter((c) => c.ID !== id));
+        return "comment deleted";
+      },
+      "deleted",
+    );
   const doEditComment = (n: number, id: number, current: string) => {
     const next = window.prompt("Edit comment:", current);
     if (next === null || next.trim() === current.trim()) return;
-    run(`editcomment-${id}`, async () => {
-      await service.EditIssueComment(id, next);
-      setIssueComments((cs) => cs.map((c) => (c.ID === id ? { ...c, Body: next } : c)));
-      return "comment edited";
-    }, "edited");
+    run(
+      `editcomment-${id}`,
+      async () => {
+        await service.EditIssueComment(id, next);
+        setIssueComments((cs) => cs.map((c) => (c.ID === id ? { ...c, Body: next } : c)));
+        return "comment edited";
+      },
+      "edited",
+    );
   };
   const postGeneralComment = (n: number) => {
     if (!generalComment.trim()) return;
