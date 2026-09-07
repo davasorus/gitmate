@@ -1,6 +1,14 @@
-import type { FileDiff } from "../../bindings/github.com/davasorus/gitmate/internal/gitops";
+import type { FileDiff, Hunk } from "../../bindings/github.com/davasorus/gitmate/internal/gitops";
 
-export function DiffView({ files }: { files: FileDiff[] }) {
+// hunkAction, when provided, renders a button on each hunk header (e.g. "Stage"
+// in the Changes view). Omit it for read-only diffs (History, PR review).
+export function DiffView({
+  files,
+  hunkAction,
+}: {
+  files: FileDiff[];
+  hunkAction?: { label: string; onClick: (path: string, hunk: Hunk) => void; disabled?: boolean };
+}) {
   if (!files || files.length === 0) {
     return <div className="p-3 text-xs italic text-muted-foreground">no diff</div>;
   }
@@ -16,8 +24,17 @@ export function DiffView({ files }: { files: FileDiff[] }) {
           ) : (
             (f.Hunks ?? []).map((h, hi) => (
               <div key={hi}>
-                <div className="bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
-                  {h.Header}
+                <div className="flex items-center gap-2 bg-muted/50 px-3 py-1 text-xs text-muted-foreground">
+                  <span className="flex-1 truncate">{h.Header}</span>
+                  {hunkAction && (
+                    <button
+                      onClick={() => hunkAction.onClick(f.NewPath || f.OldPath, h)}
+                      disabled={hunkAction.disabled}
+                      className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] hover:bg-muted disabled:opacity-40"
+                    >
+                      {hunkAction.label}
+                    </button>
+                  )}
                 </div>
                 <div className="overflow-x-auto">
                   {(h.Lines ?? []).map((ln, li) => {

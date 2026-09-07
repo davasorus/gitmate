@@ -42,6 +42,19 @@ func run(dir string, args ...string) (string, error) {
 	return string(out), nil
 }
 
+// runStdin runs git with the given args, feeding `input` to the command's
+// stdin. Used for `git apply -` (patch on stdin). Same error handling as run.
+func runStdin(dir, input string, args ...string) error {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Stdin = strings.NewReader(input)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git %s: %s", strings.Join(args, " "), strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
 // GetStatus runs status --porcelain=v2 --branch and parses the output.
 func GetStatus(dir string) (*Status, error) {
 	out, err := run(dir, "status", "--porcelain=v2", "--branch")

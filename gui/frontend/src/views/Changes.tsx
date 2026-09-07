@@ -3,7 +3,7 @@ import { useGit, cls } from "../context";
 import { StatusBadge } from "../components/StatusBadge";
 import { DiffView } from "../components/DiffView";
 import { ConfirmDialog } from "../components/ConfirmDialog";
-import type { FileDiff } from "../../bindings/github.com/davasorus/gitmate/internal/gitops";
+import type { FileDiff, Hunk } from "../../bindings/github.com/davasorus/gitmate/internal/gitops";
 
 export function Changes() {
   const { status, busy, run, service, flash, setBusy } = useGit();
@@ -30,6 +30,19 @@ export function Changes() {
   };
 
   const doStage = (p: string) => run(`stage-${p}`, () => service.StagePath(p), `staged ${p}`);
+  const doStageHunk = (path: string, hunk: Hunk) =>
+    run(`stagehunk-${path}`, async () => {
+      await service.StageHunk(path, hunk);
+      // refresh the open diff so the staged hunk drops out of the unstaged view
+      if (openDiff) setDiffFiles((await service.Diff(openDiff.path, openDiff.staged)) ?? []);
+      return "staged hunk";
+    }, "staged hunk");
+  const doUnstageHunk = (path: string, hunk: Hunk) =>
+    run(`unstagehunk-${path}`, async () => {
+      await service.UnstageHunk(path, hunk);
+      if (openDiff) setDiffFiles((await service.Diff(openDiff.path, openDiff.staged)) ?? []);
+      return "unstaged hunk";
+    }, "unstaged hunk");
   const doUnstage = (p: string) =>
     run(`unstage-${p}`, () => service.UnstagePath(p), `unstaged ${p}`);
   const doDiscard = (p: string) =>
@@ -103,7 +116,14 @@ export function Changes() {
       </div>
       {openDiff?.path === path && openDiff.staged === isStaged && (
         <div className="border-b border-border bg-background px-2 py-2">
-          <DiffView files={diffFiles} />
+          <DiffView
+            files={diffFiles}
+            hunkAction={
+              openDiff?.staged
+                ? { label: "Unstage", onClick: doUnstageHunk, disabled: !!busy }
+                : { label: "Stage", onClick: doStageHunk, disabled: !!busy }
+            }
+          />
         </div>
       )}
     </div>

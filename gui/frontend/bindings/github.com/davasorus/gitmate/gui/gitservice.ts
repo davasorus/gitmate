@@ -763,6 +763,15 @@ export function Stage(): $CancellablePromise<void> {
 }
 
 /**
+ * UnstagePath unstages a specific path.
+ * StageHunk stages a single hunk of a file (partial staging) by applying just
+ * that hunk's patch to the index.
+ */
+export function StageHunk(path: string, hunk: gitops$0.Hunk): $CancellablePromise<void> {
+    return $Call.ByID(647477841, path, hunk);
+}
+
+/**
  * StagePath stages a specific path.
  */
 export function StagePath(path: string): $CancellablePromise<void> {
@@ -863,8 +872,12 @@ export function UnresolveThread(threadID: string): $CancellablePromise<void> {
 }
 
 /**
- * UnstagePath unstages a specific path.
+ * UnstageHunk removes a single staged hunk from the index.
  */
+export function UnstageHunk(path: string, hunk: gitops$0.Hunk): $CancellablePromise<void> {
+    return $Call.ByID(1367559188, path, hunk);
+}
+
 export function UnstagePath(path: string): $CancellablePromise<void> {
     return $Call.ByID(3753426035, path);
 }

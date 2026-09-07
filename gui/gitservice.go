@@ -565,6 +565,17 @@ func (g *GitService) StagePath(path string) error {
 }
 
 // UnstagePath unstages a specific path.
+// StageHunk stages a single hunk of a file (partial staging) by applying just
+// that hunk's patch to the index.
+func (g *GitService) StageHunk(path string, hunk gitops.Hunk) error {
+	return gitops.StageHunk(g.repoDir, path, hunk)
+}
+
+// UnstageHunk removes a single staged hunk from the index.
+func (g *GitService) UnstageHunk(path string, hunk gitops.Hunk) error {
+	return gitops.UnstageHunk(g.repoDir, path, hunk)
+}
+
 func (g *GitService) UnstagePath(path string) error {
 	return gitops.Unstage(g.repoDir, path)
 }
