@@ -229,4 +229,9 @@ export const cls = {
     "rounded-md border border-border bg-muted px-3 py-1.5 text-sm outline-none focus:border-[var(--color-ahead)]",
   btn: "rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-background disabled:opacity-40",
   btnSm: "rounded-md border border-border px-2 py-0.5 text-xs hover:bg-muted disabled:opacity-40",
+  // branch-row hierarchy: primary (Switch) stands out; muted (Rename/Delete) recedes
+  btnSmPrimary:
+    "rounded-md bg-primary px-2 py-0.5 text-xs font-semibold text-background hover:opacity-90 disabled:opacity-40",
+  btnSmMuted:
+    "rounded-md px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted disabled:opacity-40",
 };

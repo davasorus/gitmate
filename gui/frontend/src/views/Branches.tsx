@@ -119,12 +119,8 @@ export function Branches() {
             <span className="truncate text-xs text-muted-foreground">{b.LastSubject}</span>
             <span className="ml-auto flex shrink-0 gap-1">
               {!b.IsCurrent && (
-                <button onClick={() => doSwitch(b.Name)} disabled={!!busy} className={cls.btnSm}>
-                  {busy === `switch-${b.Name}`
-                    ? "…"
-                    : b.IsRemote && !b.IsLocal
-                      ? "Checkout"
-                      : "Switch"}
+                <button onClick={() => doSwitch(b.Name)} disabled={!!busy} className={cls.btnSmPrimary}>
+                  {busy === `switch-${b.Name}` ? "…" : b.IsRemote && !b.IsLocal ? "Checkout" : "Switch"}
                 </button>
               )}
               {!b.IsCurrent && (
@@ -141,7 +137,7 @@ export function Branches() {
                 <button
                   onClick={() => setRenaming({ old: b.Name, next: b.Name })}
                   disabled={!!busy}
-                  className={cls.btnSm}
+                  className={cls.btnSmMuted}
                 >
                   Rename
                 </button>
@@ -150,7 +146,7 @@ export function Branches() {
                 <button
                   onClick={() => setConfirmDel(b.Name)}
                   disabled={!!busy}
-                  className={`${cls.btnSm} text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10`}
+                  className={`${cls.btnSmMuted} text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10`}
                 >
                   {busy === `delbranch-${b.Name}` ? "…" : "Delete"}
                 </button>
