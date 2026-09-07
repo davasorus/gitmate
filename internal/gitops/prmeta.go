@@ -22,6 +22,11 @@ func LastCommitSubject(dir, branch string) (string, error) {
 
 // ReadPRTemplate returns the repo's PR template contents, or "" if none.
 func ReadPRTemplate(dir string) string {
+	// The GUI's working dir may be a subdir (e.g. gui/), while the template lives
+	// at the repo root's .github/. Resolve the repo root (walk up to .git) first.
+	if root := repoRoot(dir); root != "" {
+		dir = root
+	}
 	candidates := []string{
 		".github/PULL_REQUEST_TEMPLATE.md",
 		".github/pull_request_template.md",
