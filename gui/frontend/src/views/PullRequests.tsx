@@ -4,7 +4,6 @@ import { CheckBadge } from "../components/CheckBadge";
 import { ReviewDiff, type PendingComment } from "../components/ReviewDiff";
 import type {
   PRListItem,
-  CheckRun,
   Review,
   Reviewer,
 } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
@@ -13,6 +12,7 @@ import type {
   ExistingComment,
   IssueComment,
   PRDetailThread,
+  PRDetailCheck,
 } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StateFilter = "open" | "closed" | "all";
@@ -24,7 +24,7 @@ export function PullRequests() {
   const [prBase, setPrBase] = useState("live");
   const [prBody, setPrBody] = useState("");
   const [prResult, setPrResult] = useState("");
-  const [checks, setChecks] = useState<Record<number, CheckRun[]>>({});
+  const [checks, setChecks] = useState<Record<number, PRDetailCheck[]>>({});
 
   // this view owns its PR list + state filter (open/closed/all)
   const [filter, setFilter] = useState<StateFilter>("open");
@@ -303,8 +303,9 @@ export function PullRequests() {
   const loadChecks = async (n: number) => {
     setBusy(`checks-${n}`);
     try {
-      const runs = (await service.PRChecks(n)) ?? [];
-      setChecks((p) => ({ ...p, [n]: runs }));
+      // checks come from the aggregated PR detail (GraphQL) — no separate REST call
+      const detail = await service.PRDetail(n);
+      setChecks((p) => ({ ...p, [n]: detail?.Checks ?? [] }));
     } catch (e) {
       flash("err", String(e));
     } finally {
