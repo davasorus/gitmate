@@ -77,8 +77,8 @@ func writeMessagesFile(steps []RebaseStep) (path string, cleanup func(), err err
 		return "", func() {}, err
 	}
 	_, _ = f.WriteString(strings.Join(msgs, "\n"+msgSep+"\n"))
-	f.Close()
-	return f.Name(), func() { os.Remove(f.Name()) }, nil
+	_ = f.Close()
+	return f.Name(), func() { _ = os.Remove(f.Name()) }, nil
 }
 
 func popMessage(msgsFile, dst string) error {

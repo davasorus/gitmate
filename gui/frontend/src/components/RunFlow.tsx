@@ -1,17 +1,18 @@
 import type { JobNode, Job } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 // RunFlow draws the workflow's job dependency graph (from needs:) as columns by
-// depth, with arrows for dependencies, each box colored by the live job status.
+// depth. Matrix legs (nodes named "base (leg)") are GROUPED under a single
+// parent node, with each leg shown as a row inside and colored by its own live
+// status — so "go" matrixed 3 ways reads as one job, not three.
 export function RunFlow({ graph, jobs }: { graph: JobNode[]; jobs: Job[] }) {
   if (!graph || graph.length === 0) {
     return (
-      <div className="text-xs italic text-muted-foreground">
+      <div className="text-xs italic text-[var(--color-faint)]">
         no job graph (workflow YAML unavailable or no jobs)
       </div>
     );
   }
 
-  // live status per job name (from the run's jobs)
   const statusOf = (name: string) => {
     const j =
       (jobs ?? []).find((x) => x.Name === name) ??
@@ -25,104 +26,194 @@ export function RunFlow({ graph, jobs }: { graph: JobNode[]; jobs: Job[] }) {
     if (s === "success") return "var(--color-added)";
     if (s === "failure" || s === "cancelled") return "var(--color-removed)";
     if (s === "in_progress" || s === "queued") return "var(--color-behind)";
-    return "var(--color-muted-foreground, #888)";
+    return "var(--color-faint, #6a717c)";
   };
 
-  // compute depth (longest path from a root) for column placement
-  const byName = new Map(graph.map((n) => [n.Name, n]));
+  // --- group matrix legs under a base job ---------------------------------
+  // Engine expands matrix into nodes named "base (leg1, leg2)". Cluster them by
+  // base, so the graph draws one parent box per base with N leg-rows inside.
+  const splitLeg = (name: string): { base: string; leg: string | null } => {
+    const m = name.match(/^(.*) \((.*)\)$/);
+    return m ? { base: m[1], leg: m[2] } : { base: name, leg: null };
+  };
+
+  type Group = { base: string; legs: JobNode[]; needsBases: string[] };
+  const groupMap = new Map<string, Group>();
+  const baseOrder: string[] = [];
+  for (const n of graph) {
+    const { base } = splitLeg(n.Name);
+    if (!groupMap.has(base)) {
+      groupMap.set(base, { base, legs: [], needsBases: [] });
+      baseOrder.push(base);
+    }
+    const g = groupMap.get(base)!;
+    g.legs.push(n);
+    for (const dep of n.Needs ?? []) {
+      const db = splitLeg(dep).base;
+      if (!g.needsBases.includes(db)) g.needsBases.push(db);
+    }
+  }
+  const groups = baseOrder.map((b) => groupMap.get(b)!);
+
+  // depth by base (longest path over base-level needs)
+  const gByBase = new Map(groups.map((g) => [g.base, g]));
   const depthCache = new Map<string, number>();
-  const depth = (name: string, seen = new Set<string>()): number => {
-    if (depthCache.has(name)) return depthCache.get(name)!;
-    if (seen.has(name)) return 0; // cycle guard
-    seen.add(name);
-    const node = byName.get(name);
-    const needs = node?.Needs ?? [];
-    const d = needs.length === 0 ? 0 : 1 + Math.max(...needs.map((n) => depth(n, seen)));
-    depthCache.set(name, d);
+  const depth = (base: string, seen = new Set<string>()): number => {
+    if (depthCache.has(base)) return depthCache.get(base)!;
+    if (seen.has(base)) return 0;
+    seen.add(base);
+    const g = gByBase.get(base);
+    const needs = g?.needsBases.filter((b) => b !== base) ?? [];
+    const d = needs.length === 0 ? 0 : 1 + Math.max(...needs.map((b) => depth(b, seen)));
+    depthCache.set(base, d);
     return d;
   };
 
-  // group jobs into columns by depth
-  const columns: JobNode[][] = [];
-  for (const n of graph) {
-    const d = depth(n.Name);
-    (columns[d] ||= []).push(n);
-  }
+  const columns: Group[][] = [];
+  for (const g of groups) (columns[depth(g.base)] ||= []).push(g);
 
-  // layout geometry
-  const colW = 180,
-    rowH = 56,
-    boxW = 150,
-    boxH = 34,
-    padX = 20,
-    padY = 16;
-  const pos = new Map<string, { x: number; y: number }>();
+  // geometry — parent box height grows with leg count
+  const colW = 240;
+  const boxW = 200;
+  const headH = 26; // parent header
+  const legH = 22; // per leg row
+  const gapY = 22;
+  const padX = 16;
+  const padY = 16;
+  const boxHeight = (g: Group) => headH + (g.legs.length > 1 ? g.legs.length * legH + 6 : 0);
+
+  const pos = new Map<string, { x: number; y: number; h: number }>();
   columns.forEach((col, ci) => {
-    col.forEach((n, ri) => {
-      pos.set(n.Name, { x: padX + ci * colW, y: padY + ri * rowH });
+    let y = padY;
+    col.forEach((g) => {
+      const h = boxHeight(g);
+      pos.set(g.base, { x: padX + ci * colW, y, h });
+      y += h + gapY;
     });
   });
-  const maxRows = Math.max(...columns.map((c) => c.length), 1);
   const width = padX * 2 + columns.length * colW;
-  const height = padY * 2 + maxRows * rowH;
+  const height =
+    padY * 2 +
+    Math.max(...columns.map((col) => col.reduce((s, g) => s + boxHeight(g) + gapY, 0)), 60);
+
+  const edgeColor = "var(--color-border-strong, #555)";
 
   return (
     <div className="overflow-auto">
       <svg width={width} height={height} className="min-w-full">
-        {/* dependency arrows */}
-        {graph.flatMap((n) =>
-          (n.Needs ?? []).map((dep, di) => {
-            const from = pos.get(dep),
-              to = pos.get(n.Name);
-            if (!from || !to) return null;
-            const x1 = from.x + boxW,
-              y1 = from.y + boxH / 2;
-            const x2 = to.x,
-              y2 = to.y + boxH / 2;
-            return (
-              <line
-                key={`${n.Name}-${dep}-${di}`}
-                x1={x1}
-                y1={y1}
-                x2={x2}
-                y2={y2}
-                stroke="var(--color-border, #444)"
-                strokeWidth={1.5}
-                markerEnd="url(#arrow)"
-              />
-            );
-          }),
-        )}
         <defs>
           <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="var(--color-border, #444)" />
+            <path d="M0,0 L8,4 L0,8 Z" fill={edgeColor} />
           </marker>
         </defs>
-        {/* job boxes */}
-        {graph.map((n) => {
-          const p = pos.get(n.Name)!;
-          const c = color(n.Name);
+
+        {/* base-level dependency edges (parent → parent) */}
+        {groups.flatMap((g) => {
+          const to = pos.get(g.base);
+          if (!to) return [];
+          return g.needsBases
+            .filter((b) => b !== g.base && pos.has(b))
+            .map((b, i) => {
+              const from = pos.get(b)!;
+              const x1 = from.x + boxW;
+              const y1 = from.y + Math.min(from.h, 40) / 2;
+              const x2 = to.x;
+              const y2 = to.y + Math.min(to.h, 40) / 2;
+              return (
+                <path
+                  key={`${g.base}-${b}-${i}`}
+                  d={`M${x1},${y1} C${x1 + 40},${y1} ${x2 - 40},${y2} ${x2},${y2}`}
+                  fill="none"
+                  stroke={edgeColor}
+                  strokeWidth={1.5}
+                  markerEnd="url(#arrow)"
+                />
+              );
+            });
+        })}
+
+        {/* group boxes */}
+        {groups.map((g) => {
+          const p = pos.get(g.base)!;
+          const isMatrix = g.legs.length > 1;
+          // parent color: worst-of the legs (fail > running > pending > pass)
+          const legColors = g.legs.map((l) => color(l.Name));
+          const parentColor = isMatrix
+            ? legColors.includes("var(--color-removed)")
+              ? "var(--color-removed)"
+              : legColors.includes("var(--color-behind)")
+                ? "var(--color-behind)"
+                : legColors.every((c) => c === "var(--color-added)")
+                  ? "var(--color-added)"
+                  : "var(--color-border-strong, #555)"
+            : color(g.legs[0].Name);
           return (
-            <g key={n.Name}>
+            <g key={g.base}>
               <rect
                 x={p.x}
                 y={p.y}
                 width={boxW}
-                height={boxH}
-                rx={6}
-                fill="var(--color-card, #1a1a1a)"
-                stroke={c}
-                strokeWidth={2}
+                height={p.h}
+                rx={9}
+                fill="var(--color-card)"
+                stroke={parentColor}
+                strokeWidth={1.5}
               />
-              <circle cx={p.x + 12} cy={p.y + boxH / 2} r={4} fill={c} />
+              {/* header */}
+              <circle cx={p.x + 13} cy={p.y + headH / 2 + 1} r={4} fill={parentColor} />
               <text
                 x={p.x + 24}
-                y={p.y + boxH / 2 + 4}
-                fontSize={11}
-                fill="var(--color-foreground, #ddd)"
+                y={p.y + headH / 2 + 5}
+                fontSize={12}
+                fontWeight={510}
+                fill="var(--color-foreground)"
+                fontFamily="var(--font-sans)"
               >
-                {n.Name.length > 16 ? n.Name.slice(0, 15) + "…" : n.Name}
+                {g.base.length > 20 ? g.base.slice(0, 19) + "…" : g.base}
               </text>
+              {isMatrix && (
+                <text
+                  x={p.x + boxW - 10}
+                  y={p.y + headH / 2 + 5}
+                  fontSize={9}
+                  textAnchor="end"
+                  fill="var(--color-faint)"
+                  fontFamily="var(--font-mono)"
+                >
+                  ×{g.legs.length}
+                </text>
+              )}
+              {/* leg rows (only when matrixed) */}
+              {isMatrix &&
+                g.legs.map((leg, li) => {
+                  const { leg: legLabel } = splitLeg(leg.Name);
+                  const lc = color(leg.Name);
+                  const ry = p.y + headH + 4 + li * legH;
+                  return (
+                    <g key={leg.Name}>
+                      <rect
+                        x={p.x + 8}
+                        y={ry}
+                        width={boxW - 16}
+                        height={legH - 3}
+                        rx={5}
+                        fill="transparent"
+                        stroke={lc}
+                        strokeWidth={1}
+                        opacity={0.85}
+                      />
+                      <text
+                        x={p.x + 16}
+                        y={ry + (legH - 3) / 2 + 4}
+                        fontSize={10}
+                        fill="var(--color-muted-foreground)"
+                        fontFamily="var(--font-mono)"
+                      >
+                        {(legLabel ?? "").length > 22 ? legLabel!.slice(0, 21) + "…" : legLabel}
+                      </text>
+                    </g>
+                  );
+                })}
             </g>
           );
         })}
