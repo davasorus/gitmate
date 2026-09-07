@@ -119,8 +119,16 @@ export function Branches() {
             <span className="truncate text-xs text-muted-foreground">{b.LastSubject}</span>
             <span className="ml-auto flex shrink-0 gap-1">
               {!b.IsCurrent && (
-                <button onClick={() => doSwitch(b.Name)} disabled={!!busy} className={cls.btnSmPrimary}>
-                  {busy === `switch-${b.Name}` ? "…" : b.IsRemote && !b.IsLocal ? "Checkout" : "Switch"}
+                <button
+                  onClick={() => doSwitch(b.Name)}
+                  disabled={!!busy}
+                  className={cls.btnSmPrimary}
+                >
+                  {busy === `switch-${b.Name}`
+                    ? "…"
+                    : b.IsRemote && !b.IsLocal
+                      ? "Checkout"
+                      : "Switch"}
                 </button>
               )}
               {!b.IsCurrent && (
