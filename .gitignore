@@ -50,3 +50,4 @@ gitmate_deploy.pub
 *.pem
 id_ed25519*
 *_deploy
+coverage
