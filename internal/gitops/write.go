@@ -112,7 +112,9 @@ func Fetch(dir, remote string) error {
 	if remote == "" {
 		remote = "origin"
 	}
-	_, err := run(dir, "fetch", remote)
+	// --prune drops remote-tracking refs (origin/*) for branches deleted on the
+	// remote, so the branch list doesn't show stale/ghost branches.
+	_, err := run(dir, "fetch", "--prune", remote)
 	return err
 }
 

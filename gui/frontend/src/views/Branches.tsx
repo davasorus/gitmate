@@ -120,7 +120,11 @@ export function Branches() {
             <span className="ml-auto flex shrink-0 gap-1">
               {!b.IsCurrent && (
                 <button onClick={() => doSwitch(b.Name)} disabled={!!busy} className={cls.btnSm}>
-                  {busy === `switch-${b.Name}` ? "…" : b.IsRemote && !b.IsLocal ? "Checkout" : "Switch"}
+                  {busy === `switch-${b.Name}`
+                    ? "…"
+                    : b.IsRemote && !b.IsLocal
+                      ? "Checkout"
+                      : "Switch"}
                 </button>
               )}
               {!b.IsCurrent && (

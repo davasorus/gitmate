@@ -146,6 +146,41 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
     reload();
   }, []); // initial
 
+  // (1) Reload local state when the window regains focus — reflects changes made
+  // in a terminal / another git tool without a manual Reload. Cheap + local (no network).
+  useEffect(() => {
+    const onFocus = () => {
+      reload();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") reload();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [reload]);
+
+  // (2) Periodic background fetch (network) so ahead/behind + remote branches stay
+  // fresh, then reload. Every 5 minutes. NOT on every reload (fetch is network;
+  // reload is cheap+local). Uses fetch --prune so deleted remote branches drop.
+  useEffect(() => {
+    const id = setInterval(
+      async () => {
+        try {
+          await GitService.Fetch();
+          await reload();
+        } catch {
+          /* offline / no remote — non-fatal, try again next tick */
+        }
+      },
+      5 * 60 * 1000,
+    );
+    return () => clearInterval(id);
+  }, [reload]);
+
   const run = async (name: string, fn: () => Promise<string | void>, okMsg: string) => {
     setBusy(name);
     try {
