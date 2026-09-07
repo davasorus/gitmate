@@ -19,6 +19,7 @@ export type {
     PRDetailReview,
     PRDetailThread,
     PRDetailThreadComment,
+    PRListItem,
     Release,
     Review,
     ReviewComment,

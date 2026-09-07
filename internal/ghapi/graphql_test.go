@@ -58,3 +58,51 @@ func TestUnresolveThread(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPRListGraphQL(t *testing.T) {
+	// two PRs: #1 approved with a passing + a failing check; #2 draft, review required, one pending check
+	resp := `{"data":{"repository":{"pullRequests":{"nodes":[
+		{"number":1,"title":"first","state":"OPEN","isDraft":false,"reviewDecision":"APPROVED",
+		 "author":{"login":"alice"},
+		 "labels":{"nodes":[{"name":"bug"}]},
+		 "commits":{"nodes":[{"commit":{"statusCheckRollup":{"contexts":{"nodes":[
+			{"status":"COMPLETED","conclusion":"SUCCESS"},
+			{"status":"COMPLETED","conclusion":"FAILURE"}
+		 ]}}}}]}},
+		{"number":2,"title":"second","state":"OPEN","isDraft":true,"reviewDecision":"REVIEW_REQUIRED",
+		 "author":{"login":"bob"},
+		 "labels":{"nodes":[]},
+		 "commits":{"nodes":[{"commit":{"statusCheckRollup":{"contexts":{"nodes":[
+			{"status":"IN_PROGRESS","conclusion":""}
+		 ]}}}}]}}
+	]}}}}`
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(resp))
+	})
+	c, _ := newGQLTestClient(t, h)
+	list, err := c.PRListGraphQL(context.Background(), "o", "r", "open")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("expected 2 PRs, got %d", len(list))
+	}
+	// PR #1: approved, 2 checks (1 pass, 1 fail)
+	if list[0].Number != 1 || list[0].Author != "alice" || list[0].ReviewDecision != "APPROVED" {
+		t.Errorf("pr0 wrong: %+v", list[0])
+	}
+	if list[0].ChecksTotal != 2 || list[0].ChecksPassed != 1 || list[0].ChecksFailed != 1 {
+		t.Errorf("pr0 check rollup wrong: %+v", list[0])
+	}
+	if len(list[0].Labels) != 1 || list[0].Labels[0] != "bug" {
+		t.Errorf("pr0 labels wrong: %v", list[0].Labels)
+	}
+	// PR #2: draft, review required, 1 pending check
+	if !list[1].Draft || list[1].ReviewDecision != "REVIEW_REQUIRED" {
+		t.Errorf("pr1 wrong: %+v", list[1])
+	}
+	if list[1].ChecksTotal != 1 || list[1].ChecksPending != 1 {
+		t.Errorf("pr1 check rollup wrong: %+v", list[1])
+	}
+}

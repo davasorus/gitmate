@@ -196,6 +196,29 @@ export interface PRDetailThreadComment {
 }
 
 /**
+ * PRListItem is a PR in a list view WITH its rollup status (labels, review
+ * decision, CI check summary) — fetched in ONE GraphQL query for the whole
+ * list, instead of REST's N+1 (list + per-PR checks/reviews).
+ */
+export interface PRListItem {
+    "Number": number;
+    "Title": string;
+    "Author": string;
+    "State": string;
+    "Draft": boolean;
+    "Labels": string[] | null;
+
+    /**
+     * APPROVED / CHANGES_REQUESTED / REVIEW_REQUIRED / ""
+     */
+    "ReviewDecision": string;
+    "ChecksTotal": number;
+    "ChecksPassed": number;
+    "ChecksFailed": number;
+    "ChecksPending": number;
+}
+
+/**
  * Release is a trimmed GitHub release view.
  */
 export interface Release {

@@ -275,6 +275,14 @@ export function PRs(state: string): $CancellablePromise<ghapi$0.PR[] | null> {
     return $Call.ByID(3721264108, state);
 }
 
+/**
+ * PRsRich returns the PR list WITH review-decision + CI check rollup per PR,
+ * fetched in one GraphQL query (replaces the REST list + N per-PR check calls).
+ */
+export function PRsRich(state: string): $CancellablePromise<ghapi$0.PRListItem[] | null> {
+    return $Call.ByID(762179970, state);
+}
+
 export function Pull(rebase: boolean): $CancellablePromise<void> {
     return $Call.ByID(3924717390, rebase);
 }

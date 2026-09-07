@@ -75,6 +75,21 @@ func (g *GitService) PRs(state string) ([]ghapi.PR, error) {
 	return client.ListPRs(ctx, owner, repo, state)
 }
 
+// PRsRich returns the PR list WITH review-decision + CI check rollup per PR,
+// fetched in one GraphQL query (replaces the REST list + N per-PR check calls).
+func (g *GitService) PRsRich(state string) ([]ghapi.PRListItem, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.PRListGraphQL(ctx, owner, repo, state)
+}
+
 func (g *GitService) Issues(state string) ([]ghapi.Issue, error) {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)

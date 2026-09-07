@@ -186,3 +186,115 @@ func (c *Client) UnresolveThread(ctx context.Context, threadID string) error {
 	input := githubv4.UnresolveReviewThreadInput{ThreadID: githubv4.ID(threadID)}
 	return c.gql.Mutate(ctx, &m, input, nil)
 }
+
+// PRListItem is a PR in a list view WITH its rollup status (labels, review
+// decision, CI check summary) — fetched in ONE GraphQL query for the whole
+// list, instead of REST's N+1 (list + per-PR checks/reviews).
+type PRListItem struct {
+	Number         int
+	Title          string
+	Author         string
+	State          string
+	Draft          bool
+	Labels         []string
+	ReviewDecision string // APPROVED / CHANGES_REQUESTED / REVIEW_REQUIRED / ""
+	ChecksTotal    int
+	ChecksPassed   int
+	ChecksFailed   int
+	ChecksPending  int
+}
+
+// PRListGraphQL fetches PRs (by state) with per-PR review decision + check
+// rollup in a single query. state: "OPEN", "CLOSED", "MERGED" (GraphQL enums).
+func (c *Client) PRListGraphQL(ctx context.Context, owner, repo, state string) ([]PRListItem, error) {
+	var states []githubv4.PullRequestState
+	switch state {
+	case "closed", "CLOSED":
+		states = []githubv4.PullRequestState{githubv4.PullRequestStateClosed, githubv4.PullRequestStateMerged}
+	case "all", "ALL":
+		states = []githubv4.PullRequestState{githubv4.PullRequestStateOpen, githubv4.PullRequestStateClosed, githubv4.PullRequestStateMerged}
+	default:
+		states = []githubv4.PullRequestState{githubv4.PullRequestStateOpen}
+	}
+
+	var q struct {
+		Repository struct {
+			PullRequests struct {
+				Nodes []struct {
+					Number         int
+					Title          string
+					State          string
+					IsDraft        bool
+					ReviewDecision string
+					Author         struct{ Login string }
+					Labels         struct {
+						Nodes []struct{ Name string }
+					} `graphql:"labels(first: 20)"`
+					Commits struct {
+						Nodes []struct {
+							Commit struct {
+								StatusCheckRollup struct {
+									Contexts struct {
+										Nodes []struct {
+											CheckRun struct {
+												Status     string
+												Conclusion string
+											} `graphql:"... on CheckRun"`
+											StatusContext struct {
+												State string
+											} `graphql:"... on StatusContext"`
+										}
+									} `graphql:"contexts(first: 100)"`
+								}
+							}
+						}
+					} `graphql:"commits(last: 1)"`
+				}
+			} `graphql:"pullRequests(first: 50, states: $states, orderBy: {field: CREATED_AT, direction: DESC})"`
+		} `graphql:"repository(owner: $owner, name: $repo)"`
+	}
+	vars := map[string]interface{}{
+		"owner":  githubv4.String(owner),
+		"repo":   githubv4.String(repo),
+		"states": states,
+	}
+	if err := c.gql.Query(ctx, &q, vars); err != nil {
+		return nil, err
+	}
+
+	var out []PRListItem
+	for _, n := range q.Repository.PullRequests.Nodes {
+		item := PRListItem{
+			Number:         n.Number,
+			Title:          n.Title,
+			Author:         n.Author.Login,
+			State:          n.State,
+			Draft:          n.IsDraft,
+			ReviewDecision: n.ReviewDecision,
+		}
+		for _, l := range n.Labels.Nodes {
+			item.Labels = append(item.Labels, l.Name)
+		}
+		if len(n.Commits.Nodes) > 0 {
+			for _, ctxNode := range n.Commits.Nodes[0].Commit.StatusCheckRollup.Contexts.Nodes {
+				item.ChecksTotal++
+				// CheckRun uses Status/Conclusion; StatusContext uses State.
+				concl := ctxNode.CheckRun.Conclusion
+				status := ctxNode.CheckRun.Status
+				sctx := ctxNode.StatusContext.State
+				switch {
+				case concl == "SUCCESS" || sctx == "SUCCESS":
+					item.ChecksPassed++
+				case concl == "FAILURE" || concl == "TIMED_OUT" || concl == "CANCELLED" || sctx == "FAILURE" || sctx == "ERROR":
+					item.ChecksFailed++
+				case status == "COMPLETED":
+					item.ChecksPassed++ // neutral/skipped → count as non-failing
+				default:
+					item.ChecksPending++
+				}
+			}
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}
