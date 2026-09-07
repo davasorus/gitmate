@@ -94,6 +94,20 @@ export interface IssueComment {
 }
 
 /**
+ * IssueListItem is an issue with its labels + assignees, fetched via GraphQL's
+ * issues connection (which — unlike the REST issues endpoint — returns ONLY
+ * issues, never PRs, so no client-side PR filtering is needed).
+ */
+export interface IssueListItem {
+    "Number": number;
+    "Title": string;
+    "Author": string;
+    "State": string;
+    "Labels": string[] | null;
+    "Assignees": string[] | null;
+}
+
+/**
  * Job is a job within a run; Steps are its steps.
  */
 export interface Job {

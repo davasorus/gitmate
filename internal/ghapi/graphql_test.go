@@ -106,3 +106,34 @@ func TestPRListGraphQL(t *testing.T) {
 		t.Errorf("pr1 check rollup wrong: %+v", list[1])
 	}
 }
+
+func TestIssueListGraphQL(t *testing.T) {
+	resp := `{"data":{"repository":{"issues":{"nodes":[
+		{"number":10,"title":"a bug","state":"OPEN","author":{"login":"carol"},
+		 "labels":{"nodes":[{"name":"bug"}]},
+		 "assignees":{"nodes":[{"login":"dave"}]}},
+		{"number":11,"title":"a chore","state":"OPEN","author":{"login":"erin"},
+		 "labels":{"nodes":[]},"assignees":{"nodes":[]}}
+	]}}}}`
+	h := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(resp))
+	})
+	c, _ := newGQLTestClient(t, h)
+	list, err := c.IssueListGraphQL(context.Background(), "o", "r", "open")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("expected 2 issues, got %d", len(list))
+	}
+	if list[0].Number != 10 || list[0].Author != "carol" {
+		t.Errorf("issue0 wrong: %+v", list[0])
+	}
+	if len(list[0].Labels) != 1 || list[0].Labels[0] != "bug" {
+		t.Errorf("issue0 labels wrong: %v", list[0].Labels)
+	}
+	if len(list[0].Assignees) != 1 || list[0].Assignees[0] != "dave" {
+		t.Errorf("issue0 assignees wrong: %v", list[0].Assignees)
+	}
+}

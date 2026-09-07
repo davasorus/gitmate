@@ -103,6 +103,21 @@ func (g *GitService) Issues(state string) ([]ghapi.Issue, error) {
 	return client.ListIssues(ctx, owner, repo, state)
 }
 
+// IssuesRich returns issues WITH labels + assignees in one GraphQL query
+// (and never mixes in PRs, unlike the REST issues endpoint).
+func (g *GitService) IssuesRich(state string) ([]ghapi.IssueListItem, error) {
+	ctx := context.Background()
+	owner, repo, err := g.resolve(ctx)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghapi.New(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	return client.IssueListGraphQL(ctx, owner, repo, state)
+}
+
 func (g *GitService) SetPRState(number int, state string) error {
 	ctx := context.Background()
 	owner, repo, err := g.resolve(ctx)

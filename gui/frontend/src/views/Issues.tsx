@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useGit, cls } from "../context";
-import type { Issue } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
+import type { IssueListItem } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StateFilter = "open" | "closed" | "all";
 
@@ -10,12 +10,12 @@ export function Issues() {
   const [body, setBody] = useState("");
 
   const [filter, setFilter] = useState<StateFilter>("open");
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [issues, setIssues] = useState<IssueListItem[]>([]);
 
   const reload = async () => {
     setBusy("issues-load");
     try {
-      setIssues((await service.Issues(filter)) ?? []);
+      setIssues((await service.IssuesRich(filter)) ?? []);
     } catch (e) {
       flash("err", String(e));
     } finally {
@@ -29,7 +29,7 @@ export function Issues() {
     (async () => {
       setBusy("issues-load");
       try {
-        const list = (await service.Issues(filter)) ?? [];
+        const list = (await service.IssuesRich(filter)) ?? [];
         if (!cancelled) setIssues(list);
       } catch (e) {
         if (!cancelled) flash("err", String(e));
@@ -147,6 +147,11 @@ export function Issues() {
                 </span>
                 <span className="truncate">{i.Title}</span>
                 <span className="text-xs text-muted-foreground">@{i.Author}</span>
+                {(i.Assignees ?? []).length > 0 && (
+                  <span className="text-xs text-muted-foreground" title="assignees">
+                    → {(i.Assignees ?? []).map((a) => "@" + a).join(", ")}
+                  </span>
+                )}
                 <span className="ml-auto flex shrink-0 gap-1">
                   <button
                     onClick={() => doClose(i.Number)}

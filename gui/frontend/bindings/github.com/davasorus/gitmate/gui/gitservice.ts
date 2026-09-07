@@ -176,6 +176,14 @@ export function Issues(state: string): $CancellablePromise<ghapi$0.Issue[] | nul
     return $Call.ByID(1294470425, state);
 }
 
+/**
+ * IssuesRich returns issues WITH labels + assignees in one GraphQL query
+ * (and never mixes in PRs, unlike the REST issues endpoint).
+ */
+export function IssuesRich(state: string): $CancellablePromise<ghapi$0.IssueListItem[] | null> {
+    return $Call.ByID(465427515, state);
+}
+
 export function JobLogs(jobID: number): $CancellablePromise<ghapi$0.JobLog> {
     return $Call.ByID(3461752551, jobID);
 }

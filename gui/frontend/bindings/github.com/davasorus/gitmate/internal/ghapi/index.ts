@@ -9,6 +9,7 @@ export type {
     ExistingComment,
     Issue,
     IssueComment,
+    IssueListItem,
     Job,
     JobLog,
     JobNode,

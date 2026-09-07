@@ -298,3 +298,74 @@ func (c *Client) PRListGraphQL(ctx context.Context, owner, repo, state string) (
 	}
 	return out, nil
 }
+
+// IssueListItem is an issue with its labels + assignees, fetched via GraphQL's
+// issues connection (which — unlike the REST issues endpoint — returns ONLY
+// issues, never PRs, so no client-side PR filtering is needed).
+type IssueListItem struct {
+	Number    int
+	Title     string
+	Author    string
+	State     string
+	Labels    []string
+	Assignees []string
+}
+
+// IssueListGraphQL fetches issues (by state) with labels + assignees in one
+// query. state: "open"/"closed"/"all".
+func (c *Client) IssueListGraphQL(ctx context.Context, owner, repo, state string) ([]IssueListItem, error) {
+	var states []githubv4.IssueState
+	switch state {
+	case "closed", "CLOSED":
+		states = []githubv4.IssueState{githubv4.IssueStateClosed}
+	case "all", "ALL":
+		states = []githubv4.IssueState{githubv4.IssueStateOpen, githubv4.IssueStateClosed}
+	default:
+		states = []githubv4.IssueState{githubv4.IssueStateOpen}
+	}
+
+	var q struct {
+		Repository struct {
+			Issues struct {
+				Nodes []struct {
+					Number int
+					Title  string
+					State  string
+					Author struct{ Login string }
+					Labels struct {
+						Nodes []struct{ Name string }
+					} `graphql:"labels(first: 20)"`
+					Assignees struct {
+						Nodes []struct{ Login string }
+					} `graphql:"assignees(first: 20)"`
+				}
+			} `graphql:"issues(first: 50, states: $states, orderBy: {field: CREATED_AT, direction: DESC})"`
+		} `graphql:"repository(owner: $owner, name: $repo)"`
+	}
+	vars := map[string]interface{}{
+		"owner":  githubv4.String(owner),
+		"repo":   githubv4.String(repo),
+		"states": states,
+	}
+	if err := c.gql.Query(ctx, &q, vars); err != nil {
+		return nil, err
+	}
+
+	var out []IssueListItem
+	for _, n := range q.Repository.Issues.Nodes {
+		item := IssueListItem{
+			Number: n.Number,
+			Title:  n.Title,
+			Author: n.Author.Login,
+			State:  n.State,
+		}
+		for _, l := range n.Labels.Nodes {
+			item.Labels = append(item.Labels, l.Name)
+		}
+		for _, a := range n.Assignees.Nodes {
+			item.Assignees = append(item.Assignees, a.Login)
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}
