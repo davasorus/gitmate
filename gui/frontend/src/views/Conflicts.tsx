@@ -55,6 +55,7 @@ export function Conflicts() {
       "resolved",
     );
   const abort = () => run("merge-abort", () => service.MergeAbort(), "merge aborted");
+  const commitMerge = () => run("commit-merge", () => service.CommitMerge(), "merge committed");
 
   if (!mergeInProgress) {
     return (
@@ -81,8 +82,11 @@ export function Conflicts() {
       </div>
 
       {conflicts.length === 0 ? (
-        <div className="rounded-md border border-[var(--color-added)] bg-[var(--color-added)]/10 px-3 py-2 text-sm text-[var(--color-added)]">
-          All conflicts resolved — commit in Changes to finish the merge.
+        <div className="flex items-center justify-between gap-3 rounded-md border border-[var(--color-added)] bg-[var(--color-added)]/10 px-3 py-2 text-sm text-[var(--color-added)]">
+          <span>All conflicts resolved — finish the merge.</span>
+          <button onClick={commitMerge} disabled={!!busy} className={`${cls.btn} shrink-0`}>
+            {busy === "commit-merge" ? "…" : "Commit merge"}
+          </button>
         </div>
       ) : (
         <div className="rounded-lg border border-border">

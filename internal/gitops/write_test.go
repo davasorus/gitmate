@@ -1,6 +1,10 @@
 package gitops
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestMergeNoConflict(t *testing.T) {
 	dir := newTestRepo(t)
@@ -309,4 +313,60 @@ func TestRebaseContinue(t *testing.T) {
 	_ = ResolveOurs(dir, "a.txt")
 	_ = MarkResolved(dir, "a.txt")
 	_ = RebaseContinue(dir) // exercise the path
+}
+
+func TestRepoRoot(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "x\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "init")
+
+	// make a subdirectory; RepoRoot from there should resolve to the repo root
+	sub := filepath.Join(dir, "gui")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got := RepoRoot(sub)
+	// resolve symlinks/case for a robust compare (macOS /private, Windows casing)
+	wantResolved, _ := filepath.EvalSymlinks(dir)
+	gotResolved, _ := filepath.EvalSymlinks(got)
+	if gotResolved != wantResolved && got != dir {
+		t.Fatalf("RepoRoot(%q) = %q, want repo root %q", sub, got, dir)
+	}
+}
+
+func TestCommitMerge(t *testing.T) {
+	dir := newTestRepo(t)
+	writeFile(t, dir, "a.txt", "base\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "base")
+	base, _ := CurrentBranch(dir)
+
+	_ = SwitchNew(dir, "other")
+	writeFile(t, dir, "a.txt", "theirs\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "other")
+
+	_ = Switch(dir, base)
+	writeFile(t, dir, "a.txt", "ours\n")
+	_ = Stage(dir)
+	_, _ = CreateCommit(dir, "ours")
+
+	_ = Merge(dir, "other") // conflicts
+	if !MergeInProgress(dir) {
+		t.Fatal("expected merge in progress")
+	}
+	// resolve + stage, then finish the merge
+	_ = ResolveOurs(dir, "a.txt")
+	_ = MarkResolved(dir, "a.txt")
+	hash, err := CommitMerge(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hash == "" {
+		t.Fatal("expected a commit hash")
+	}
+	if MergeInProgress(dir) {
+		t.Fatal("merge should be finished after CommitMerge")
+	}
 }

@@ -112,7 +112,9 @@ func Fetch(dir, remote string) error {
 	if remote == "" {
 		remote = "origin"
 	}
-	_, err := run(dir, "fetch", remote)
+	// --prune drops remote-tracking refs (origin/*) for branches deleted on the
+	// remote, so the branch list doesn't show stale/ghost branches.
+	_, err := run(dir, "fetch", "--prune", remote)
 	return err
 }
 
@@ -269,4 +271,33 @@ func SequencerInProgress(dir string) (cherryPick bool, revert bool) {
 		return false, false
 	}
 	return strings.Contains(out, "cherry-pick"), strings.Contains(out, "revert")
+}
+
+// RepoRoot resolves dir to the top level of its git working tree (via
+// rev-parse --show-toplevel). Returns the input unchanged if resolution fails
+// (e.g. not a repo yet). The GUI uses this to pin repoDir to the repo ROOT, so
+// path-relative git commands don't resolve against a subdirectory like gui/.
+func RepoRoot(dir string) string {
+	if dir == "" {
+		dir = "."
+	}
+	top, err := run(dir, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return dir
+	}
+	return strings.TrimSpace(top)
+}
+
+// CommitMerge finishes an in-progress merge by committing with git's prepared
+// MERGE_MSG (no editor). Use after all conflicts are resolved + staged. Returns
+// the new commit's short hash.
+func CommitMerge(dir string) (string, error) {
+	if _, err := run(dir, "-c", "core.editor=true", "commit", "--no-edit"); err != nil {
+		return "", err
+	}
+	out, err := run(dir, "rev-parse", "--short", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(out), nil
 }

@@ -93,6 +93,22 @@ export function Branches() {
               <span className="w-2" />
             )}
             <b>{b.Name}</b>
+            {b.IsRemote && !b.IsLocal && (
+              <span
+                className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                title={`only on ${b.Remote} — Switch creates a local tracking branch`}
+              >
+                remote
+              </span>
+            )}
+            {b.IsLocal && b.IsRemote && (
+              <span
+                className="rounded-full border border-border px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                title="local + tracked on remote"
+              >
+                ↕
+              </span>
+            )}
             <span className="text-[var(--color-modified)]">{b.LastHash}</span>
             {!b.Upstream && <span className="text-xs text-muted-foreground">(no upstream)</span>}
             {b.Upstream && (b.Ahead || b.Behind) ? (
@@ -103,8 +119,16 @@ export function Branches() {
             <span className="truncate text-xs text-muted-foreground">{b.LastSubject}</span>
             <span className="ml-auto flex shrink-0 gap-1">
               {!b.IsCurrent && (
-                <button onClick={() => doSwitch(b.Name)} disabled={!!busy} className={cls.btnSm}>
-                  {busy === `switch-${b.Name}` ? "…" : "Switch"}
+                <button
+                  onClick={() => doSwitch(b.Name)}
+                  disabled={!!busy}
+                  className={cls.btnSmPrimary}
+                >
+                  {busy === `switch-${b.Name}`
+                    ? "…"
+                    : b.IsRemote && !b.IsLocal
+                      ? "Checkout"
+                      : "Switch"}
                 </button>
               )}
               {!b.IsCurrent && (
@@ -117,18 +141,20 @@ export function Branches() {
                   {busy === `rebase-branch-${b.Name}` ? "…" : "Rebase"}
                 </button>
               )}
-              <button
-                onClick={() => setRenaming({ old: b.Name, next: b.Name })}
-                disabled={!!busy}
-                className={cls.btnSm}
-              >
-                Rename
-              </button>
-              {!b.IsCurrent && (
+              {b.IsLocal && (
+                <button
+                  onClick={() => setRenaming({ old: b.Name, next: b.Name })}
+                  disabled={!!busy}
+                  className={cls.btnSmMuted}
+                >
+                  Rename
+                </button>
+              )}
+              {b.IsLocal && !b.IsCurrent && (
                 <button
                   onClick={() => setConfirmDel(b.Name)}
                   disabled={!!busy}
-                  className={`${cls.btnSm} text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10`}
+                  className={`${cls.btnSmMuted} text-[var(--color-removed)] hover:bg-[var(--color-removed)]/10`}
                 >
                   {busy === `delbranch-${b.Name}` ? "…" : "Delete"}
                 </button>

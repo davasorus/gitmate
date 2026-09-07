@@ -66,6 +66,10 @@ export function Commit(message: string): $CancellablePromise<string> {
     return $Call.ByID(471482348, message);
 }
 
+export function CommitMerge(): $CancellablePromise<string> {
+    return $Call.ByID(1227884784);
+}
+
 export function ConflictedFiles(): $CancellablePromise<string[] | null> {
     return $Call.ByID(4266596273);
 }
