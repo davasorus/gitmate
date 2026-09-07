@@ -84,6 +84,11 @@ func (g *GitService) SetRepoDir(dir string) {
 	}
 }
 
+// IsRepo reports whether the current repoDir is a git working tree.
+func (g *GitService) IsRepo() bool {
+	return gitops.IsRepo(g.repoDir)
+}
+
 // GetRepoDir returns the current working directory.
 func (g *GitService) GetRepoDir() string {
 	return g.repoDir

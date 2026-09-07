@@ -327,3 +327,11 @@ func UndoTo(dir, sha string) error {
 	_, err := run(dir, "reset", "--hard", sha)
 	return err
 }
+
+// IsRepo reports whether dir is inside a git working tree. Used to gate all git
+// and GitHub operations so the app doesn't fire (and cascade-fail) when launched
+// in a non-repository folder.
+func IsRepo(dir string) bool {
+	out, err := run(dir, "rev-parse", "--is-inside-work-tree")
+	return err == nil && strings.TrimSpace(out) == "true"
+}

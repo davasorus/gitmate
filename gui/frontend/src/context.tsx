@@ -42,6 +42,7 @@ export interface GitmateState {
   tags: Tag[];
   checks: Record<number, CheckRun[]>;
   mergeInProgress: boolean;
+  notRepo: boolean; // current dir is not a git repo → skip all git/GH ops
   undoLabel: string; // pending undoable op label ("" = nothing to undo)
   rebaseInProgress: boolean;
   cherryPickInProgress: boolean;
@@ -81,6 +82,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
   const [checks] = useState<Record<number, CheckRun[]>>({});
   const [mergeInProgress, setMergeInProgress] = useState(false);
   const [undoLabel, setUndoLabel] = useState("");
+  const [notRepo, setNotRepo] = useState(false);
   const [rebaseInProgress, setRebaseInProgress] = useState(false);
   const [cherryPickInProgress, setCherryPickInProgress] = useState(false);
   const [revertInProgress, setRevertInProgress] = useState(false);
@@ -97,6 +99,26 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
   const reload = useCallback(async () => {
     try {
       await GitService.SetRepoDir(dir.trim());
+      // Guard: in a non-git folder, do NOT fire git/GitHub operations — they
+      // cascade-fail (and hammer the API). Clear state and stop here.
+      if (!(await GitService.IsRepo())) {
+        setNotRepo(true);
+        setStatus(null);
+        setBranches([]);
+        setCommits([]);
+        setPRs([]);
+        setStashes([]);
+        setIssues([]);
+        setTags([]);
+        setMergeInProgress(false);
+        setRebaseInProgress(false);
+        setCherryPickInProgress(false);
+        setRevertInProgress(false);
+        setConflicts([]);
+        setUndoLabel("");
+        return;
+      }
+      setNotRepo(false);
       const [s, b, c] = await Promise.all([
         GitService.Status(),
         GitService.Branches(),
@@ -177,6 +199,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const id = setInterval(
       async () => {
+        if (notRepo) return; // no repo → nothing to fetch
         try {
           await GitService.Fetch();
           await reload();
@@ -187,7 +210,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
       5 * 60 * 1000,
     );
     return () => clearInterval(id);
-  }, [reload]);
+  }, [reload, notRepo]);
 
   const run = async (name: string, fn: () => Promise<string | void>, okMsg: string) => {
     setBusy(name);
@@ -216,6 +239,7 @@ export function GitmateProvider({ children }: { children: ReactNode }) {
     tags,
     checks,
     mergeInProgress,
+    notRepo,
     undoLabel,
     rebaseInProgress,
     cherryPickInProgress,
