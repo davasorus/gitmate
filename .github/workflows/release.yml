@@ -75,7 +75,7 @@ jobs:
           NOTES
       - name: Upload proposal
         if: steps.semrel.outputs.new_release_published == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-meta
           path: |
@@ -104,7 +104,7 @@ jobs:
         with:
           version: "~> v2"
           args: build --clean --snapshot
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: cli-artifacts
           path: dist/**/gitmate*
@@ -126,7 +126,7 @@ jobs:
       - name: Build GUI
         run: wails3 build
         working-directory: gui
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: gui-${{ matrix.os }}
           path: gui/bin/*
