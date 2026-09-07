@@ -185,7 +185,9 @@ export function Changes() {
               doCommit();
             }
           }}
-          placeholder={"commit message (stages all)\nsubject line, then blank line, then body\n⌘/Ctrl+Enter to commit"}
+          placeholder={
+            "commit message (stages all)\nsubject line, then blank line, then body\n⌘/Ctrl+Enter to commit"
+          }
           rows={3}
           className={`${cls.input} flex-1 resize-y font-mono`}
         />

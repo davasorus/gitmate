@@ -401,17 +401,26 @@ export function PullRequests() {
                     </span>
                   )}
                   {p.ReviewDecision === "APPROVED" && (
-                    <span className="rounded-full px-1.5 py-0.5 text-[var(--color-ahead)]" title="approved">
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-[var(--color-ahead)]"
+                      title="approved"
+                    >
                       ✓ approved
                     </span>
                   )}
                   {p.ReviewDecision === "CHANGES_REQUESTED" && (
-                    <span className="rounded-full px-1.5 py-0.5 text-[var(--color-removed)]" title="changes requested">
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-[var(--color-removed)]"
+                      title="changes requested"
+                    >
                       ✗ changes
                     </span>
                   )}
                   {p.ReviewDecision === "REVIEW_REQUIRED" && (
-                    <span className="rounded-full px-1.5 py-0.5 text-muted-foreground" title="review required">
+                    <span
+                      className="rounded-full px-1.5 py-0.5 text-muted-foreground"
+                      title="review required"
+                    >
                       review needed
                     </span>
                   )}
