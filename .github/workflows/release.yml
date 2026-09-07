@@ -23,17 +23,18 @@ jobs:
   propose:
     runs-on: ubuntu-latest
     outputs:
-      new_release_published: ${{ steps.semrel.outputs.new_release_published }}
-      version: ${{ steps.semrel.outputs.new_release_version }}
+      # true when there's something to release (either path)
+      release: ${{ steps.collect.outputs.release }}
+      version: ${{ steps.collect.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      # semantic-release in DRY-RUN. This action exposes the computed version and
-      # the full rendered release notes as OUTPUTS (reliable — no file writing).
+      # ---- LIVE path: semantic-release DECIDES the version + notes (dry run) ----
       - name: Compute version + notes (dry run, creates nothing)
         id: semrel
+        if: github.ref == 'refs/heads/live'
         uses: cycjimmy/semantic-release-action@v6
         with:
           dry_run: true
@@ -45,37 +46,50 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # Write the PROPOSAL as markdown to the run summary — THIS is what you review.
-      - name: Show release proposal
-        if: steps.semrel.outputs.new_release_published == 'true'
-        run: |
-          {
-            echo "# 🚀 Release proposal"
-            echo ""
-            echo "**Proposed version:** \`v${{ steps.semrel.outputs.new_release_version }}\`"
-            echo ""
-            echo "## Release notes (what will be published)"
-            echo ""
-            cat <<'NOTES'
-          ${{ steps.semrel.outputs.new_release_notes }}
-          NOTES
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Nothing to release
-        if: steps.semrel.outputs.new_release_published != 'true'
-        run: echo "No release-worthy commits since the last tag — nothing to propose." >> "$GITHUB_STEP_SUMMARY"
-
-      # Persist version + notes for the later stages (after approval).
-      - name: Save proposal
-        if: steps.semrel.outputs.new_release_published == 'true'
+      - name: Save proposal (live path)
+        if: github.ref == 'refs/heads/live' && steps.semrel.outputs.new_release_published == 'true'
         run: |
           echo "${{ steps.semrel.outputs.new_release_version }}" > release-version.txt
           cat <<'NOTES' > release-notes.md
           ${{ steps.semrel.outputs.new_release_notes }}
           NOTES
+
+      # ---- TAG path: version IS the tag; generate grouped notes for its range ----
+      - name: Compute notes from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VER="${GITHUB_REF_NAME#v}"
+          echo "$VER" > release-version.txt
+          npm install -g conventional-changelog-cli conventional-changelog-conventionalcommits@9
+          # grouped notes for just the latest tag's commit range
+          conventional-changelog -p conventionalcommits -r 2 --skip-unstable > release-notes.md || true
+          if [ ! -s release-notes.md ]; then echo "Release ${GITHUB_REF_NAME}" > release-notes.md; fi
+
+      # ---- collect: unify both paths into outputs + the reviewable proposal ----
+      - name: Collect + show proposal
+        id: collect
+        run: |
+          if [ -f release-version.txt ]; then
+            VER="$(cat release-version.txt)"
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "version=$VER" >> "$GITHUB_OUTPUT"
+            {
+              echo "# 🚀 Release proposal"
+              echo ""
+              echo "**Proposed version:** \`v${VER}\`"
+              echo ""
+              echo "## Release notes (what will be published)"
+              echo ""
+              cat release-notes.md
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "No release-worthy commits since the last tag — nothing to propose." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Upload proposal
-        if: steps.semrel.outputs.new_release_published == 'true'
-        uses: actions/upload-artifact@v4
+        if: steps.collect.outputs.release == 'true'
+        uses: actions/upload-artifact@v7
         with:
           name: release-meta
           path: |
@@ -86,7 +100,7 @@ jobs:
   # ---- GATE: you review the proposal above, then approve. Nothing built yet. ----
   gate:
     needs: propose
-    if: needs.propose.outputs.new_release_published == 'true'
+    if: needs.propose.outputs.release == 'true'
     runs-on: ubuntu-latest
     environment: release # required reviewer here → pauses for your approval
     steps:
@@ -97,17 +111,21 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       - uses: ./.github/actions/setup-go
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
-          args: build --clean --snapshot
-      - uses: actions/upload-artifact@v4
+          args: release --clean --snapshot --skip=publish
+      # archives are uniquely named per platform (…_linux_amd64.tar.gz etc.)
+      - uses: actions/upload-artifact@v7
         with:
           name: cli-artifacts
-          path: dist/**/gitmate*
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*checksums*
           if-no-files-found: warn
 
   build-gui:
@@ -118,11 +136,11 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: "1.25"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "20"
       - name: Linux GUI deps
@@ -138,7 +156,7 @@ jobs:
       - name: Build GUI
         run: wails3 build
         working-directory: gui
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: gui-${{ matrix.os }}
           path: gui/bin/*
@@ -149,16 +167,29 @@ jobs:
     needs: [propose, build-cli, build-gui]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           persist-credentials: true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with: { path: artifacts }
       - name: Assemble assets
         run: |
           mkdir -p out
-          find artifacts -type f \( -name 'gitmate*' -o -name '*.exe' \) -exec cp {} out/ \; || true
+          # CLI archives: already uniquely named per platform — copy straight in.
+          find artifacts/cli-artifacts -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name '*checksums*' \) -exec cp {} out/ \; || true
+          # GUI: one binary per OS, same base name → rename per-OS to avoid collisions.
+          for d in artifacts/gui-*; do
+            [ -d "$d" ] || continue
+            osname="$(basename "$d" | sed 's/^gui-//')"       # e.g. ubuntu-latest
+            f="$(find "$d" -type f | head -1)"
+            [ -n "$f" ] || continue
+            ext="${f##*.}"
+            case "$f" in
+              *.exe) cp "$f" "out/gitmate-gui-${osname}.exe" ;;
+              *)     cp "$f" "out/gitmate-gui-${osname}" ;;
+            esac
+          done
           ls -la out || true
       - name: Create the single immutable release
         env:

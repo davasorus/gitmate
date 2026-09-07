@@ -94,6 +94,20 @@ export interface IssueComment {
 }
 
 /**
+ * IssueListItem is an issue with its labels + assignees, fetched via GraphQL's
+ * issues connection (which — unlike the REST issues endpoint — returns ONLY
+ * issues, never PRs, so no client-side PR filtering is needed).
+ */
+export interface IssueListItem {
+    "Number": number;
+    "Title": string;
+    "Author": string;
+    "State": string;
+    "Labels": string[] | null;
+    "Assignees": string[] | null;
+}
+
+/**
  * Job is a job within a run; Steps are its steps.
  */
 export interface Job {
@@ -193,6 +207,29 @@ export interface PRDetailThread {
 export interface PRDetailThreadComment {
     "Author": string;
     "Body": string;
+}
+
+/**
+ * PRListItem is a PR in a list view WITH its rollup status (labels, review
+ * decision, CI check summary) — fetched in ONE GraphQL query for the whole
+ * list, instead of REST's N+1 (list + per-PR checks/reviews).
+ */
+export interface PRListItem {
+    "Number": number;
+    "Title": string;
+    "Author": string;
+    "State": string;
+    "Draft": boolean;
+    "Labels": string[] | null;
+
+    /**
+     * APPROVED / CHANGES_REQUESTED / REVIEW_REQUIRED / ""
+     */
+    "ReviewDecision": string;
+    "ChecksTotal": number;
+    "ChecksPassed": number;
+    "ChecksFailed": number;
+    "ChecksPending": number;
 }
 
 /**

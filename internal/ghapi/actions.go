@@ -424,28 +424,125 @@ func parseJobGraph(yml string) []JobNode {
 	if doc.Jobs.Kind != yaml.MappingNode {
 		return nil
 	}
-	var out []JobNode
+
+	// First pass: read each declared job's needs + matrix legs (base names).
+	type rawJob struct {
+		needs []string
+		legs  []string // matrix leg labels, e.g. "ubuntu-latest, 1.25"; empty if no matrix
+	}
+	raw := map[string]*rawJob{}
+	var order []string
 	for i := 0; i+1 < len(doc.Jobs.Content); i += 2 {
 		name := doc.Jobs.Content[i].Value
 		spec := doc.Jobs.Content[i+1]
-		node := JobNode{Name: name}
+		rj := &rawJob{}
 		if spec.Kind == yaml.MappingNode {
 			for j := 0; j+1 < len(spec.Content); j += 2 {
-				if spec.Content[j].Value != "needs" {
-					continue
-				}
-				nv := spec.Content[j+1]
-				switch nv.Kind {
-				case yaml.ScalarNode:
-					node.Needs = append(node.Needs, nv.Value)
-				case yaml.SequenceNode:
-					for _, n := range nv.Content {
-						node.Needs = append(node.Needs, n.Value)
+				key := spec.Content[j].Value
+				val := spec.Content[j+1]
+				switch key {
+				case "needs":
+					switch val.Kind {
+					case yaml.ScalarNode:
+						rj.needs = append(rj.needs, val.Value)
+					case yaml.SequenceNode:
+						for _, n := range val.Content {
+							rj.needs = append(rj.needs, n.Value)
+						}
 					}
+				case "strategy":
+					rj.legs = matrixLegs(val)
 				}
 			}
 		}
-		out = append(out, node)
+		raw[name] = rj
+		order = append(order, name)
+	}
+
+	// expandedNames: for a base job, the runtime node name(s) it becomes.
+	// GitHub names matrix runtime jobs "base (leg1, leg2, ...)".
+	expanded := func(base string) []string {
+		rj := raw[base]
+		if rj == nil || len(rj.legs) == 0 {
+			return []string{base}
+		}
+		names := make([]string, 0, len(rj.legs))
+		for _, leg := range rj.legs {
+			names = append(names, base+" ("+leg+")")
+		}
+		return names
+	}
+
+	// Second pass: emit one node per (expanded) runtime job; fan needs edges to
+	// every expanded leg of each dependency.
+	var out []JobNode
+	for _, base := range order {
+		rj := raw[base]
+		var deps []string
+		for _, dep := range rj.needs {
+			deps = append(deps, expanded(dep)...)
+		}
+		for _, nodeName := range expanded(base) {
+			out = append(out, JobNode{Name: nodeName, Needs: deps})
+		}
 	}
 	return out
+}
+
+// matrixLegs extracts matrix combinations from a job's `strategy:` node and
+// returns one label per combination (the parenthesized text GitHub appends to
+// the runtime job name, e.g. "ubuntu-latest, 1.25"). Returns nil if no matrix.
+func matrixLegs(strategy *yaml.Node) []string {
+	if strategy.Kind != yaml.MappingNode {
+		return nil
+	}
+	var matrix *yaml.Node
+	for i := 0; i+1 < len(strategy.Content); i += 2 {
+		if strategy.Content[i].Value == "matrix" {
+			matrix = strategy.Content[i+1]
+		}
+	}
+	if matrix == nil || matrix.Kind != yaml.MappingNode {
+		return nil
+	}
+	// collect each matrix axis's values, in declaration order, skipping
+	// include/exclude (best-effort: GitHub's real expansion is more complex).
+	type axis struct{ values []string }
+	var axes []axis
+	for i := 0; i+1 < len(matrix.Content); i += 2 {
+		key := matrix.Content[i].Value
+		val := matrix.Content[i+1]
+		if key == "include" || key == "exclude" {
+			continue
+		}
+		if val.Kind != yaml.SequenceNode {
+			continue
+		}
+		a := axis{}
+		for _, v := range val.Content {
+			a.values = append(a.values, v.Value)
+		}
+		if len(a.values) > 0 {
+			axes = append(axes, a)
+		}
+	}
+	if len(axes) == 0 {
+		return nil
+	}
+	// cartesian product of axes → "v1, v2, ..." labels
+	combos := []string{""}
+	for _, a := range axes {
+		var next []string
+		for _, prefix := range combos {
+			for _, v := range a.values {
+				if prefix == "" {
+					next = append(next, v)
+				} else {
+					next = append(next, prefix+", "+v)
+				}
+			}
+		}
+		combos = next
+	}
+	return combos
 }

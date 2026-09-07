@@ -3,8 +3,7 @@ import { useGit, cls } from "../context";
 import { CheckBadge } from "../components/CheckBadge";
 import { ReviewDiff, type PendingComment } from "../components/ReviewDiff";
 import type {
-  PR,
-  CheckRun,
+  PRListItem,
   Review,
   Reviewer,
 } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
@@ -13,6 +12,7 @@ import type {
   ExistingComment,
   IssueComment,
   PRDetailThread,
+  PRDetailCheck,
 } from "../../bindings/github.com/davasorus/gitmate/internal/ghapi";
 
 type StateFilter = "open" | "closed" | "all";
@@ -24,16 +24,16 @@ export function PullRequests() {
   const [prBase, setPrBase] = useState("live");
   const [prBody, setPrBody] = useState("");
   const [prResult, setPrResult] = useState("");
-  const [checks, setChecks] = useState<Record<number, CheckRun[]>>({});
+  const [checks, setChecks] = useState<Record<number, PRDetailCheck[]>>({});
 
   // this view owns its PR list + state filter (open/closed/all)
   const [filter, setFilter] = useState<StateFilter>("open");
-  const [prs, setPrs] = useState<PR[]>([]);
+  const [prs, setPrs] = useState<PRListItem[]>([]);
 
   const reload = async () => {
     setBusy("prs-load");
     try {
-      setPrs((await service.PRs(filter)) ?? []);
+      setPrs((await service.PRsRich(filter)) ?? []);
     } catch (e) {
       flash("err", String(e));
     } finally {
@@ -47,7 +47,7 @@ export function PullRequests() {
     (async () => {
       setBusy("prs-load");
       try {
-        const list = (await service.PRs(filter)) ?? [];
+        const list = (await service.PRsRich(filter)) ?? [];
         if (!cancelled) setPrs(list);
       } catch (e) {
         if (!cancelled) flash("err", String(e));
@@ -303,8 +303,9 @@ export function PullRequests() {
   const loadChecks = async (n: number) => {
     setBusy(`checks-${n}`);
     try {
-      const runs = (await service.PRChecks(n)) ?? [];
-      setChecks((p) => ({ ...p, [n]: runs }));
+      // checks come from the aggregated PR detail (GraphQL) — no separate REST call
+      const detail = await service.PRDetail(n);
+      setChecks((p) => ({ ...p, [n]: detail?.Checks ?? [] }));
     } catch (e) {
       flash("err", String(e));
     } finally {
@@ -393,6 +394,46 @@ export function PullRequests() {
                 <span className="font-semibold text-[var(--color-ahead)]">#{p.Number}</span>
                 <span className="truncate">{p.Title}</span>
                 <span className="text-xs text-muted-foreground">@{p.Author}</span>
+                <span className="flex items-center gap-1 text-[10px]">
+                  {p.Draft && (
+                    <span className="rounded-full border border-border px-1.5 py-0.5 text-muted-foreground">
+                      draft
+                    </span>
+                  )}
+                  {p.ReviewDecision === "APPROVED" && (
+                    <span className="rounded-full px-1.5 py-0.5 text-[var(--color-ahead)]" title="approved">
+                      ✓ approved
+                    </span>
+                  )}
+                  {p.ReviewDecision === "CHANGES_REQUESTED" && (
+                    <span className="rounded-full px-1.5 py-0.5 text-[var(--color-removed)]" title="changes requested">
+                      ✗ changes
+                    </span>
+                  )}
+                  {p.ReviewDecision === "REVIEW_REQUIRED" && (
+                    <span className="rounded-full px-1.5 py-0.5 text-muted-foreground" title="review required">
+                      review needed
+                    </span>
+                  )}
+                  {p.ChecksTotal > 0 && (
+                    <span
+                      className={
+                        p.ChecksFailed > 0
+                          ? "text-[var(--color-removed)]"
+                          : p.ChecksPending > 0
+                            ? "text-muted-foreground"
+                            : "text-[var(--color-ahead)]"
+                      }
+                      title={`${p.ChecksPassed} passed, ${p.ChecksFailed} failed, ${p.ChecksPending} pending`}
+                    >
+                      {p.ChecksFailed > 0
+                        ? `✗ ${p.ChecksFailed}/${p.ChecksTotal}`
+                        : p.ChecksPending > 0
+                          ? `● ${p.ChecksPending}/${p.ChecksTotal}`
+                          : `✓ ${p.ChecksTotal}`}
+                    </span>
+                  )}
+                </span>
                 <span className="ml-auto flex gap-1">
                   <button
                     onClick={() => toggleReview(p.Number)}

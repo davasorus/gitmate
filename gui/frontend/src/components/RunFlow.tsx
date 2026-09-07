@@ -13,7 +13,9 @@ export function RunFlow({ graph, jobs }: { graph: JobNode[]; jobs: Job[] }) {
 
   // live status per job name (from the run's jobs)
   const statusOf = (name: string) => {
-    const j = (jobs ?? []).find((x) => x.Name === name || x.Name.startsWith(name));
+    const j =
+      (jobs ?? []).find((x) => x.Name === name) ??
+      (jobs ?? []).find((x) => x.Name.startsWith(name));
     if (!j) return { status: "", conclusion: "" };
     return { status: j.Status, conclusion: j.Conclusion };
   };

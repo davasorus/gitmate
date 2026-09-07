@@ -233,3 +233,29 @@ func TestListRunsWithDuration(t *testing.T) {
 		t.Fatalf("expected a computed duration, got %+v", runs[0])
 	}
 }
+
+func TestParseJobGraph_Matrix(t *testing.T) {
+	yml := "jobs:\n" +
+		"  build:\n" +
+		"    strategy:\n" +
+		"      matrix:\n" +
+		"        os: [ubuntu-latest, windows-latest]\n" +
+		"  test:\n" +
+		"    needs: build\n"
+	nodes := parseJobGraph(yml)
+	// build expands to 2 legs; test (no matrix) is 1 node that needs BOTH legs
+	names := map[string]bool{}
+	for _, n := range nodes {
+		names[n.Name] = true
+	}
+	if !names["build (ubuntu-latest)"] || !names["build (windows-latest)"] {
+		t.Fatalf("matrix legs not expanded: %+v", nodes)
+	}
+	for _, n := range nodes {
+		if n.Name == "test" {
+			if len(n.Needs) != 2 {
+				t.Fatalf("test should need both build legs, got %v", n.Needs)
+			}
+		}
+	}
+}
