@@ -31,18 +31,26 @@ export function Changes() {
 
   const doStage = (p: string) => run(`stage-${p}`, () => service.StagePath(p), `staged ${p}`);
   const doStageHunk = (path: string, hunk: Hunk) =>
-    run(`stagehunk-${path}`, async () => {
-      await service.StageHunk(path, hunk);
-      // refresh the open diff so the staged hunk drops out of the unstaged view
-      if (openDiff) setDiffFiles((await service.Diff(openDiff.path, openDiff.staged)) ?? []);
-      return "staged hunk";
-    }, "staged hunk");
+    run(
+      `stagehunk-${path}`,
+      async () => {
+        await service.StageHunk(path, hunk);
+        // refresh the open diff so the staged hunk drops out of the unstaged view
+        if (openDiff) setDiffFiles((await service.Diff(openDiff.path, openDiff.staged)) ?? []);
+        return "staged hunk";
+      },
+      "staged hunk",
+    );
   const doUnstageHunk = (path: string, hunk: Hunk) =>
-    run(`unstagehunk-${path}`, async () => {
-      await service.UnstageHunk(path, hunk);
-      if (openDiff) setDiffFiles((await service.Diff(openDiff.path, openDiff.staged)) ?? []);
-      return "unstaged hunk";
-    }, "unstaged hunk");
+    run(
+      `unstagehunk-${path}`,
+      async () => {
+        await service.UnstageHunk(path, hunk);
+        if (openDiff) setDiffFiles((await service.Diff(openDiff.path, openDiff.staged)) ?? []);
+        return "unstaged hunk";
+      },
+      "unstaged hunk",
+    );
   const doUnstage = (p: string) =>
     run(`unstage-${p}`, () => service.UnstagePath(p), `unstaged ${p}`);
   const doDiscard = (p: string) =>
