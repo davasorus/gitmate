@@ -36,6 +36,7 @@ all writes use REST — mixed intentionally.
 ### Download a release
 
 Grab the latest build from the [Releases](https://github.com/davasorus/gitmate/releases) page:
+
 - **CLI**: `gitmate` (Linux/macOS) or `gitmate.exe` (Windows) — a single static binary
 - **GUI**: the desktop app for your platform
 
@@ -69,22 +70,33 @@ needs the **`workflow`** scope.
 
 ### CLI
 
+Install the command-line tool with Go (requires Go 1.25+):
+
 ```bash
+go install github.com/davasorus/gitmate/cmd/gitmate@latest
+```
+
+This installs `gitmate` into `$(go env GOPATH)/bin` — make sure that's on your `PATH`.
+(Or download a release binary, or build from source — see [docs/cli.md](docs/cli.md).)
+
+```bash
+gitmate whoami             # verify GitHub auth
 gitmate status
 gitmate commit -m "message"
 gitmate branch
 gitmate log
 
 # GitHub
-gitmate pr list
+gitmate prs
 gitmate pr checks <number>
-gitmate issue list
-gitmate release list
+gitmate issues
+gitmate release
 gitmate actions            # workflow runs
 gitmate actions dispatch <workflow.yml> key=value
 ```
 
-Run `gitmate <command> --help` for the full flag set of any command.
+Run `gitmate <command> --help` for any command's flags. Full command reference:
+**[docs/cli.md](docs/cli.md)**.
 
 ### GUI
 
