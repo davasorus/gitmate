@@ -154,8 +154,14 @@ jobs:
         run: npm ci
         working-directory: gui/frontend
       - name: Build GUI
-        run: wails3 build
+        shell: bash
         working-directory: gui
+        run: |
+          # stamp the release version into the GUI binary (shared version pkg),
+          # so the GUI shows the tag instead of "dev". Version from the latest tag.
+          VER="$(git describe --tags --abbrev=0 2>/dev/null || echo dev)"
+          echo "stamping GUI version: $VER"
+          wails3 build -ldflags "-X github.com/davasorus/gitmate/internal/version.Stamped=$VER"
       - uses: actions/upload-artifact@v7
         with:
           name: gui-${{ matrix.os }}
