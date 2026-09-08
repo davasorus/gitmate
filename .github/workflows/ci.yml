@@ -214,14 +214,14 @@ jobs:
     steps:
       - name: Download coverage
         if: needs.go.result == 'success'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: coverage
           path: cov
         continue-on-error: true
 
       - name: Report tests + coverage to PR
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
