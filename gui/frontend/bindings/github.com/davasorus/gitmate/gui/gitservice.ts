@@ -948,3 +948,10 @@ export function UnstagePath(path: string): $CancellablePromise<void> {
 export function UploadAsset(releaseID: number, name: string, dataB64: string): $CancellablePromise<ghapi$0.Asset> {
     return $Call.ByID(996616100, releaseID, name, dataB64);
 }
+
+/**
+ * Version returns the gitmate build version (for display in the GUI).
+ */
+export function Version(): $CancellablePromise<string> {
+    return $Call.ByID(2389771559);
+}

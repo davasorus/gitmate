@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/google/go-github/v88/github"
@@ -63,7 +64,29 @@ func resolveToken() string {
 		return t
 	}
 
+	// 3. Fall back to the GitHub CLI's token (`gh auth token`) if gh is
+	//    installed and logged in. This makes "run `gh auth login`" actually work.
+	if t := ghToken(); t != "" {
+		return t
+	}
+
 	return ""
+}
+
+// ghToken returns the token from the GitHub CLI (`gh auth token`), or "" if gh
+// isn't installed, isn't logged in, or errors. Best-effort.
+func ghToken() string {
+	path, err := exec.LookPath("gh")
+	if err != nil {
+		return ""
+	}
+	cmd := exec.Command(path, "auth", "token")
+	hideGHWindow(cmd) // no console flash in GUI builds (Windows)
+	out, err := cmd.Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
 
 // Whoami returns the authenticated user's login — a cheap call to
