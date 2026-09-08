@@ -108,7 +108,7 @@ jobs:
 
   # ---- BUILD (only after approval) ----
   build-cli:
-    needs: gate
+    needs: [propose, gate]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -117,7 +117,12 @@ jobs:
       - uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
-          args: release --clean --snapshot --skip=publish
+          # Build against the REAL version (not a snapshot) so archives are named
+          # gitmate_<version>_<os>_<arch>. The tag doesn't exist yet at build time,
+          # so we hand GoReleaser the proposed version via GORELEASER_CURRENT_TAG.
+          args: release --clean --skip=publish --skip=validate
+        env:
+          GORELEASER_CURRENT_TAG: v${{ needs.propose.outputs.version }}
       # archives are uniquely named per platform (…_linux_amd64.tar.gz etc.)
       - uses: actions/upload-artifact@v7
         with:
@@ -129,7 +134,7 @@ jobs:
           if-no-files-found: warn
 
   build-gui:
-    needs: gate
+    needs: [propose, gate]
     strategy:
       fail-fast: false
       matrix:
@@ -154,8 +159,14 @@ jobs:
         run: npm ci
         working-directory: gui/frontend
       - name: Build GUI
-        run: wails3 build
+        shell: bash
         working-directory: gui
+        run: |
+          # stamp the SAME release version the CLI uses, so the GUI shows the tag
+          # (not "dev" or a stale git-describe from the prior tag).
+          VER="v${{ needs.propose.outputs.version }}"
+          echo "stamping GUI version: $VER"
+          wails3 build -ldflags "-X github.com/davasorus/gitmate/internal/version.Stamped=$VER"
       - uses: actions/upload-artifact@v7
         with:
           name: gui-${{ matrix.os }}
