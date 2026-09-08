@@ -7,6 +7,7 @@ import (
 
 	"github.com/davasorus/gitmate/internal/ghapi"
 	"github.com/davasorus/gitmate/internal/gitops"
+	"github.com/davasorus/gitmate/internal/version"
 )
 
 // GitService is the bound service the frontend calls. Every method here
@@ -96,6 +97,11 @@ func (g *GitService) SetRepoDir(dir string) {
 // IsRepo reports whether the current repoDir is a git working tree.
 func (g *GitService) IsRepo() bool {
 	return gitops.IsRepo(g.repoDir)
+}
+
+// Version returns the gitmate build version (for display in the GUI).
+func (g *GitService) Version() string {
+	return version.Resolve()
 }
 
 // GetRepoDir returns the current working directory.

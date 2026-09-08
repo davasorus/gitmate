@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGit, cls, View } from "./context";
 import { Changes } from "./views/Changes";
 import { History } from "./views/History";
@@ -60,9 +60,17 @@ export default function App() {
 
   const [moreOpen, setMoreOpen] = useState(false);
   const [recent, setRecent] = useState<string[]>([]);
+  const [appVersion, setAppVersion] = useState("");
   const [recentOpen, setRecentOpen] = useState(false);
 
   // native folder picker → point the app at a repo, remember it
+  useEffect(() => {
+    service
+      .Version()
+      .then((v) => setAppVersion(v))
+      .catch(() => {});
+  }, [service]);
+
   const openRepo = async () => {
     const path = await service.SelectDirectory();
     if (!path) return;
@@ -158,6 +166,14 @@ export default function App() {
         <div className="grid h-[22px] w-[22px] place-items-center rounded-md bg-gradient-to-br from-[var(--color-accent)] to-[#5a6ad0] text-[12px] font-semibold text-white">
           g
         </div>
+        {appVersion && (
+          <span
+            className="font-mono text-[10.5px] text-[var(--color-faint)]"
+            title="gitmate version"
+          >
+            {appVersion}
+          </span>
+        )}
         <button
           onClick={() => setShowDir((v) => !v)}
           className="flex items-center gap-1.5 text-[13.5px] font-medium hover:opacity-80"
