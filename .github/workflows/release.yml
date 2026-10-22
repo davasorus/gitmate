@@ -35,7 +35,7 @@ jobs:
       - name: Compute version + notes (dry run, creates nothing)
         id: semrel
         if: github.ref == 'refs/heads/live'
-        uses: cycjimmy/semantic-release-action@v6
+        uses: cycjimmy/semantic-release-action@v8
         with:
           dry_run: true
           semantic_version: 25
