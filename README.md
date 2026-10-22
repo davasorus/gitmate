@@ -31,6 +31,10 @@ so the CLI and GUI always behave identically.
 Reads that aggregate nested data (PR detail, PR list, issue list) use GraphQL; simple reads and
 all writes use REST — mixed intentionally.
 
+## AI Usage
+
+- This was created using a combination of Online Claude Code and offline [gemma-4-12B](https://huggingface.co/google/gemma-4-12B)
+
 ## Install
 
 ### Download a release
